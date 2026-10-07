@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useGuild } from '@/context/GuildContext';
 import { useUIStore } from '@/store/uiStore';
 import { getTokens } from '@/styles/posThemeTokens';
+import NativeModal from '@/components/NativeModal';
 import {
   MessageSquareQuote,
   Send,
@@ -250,129 +251,95 @@ export default function StudentGrievancePage() {
       </div>
 
       {/* Submission Modal */}
-      {showSubmitModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div
-            className="w-full max-w-lg rounded-2xl p-6 border shadow-2xl relative"
-            style={{
-              backgroundColor: t.panel,
-              borderColor: t.strokeHi,
-            }}
-          >
-            <h3 className="text-lg font-bold" style={{ color: t.textHi }}>
-              Lodge Student Grievance
-            </h3>
-            <p className="text-xs mt-1" style={{ color: t.textMid }}>
-              Your petition will be routed directly to the Guild Executive Council for mediation or administrative escalation.
-            </p>
-
-            <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                  Category
-                </label>
-                <select
-                  value={category}
-                  onChange={(e: any) => setCategory(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg text-xs border outline-none"
-                  style={{
-                    backgroundColor: t.fieldBg,
-                    borderColor: t.stroke,
-                    color: t.textHi,
-                  }}
-                >
-                  <option value="Academics">Academics & Lecturer Issues</option>
-                  <option value="Hostel">Hostel & Accommodation</option>
-                  <option value="Sanitation">Sanitation, Water & Facilities</option>
-                  <option value="Security">Security & Campus Safety</option>
-                  <option value="Welfare">Food & Cafeteria Hygiene</option>
-                  <option value="Dispute">Student-to-Student Dispute</option>
-                  <option value="Other">Other Issues</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                  Subject / Summary
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  placeholder="e.g. Hall 4 Water Supply Interruption"
-                  className="w-full px-3 py-2 rounded-lg text-xs border outline-none"
-                  style={{
-                    backgroundColor: t.fieldBg,
-                    borderColor: t.stroke,
-                    color: t.textHi,
-                  }}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                  Full Description
-                </label>
-                <textarea
-                  required
-                  rows={4}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Provide precise details of the issue, dates, affected students or locations..."
-                  className="w-full px-3 py-2 rounded-lg text-xs border outline-none resize-none"
-                  style={{
-                    backgroundColor: t.fieldBg,
-                    borderColor: t.stroke,
-                    color: t.textHi,
-                  }}
-                />
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="anonymous-check"
-                  checked={isAnonymous}
-                  onChange={(e) => setIsAnonymous(e.target.checked)}
-                  className="rounded border"
-                />
-                <label htmlFor="anonymous-check" className="text-xs cursor-pointer select-none" style={{ color: t.textHi }}>
-                  Submit Anonymously (Hide my student identity from cabinet records)
-                </label>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t" style={{ borderColor: t.divider }}>
-                <button
-                  type="button"
-                  onClick={() => setShowSubmitModal(false)}
-                  className="px-4 py-2 rounded-lg text-xs font-semibold border hover:opacity-80"
-                  style={{
-                    backgroundColor: t.fieldBg,
-                    borderColor: t.stroke,
-                    color: t.textHi,
-                  }}
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-4 py-2 rounded-lg text-xs font-bold text-white shadow-md disabled:opacity-50 flex items-center gap-1.5"
-                  style={{
-                    background: `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`,
-                    color: t.ctaText,
-                  }}
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>{submitting ? 'Submitting...' : 'Submit Petition'}</span>
-                </button>
-              </div>
-            </form>
+      <NativeModal
+        isOpen={showSubmitModal}
+        onClose={() => setShowSubmitModal(false)}
+        title="Lodge Student Grievance"
+        subtitle="Your petition will be routed directly to the Guild Executive Council for mediation or administrative escalation."
+        icon={MessageSquareQuote}
+        size="lg"
+      >
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3.5 text-white">
+          <div>
+            <label className="block text-xs font-semibold text-white/70 mb-1">
+              Category
+            </label>
+            <select
+              value={category}
+              onChange={(e: any) => setCategory(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-slate-900/90 dark:bg-black/90 hover:border-white/35 focus:border-white/70 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+            >
+              <option value="Academics" className="bg-slate-900 text-white">Academics & Lecturer Issues</option>
+              <option value="Hostel" className="bg-slate-900 text-white">Hostel & Accommodation</option>
+              <option value="Sanitation" className="bg-slate-900 text-white">Sanitation, Water & Facilities</option>
+              <option value="Security" className="bg-slate-900 text-white">Security & Campus Safety</option>
+              <option value="Welfare" className="bg-slate-900 text-white">Food & Cafeteria Hygiene</option>
+              <option value="Dispute" className="bg-slate-900 text-white">Student-to-Student Dispute</option>
+              <option value="Other" className="bg-slate-900 text-white">Other Issues</option>
+            </select>
           </div>
-        </div>
-      )}
+
+          <div>
+            <label className="block text-xs font-semibold text-white/70 mb-1">
+              Subject / Summary
+            </label>
+            <input
+              type="text"
+              required
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              placeholder="e.g. Hall 4 Water Supply Interruption"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-white/70 mb-1">
+              Full Description
+            </label>
+            <textarea
+              required
+              rows={4}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Provide precise details of the issue, dates, affected students or locations..."
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition resize-none"
+            />
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <input
+              type="checkbox"
+              id="anonymous-check"
+              checked={isAnonymous}
+              onChange={(e) => setIsAnonymous(e.target.checked)}
+              className="rounded border-white/30 text-emerald-500 focus:ring-emerald-400"
+            />
+            <label htmlFor="anonymous-check" className="text-xs text-white/80 cursor-pointer select-none">
+              Submit Anonymously (Hide my student identity from cabinet records)
+            </label>
+          </div>
+
+          <div className="flex items-center justify-end gap-2.5 pt-3.5 border-t border-white/15">
+            <button
+              type="button"
+              onClick={() => setShowSubmitModal(false)}
+              className="px-4 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition active:scale-95"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs shadow-[0_4px_16px_rgba(16,185,129,0.3)] transition active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>{submitting ? 'Submitting...' : 'Submit Petition'}</span>
+            </button>
+          </div>
+        </form>
+      </NativeModal>
     </div>
   );
 }

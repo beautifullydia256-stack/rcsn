@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { mergeClassNamesWithCanonical } from '@/lib/schoolClassNames';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
+import NativeModal from '@/components/NativeModal';
+import { GraduationCap } from 'lucide-react';
 
 export default function TeacherProfilePage() {
   const navigate = useNavigate();
@@ -366,39 +368,56 @@ export default function TeacherProfilePage() {
         </div>
       )}
 
-      {showAppointModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowAppointModal(false)}>
-          <div className="bg-slate-800 rounded-xl p-6 max-w-md w-full mx-4 border border-[var(--ac-border)]" onClick={(e) => e.stopPropagation()}>
-            <h3 className="ac-text-primary text-xl font-semibold mb-4">Appoint as Class Teacher</h3>
-            {availableClasses.length === 0 ? (
-              <div className="ac-text-secondary mb-4">
-                No class is free to assign: each class already has a class teacher (this term), or your school type is not set.
-              </div>
-            ) : (
-              <>
-                <p className="ac-text-secondary text-sm mb-4">Select a class to appoint <strong className="ac-text-primary">{name}</strong> as its class teacher.</p>
-                <label className="block ac-text-secondary text-sm mb-2">Available Classes</label>
-                <select
-                  className="ac-input w-full rounded-lg px-3 py-2 mb-4"
-                  value={selectedClassToAppoint}
-                  onChange={(e) => setSelectedClassToAppoint(e.target.value)}
-                >
-                  <option value="">Select a class...</option>
-                  {availableClasses.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </>
-            )}
-            <div className="flex gap-3">
-              <button type="button" className="flex-1 ac-glass-btn-secondary rounded-lg px-4 py-2" onClick={() => { setShowAppointModal(false); setSelectedClassToAppoint(''); }}>Cancel</button>
-              <button type="button" className="flex-1 rounded-lg bg-yellow-600 hover:bg-yellow-500 text-white px-4 py-2 disabled:opacity-50" onClick={appointAsClassTeacher} disabled={!selectedClassToAppoint || appointing}>
-                {appointing ? 'Appointing...' : 'Appoint'}
-              </button>
+      <NativeModal
+        isOpen={showAppointModal}
+        onClose={() => { setShowAppointModal(false); setSelectedClassToAppoint(''); }}
+        title="Appoint as Class Teacher"
+        subtitle={`Select a cohort class to assign ${name || 'teacher'} as primary in-charge`}
+        icon={GraduationCap}
+        size="md"
+      >
+        <div className="flex flex-col gap-3 text-white">
+          {availableClasses.length === 0 ? (
+            <div className="p-4 rounded-xl border border-white/15 bg-black/25 text-white/70 text-xs">
+              No class is free to assign: each class already has a class teacher (this term), or your school type is not set.
             </div>
+          ) : (
+            <div>
+              <p className="text-xs text-white/80 mb-3">
+                Select a class to appoint <strong className="text-white font-semibold">{name}</strong> as its class teacher.
+              </p>
+              <label className="block text-xs font-semibold text-white/70 mb-1">Available Classes</label>
+              <select
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-slate-900/90 dark:bg-black/90 hover:border-white/35 focus:border-white/70 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+                value={selectedClassToAppoint}
+                onChange={(e) => setSelectedClassToAppoint(e.target.value)}
+              >
+                <option value="" className="bg-slate-900 text-white">Select a class...</option>
+                {availableClasses.map((c) => (
+                  <option key={c} value={c} className="bg-slate-900 text-white">{c}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div className="flex items-center justify-end gap-2.5 pt-3.5 border-t border-white/15">
+            <button
+              type="button"
+              className="px-4 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition active:scale-95"
+              onClick={() => { setShowAppointModal(false); setSelectedClassToAppoint(''); }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs shadow-[0_4px_16px_rgba(16,185,129,0.3)] transition active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+              onClick={appointAsClassTeacher}
+              disabled={!selectedClassToAppoint || appointing}
+            >
+              {appointing ? 'Appointing...' : 'Appoint Class Teacher'}
+            </button>
           </div>
         </div>
-      )}
+      </NativeModal>
     </AdminPageWrapper>
   );
 }

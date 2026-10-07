@@ -38,8 +38,9 @@ import profileTemplateRaw from '@/assets/pwezacore-teacher-profile.html?raw';
 import { downloadTeacherProfilePdf, type TeacherProfilePdfData } from '@/lib/adminPdfDownload';
 import UserRolesSection from '@/components/admin/UserRolesSection';
 import ChangeTeacherPhoneModal from '@/components/admin/ChangeTeacherPhoneModal';
+import NativeModal from '@/components/NativeModal';
+import { Mail, Phone, CheckCircle2 } from 'lucide-react';
 import { isTertiarySchool } from '@/hooks/useSchoolType';
-import { Mail, Phone } from 'lucide-react';
 
 // Professional SVG Icons (Zero Emojis)
 const PENCIL_SVG = `<svg class="w-4 h-4 mr-1.5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>`;
@@ -1907,57 +1908,46 @@ export default function DesignTeacherProfile() {
     }
   }, [linkedUserId, teacherId, authSchoolId, changeEmailInput]);
 
-  const changeEmailModal = createPortal(
-    <div
-      className={`fixed inset-0 z-50 items-center justify-center bg-black/50 backdrop-blur-sm p-4 ${changeEmailOpen ? 'flex' : 'hidden'}`}
+  const changeEmailModal = (
+    <NativeModal
+      isOpen={changeEmailOpen}
+      onClose={() => setChangeEmailOpen(false)}
+      title="Change Login Email"
+      subtitle={portalEmail ? `Current email: ${portalEmail}` : undefined}
+      icon={Mail}
+      size="md"
     >
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Change Login Email</h2>
-            {portalEmail && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                Current: <span className="font-medium text-gray-700 dark:text-gray-300">{portalEmail}</span>
-              </p>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={() => setChangeEmailOpen(false)}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
-        </div>
-
+      <div className="flex flex-col gap-3 text-white">
         {!changeEmailSuccess ? (
           <>
             {!linkedUserId && (
-              <div className="mb-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 text-sm text-amber-800 dark:text-amber-300">
+              <div className="p-3 rounded-xl bg-amber-500/15 border border-amber-500/30 text-xs text-amber-200">
                 No portal login account found for this teacher. Use <strong>Create Login</strong> to set one up first.
               </div>
             )}
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            <p className="text-xs text-white/70">
               Enter the teacher's new email address. Their account will be moved immediately and a password-reset email will be sent to the new address so they can log in.
             </p>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New email address</label>
-            <input
-              type="email"
-              value={changeEmailInput}
-              onChange={(e) => setChangeEmailInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') void handleChangeEmail(); }}
-              placeholder="teacher@example.com"
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm mb-3"
-              autoFocus={changeEmailOpen}
-            />
+            <div>
+              <label className="block text-xs font-semibold text-white/70 mb-1">New email address</label>
+              <input
+                type="email"
+                value={changeEmailInput}
+                onChange={(e) => setChangeEmailInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') void handleChangeEmail(); }}
+                placeholder="teacher@example.com"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+                autoFocus={changeEmailOpen}
+              />
+            </div>
             {changeEmailError && (
-              <p className="text-sm text-red-600 dark:text-red-400 mb-3">{changeEmailError}</p>
+              <p className="text-xs text-rose-400">{changeEmailError}</p>
             )}
-            <div className="flex gap-2">
+            <div className="flex items-center justify-end gap-2.5 pt-3.5 border-t border-white/15">
               <button
                 type="button"
                 onClick={() => setChangeEmailOpen(false)}
-                className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm"
+                className="px-4 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition active:scale-95"
               >
                 Cancel
               </button>
@@ -1965,43 +1955,42 @@ export default function DesignTeacherProfile() {
                 type="button"
                 onClick={() => void handleChangeEmail()}
                 disabled={changeEmailLoading || !changeEmailInput.trim() || !linkedUserId}
-                className="flex-1 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs shadow-[0_4px_16px_rgba(16,185,129,0.3)] transition active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
               >
-                {changeEmailLoading ? 'Sending…' : 'Change & Send Email'}
+                {changeEmailLoading ? 'Sending...' : 'Change & Send Email'}
               </button>
             </div>
           </>
         ) : (
           <>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center flex-shrink-0">
-                <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-              </div>
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
               <div>
-                <p className="font-semibold text-gray-900 dark:text-gray-100">Done!</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Email updated and access email sent</p>
+                <p className="text-xs font-bold text-white">Done!</p>
+                <p className="text-[11px] text-white/70">Email updated and access email sent</p>
               </div>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-              The teacher will receive an email at <strong className="text-gray-900 dark:text-gray-100">{portalEmail}</strong> with a link to set their password and log in. Their account and all data remain intact.
+            <p className="text-xs text-white/80">
+              The teacher will receive an email at <strong className="text-white">{portalEmail}</strong> with a link to set their password and log in. Their account and all data remain intact.
             </p>
             {changeEmailWarning && (
-              <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3 mb-3">
+              <p className="text-xs text-amber-200 bg-amber-500/15 border border-amber-500/30 rounded-xl p-3">
                 {changeEmailWarning}
               </p>
             )}
-            <button
-              type="button"
-              onClick={() => setChangeEmailOpen(false)}
-              className="w-full px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-sm"
-            >
-              Done
-            </button>
+            <div className="flex justify-end pt-3 border-t border-white/15">
+              <button
+                type="button"
+                onClick={() => setChangeEmailOpen(false)}
+                className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs shadow-[0_4px_16px_rgba(16,185,129,0.3)] transition active:scale-95"
+              >
+                Done
+              </button>
+            </div>
           </>
         )}
       </div>
-    </div>,
-    document.body
+    </NativeModal>
   );
 
   return (

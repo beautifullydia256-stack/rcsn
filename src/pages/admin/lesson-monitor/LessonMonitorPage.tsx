@@ -22,6 +22,7 @@ import { useUIStore } from '@/store/uiStore';
 import { supabase } from '@/lib/supabase';
 import { registerApiUrl } from '@/lib/registerApiOrigin';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
+import NativeModal from '@/components/NativeModal';
 import PosEmptyState from '@/components/finance/pos/PosEmptyState';
 import { useAcademicPeriod } from '@/lib/academicPeriodTerminology';
 import { SORA, INTER } from '@/styles/posThemeTokens';
@@ -147,131 +148,117 @@ function PhotoModal({
   const badge = STATUS_BADGE[log.status];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="w-full max-w-2xl my-8 rounded-2xl bg-white dark:bg-[#0d1512] border border-slate-200 dark:border-white/10 shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.02]">
-          <div>
-            <h2 className="text-base font-bold text-slate-900 dark:text-white" style={{ fontFamily: SORA }}>
-              {log.subject} — {log.class_name}
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-white/40 mt-0.5">
-              {fmtDate(log.lesson_date)} · {hhmm(log.scheduled_start)} – {hhmm(log.scheduled_end)}
+    <NativeModal
+      isOpen={true}
+      onClose={onClose}
+      title={`${log.subject} — ${log.class_name}`}
+      subtitle={`${fmtDate(log.lesson_date)} · ${hhmm(log.scheduled_start)} – ${hhmm(log.scheduled_end)}`}
+      icon={BookOpen}
+      size="xl"
+    >
+      <div className="space-y-4 text-white">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="text-sm text-white/70">
+            {log.teacher_name && <span className="text-white font-semibold">{log.teacher_name}</span>}
+            {log.started_at && <span className="ml-2">· Started {fmtTime(log.started_at)}</span>}
+            {log.ended_at && <span>· Closed {fmtTime(log.ended_at)}</span>}
+          </div>
+          <span className={`inline-flex items-center gap-1.5 text-xs font-semibold rounded-full border px-3 py-1 ${badge.cls}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
+            {badge.label}
+          </span>
+        </div>
+
+        {log.status === 'approved' ? (
+          <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/15 px-5 py-8 text-center">
+            <div className="mb-3 flex justify-center text-emerald-400">
+              <CheckCircle2 className="w-10 h-10" />
+            </div>
+            <p className="text-emerald-300 font-bold text-base" style={{ fontFamily: SORA }}>
+              Lesson Approved
             </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 transition"
-            aria-label="Close"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="p-5 space-y-4">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div className="text-sm text-slate-600 dark:text-white/60">
-              {log.teacher_name && <span className="text-slate-900 dark:text-white font-semibold">{log.teacher_name}</span>}
-              {log.started_at && <span className="ml-2">· Started {fmtTime(log.started_at)}</span>}
-              {log.ended_at && <span>· Closed {fmtTime(log.ended_at)}</span>}
-            </div>
-            <span className={`inline-flex items-center gap-1.5 text-xs font-semibold rounded-full border px-3 py-1 ${badge.cls}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
-              {badge.label}
-            </span>
-          </div>
-
-          {log.status === 'approved' ? (
-            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-50 dark:bg-emerald-950/30 px-5 py-8 text-center">
-              <div className="mb-3 flex justify-center text-emerald-600 dark:text-emerald-400">
-                <CheckCircle2 className="w-10 h-10" />
-              </div>
-              <p className="text-emerald-900 dark:text-emerald-300 font-bold text-base" style={{ fontFamily: SORA }}>
-                Lesson Approved
+            {log.approved_at && (
+              <p className="text-xs text-white/60 mt-1">
+                Approved on{' '}
+                {new Date(log.approved_at).toLocaleDateString('en-UG', {
+                  weekday: 'short',
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                })}
               </p>
-              {log.approved_at && (
-                <p className="text-xs text-emerald-700 dark:text-white/50 mt-1">
-                  Approved on{' '}
-                  {new Date(log.approved_at).toLocaleDateString('en-UG', {
-                    weekday: 'short',
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                  })}
-                </p>
-              )}
-            </div>
-          ) : (
-            <>
-              {photoLoading && (
-                <div className="text-sm text-slate-500 dark:text-white/40 py-12 text-center">
-                  <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-teal-500 border-t-transparent mb-2" />
-                  <p>Loading lesson verification photos…</p>
+            )}
+          </div>
+        ) : (
+          <>
+            {photoLoading && (
+              <div className="text-sm text-white/50 py-12 text-center">
+                <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-teal-500 border-t-transparent mb-2" />
+                <p>Loading lesson verification photos…</p>
+              </div>
+            )}
+            {photoErr && !photoLoading && (
+              <div className="rounded-xl border border-rose-500/30 bg-rose-500/20 px-4 py-3 text-sm text-rose-200">
+                {photoErr}
+              </div>
+            )}
+            {photos && !photoLoading && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs font-semibold text-white/60 mb-1.5">Start Photo (Arrival / Board)</p>
+                  {photos.startUrl ? (
+                    <img
+                      src={photos.startUrl}
+                      alt="Start"
+                      className="w-full h-48 object-cover rounded-xl border border-white/15 bg-black/40"
+                    />
+                  ) : (
+                    <div className="w-full h-48 rounded-xl border border-dashed border-white/20 bg-white/5 flex items-center justify-center text-xs text-white/40">
+                      No start photo captured
+                    </div>
+                  )}
                 </div>
-              )}
-              {photoErr && !photoLoading && (
-                <div className="rounded-xl border border-rose-500/30 bg-rose-50 dark:bg-rose-950/40 px-4 py-3 text-sm text-rose-700 dark:text-rose-200">
-                  {photoErr}
+                <div>
+                  <p className="text-xs font-semibold text-white/60 mb-1.5">End Photo (Lesson Work)</p>
+                  {photos.endUrl ? (
+                    <img
+                      src={photos.endUrl}
+                      alt="End"
+                      className="w-full h-48 object-cover rounded-xl border border-white/15 bg-black/40"
+                    />
+                  ) : (
+                    <div className="w-full h-48 rounded-xl border border-dashed border-white/20 bg-white/5 flex items-center justify-center text-xs text-white/40">
+                      No end photo captured
+                    </div>
+                  )}
                 </div>
-              )}
-              {photos && !photoLoading && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs font-semibold text-slate-600 dark:text-white/50 mb-1.5">Start Photo (Arrival / Board)</p>
-                    {photos.startUrl ? (
-                      <img
-                        src={photos.startUrl}
-                        alt="Start"
-                        className="w-full h-48 object-cover rounded-xl border border-slate-200 dark:border-white/10"
-                      />
-                    ) : (
-                      <div className="w-full h-48 rounded-xl border border-dashed border-slate-300 dark:border-white/10 flex items-center justify-center text-xs text-slate-400">
-                        No start photo captured
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-slate-600 dark:text-white/50 mb-1.5">End Photo (Lesson Work)</p>
-                    {photos.endUrl ? (
-                      <img
-                        src={photos.endUrl}
-                        alt="End"
-                        className="w-full h-48 object-cover rounded-xl border border-slate-200 dark:border-white/10"
-                      />
-                    ) : (
-                      <div className="w-full h-48 rounded-xl border border-dashed border-slate-300 dark:border-white/10 flex items-center justify-center text-xs text-slate-400">
-                        No end photo captured
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
+              </div>
+            )}
 
-              {log.status === 'completed' && (
-                <div className="pt-2 flex justify-end gap-2 border-t border-slate-200 dark:border-white/10">
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="px-4 py-2 text-xs font-semibold rounded-xl border border-slate-300 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onApprove(log.log_id)}
-                    disabled={approving}
-                    className="px-4 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-900/20 hover:from-emerald-500 hover:to-teal-500 transition disabled:opacity-50 inline-flex items-center gap-2"
-                  >
-                    {approving && <div className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />}
-                    <span>Approve Lesson Log</span>
-                  </button>
-                </div>
-              )}
-            </>
-          )}
-        </div>
+            {log.status === 'completed' && (
+              <div className="pt-3 flex justify-end gap-2 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="rounded-xl px-4 py-2 text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onApprove(log.log_id)}
+                  disabled={approving}
+                  className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-5 py-2 text-xs font-semibold text-white shadow-lg shadow-emerald-500/25 hover:from-emerald-400 hover:to-teal-400 transition disabled:opacity-50 inline-flex items-center gap-2"
+                >
+                  {approving && <div className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />}
+                  <span>Approve Lesson Log</span>
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </div>
-    </div>
+    </NativeModal>
   );
 }
 

@@ -34,6 +34,7 @@ import {
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { getTokens, cardGrad, SORA, INTER } from '@/styles/posThemeTokens';
+import NativeModal from '@/components/NativeModal';
 import {
   fetchYearCalendar,
   createSchoolEvent,
@@ -1479,203 +1480,142 @@ function AddEditEventModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
-      onClick={onClose}
+    <NativeModal
+      isOpen={true}
+      onClose={onClose}
+      title={initialEvent ? 'Edit Calendar Event' : 'Add School Calendar Event'}
+      subtitle="Exams, sports, tours, holidays, and term dates"
+      icon={CalendarDays}
+      size="lg"
     >
-      <div
-        className="w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto"
-        style={{
-          background: t.cardBg,
-          border: `1px solid ${t.cardBorder}`,
-          color: t.textPrimary,
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
-              <CalendarDays className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold" style={{ fontFamily: SORA }}>
-                {initialEvent ? 'Edit Calendar Event' : 'Add School Calendar Event'}
-              </h3>
-              <p className="text-xs" style={{ color: t.textMuted }}>
-                Exams, sports, tours, holidays, and term dates
-              </p>
-            </div>
-          </div>
-          <button type="button" onClick={onClose} className="p-1 rounded-lg hover:bg-slate-500/10 text-slate-400">
-            <X className="w-5 h-5" />
-          </button>
+      <form onSubmit={handleSubmit} className="space-y-4 text-white">
+        <div>
+          <label className="block text-xs font-semibold text-white/70 mb-1">
+            Event Title *
+          </label>
+          <input
+            type="text"
+            required
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g. End of Term 2 Examinations, Annual Sports Gala"
+            className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+          />
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="block font-semibold mb-1" style={{ color: t.textMuted }}>
-              Event Title *
+            <label className="block text-xs font-semibold text-white/70 mb-1">
+              Event Category *
+            </label>
+            <select
+              value={eventType}
+              onChange={(e) => {
+                const val = e.target.value as SchoolEventType;
+                setEventType(val);
+                if (val === 'exam') setHasExamTimetable(true);
+              }}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-slate-900/90 dark:bg-black/90 hover:border-white/35 focus:border-white/70 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+            >
+              <option value="exam" className="bg-slate-900 text-white">Examination / Assessment Period</option>
+              <option value="sports" className="bg-slate-900 text-white">Sports &amp; Athletics</option>
+              <option value="tour" className="bg-slate-900 text-white">School Tour / Excursion</option>
+              <option value="term_dates" className="bg-slate-900 text-white">Term Dates (Opening/Closing)</option>
+              <option value="meeting" className="bg-slate-900 text-white">Meeting / Parent Visitation</option>
+              <option value="cultural" className="bg-slate-900 text-white">Cultural Gala &amp; Speech Day</option>
+              <option value="holiday" className="bg-slate-900 text-white">School / Public Holiday</option>
+              <option value="other" className="bg-slate-900 text-white">General Event</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-white/70 mb-1">
+              Target Audience
+            </label>
+            <select
+              value={targetAudience}
+              onChange={(e) => setTargetAudience(e.target.value as TargetAudience)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-slate-900/90 dark:bg-black/90 hover:border-white/35 focus:border-white/70 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+            >
+              <option value="all" className="bg-slate-900 text-white">Entire School Community</option>
+              <option value="students" className="bg-slate-900 text-white">Students Only</option>
+              <option value="staff" className="bg-slate-900 text-white">Teaching &amp; Support Staff</option>
+              <option value="parents" className="bg-slate-900 text-white">Parents &amp; Guardians</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-semibold text-white/70 mb-1">
+              Start Date *
             </label>
             <input
-              type="text"
+              type="date"
               required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. End of Term 2 Examinations, Annual Sports Gala"
-              className="w-full px-3 py-2 rounded-xl focus:outline-none"
-              style={{
-                background: t.inputBg,
-                border: `1px solid ${t.inputBorder}`,
-                color: t.textPrimary,
-              }}
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold mb-1" style={{ color: t.textMuted }}>
-                Event Category *
-              </label>
-              <select
-                value={eventType}
-                onChange={(e) => {
-                  const val = e.target.value as SchoolEventType;
-                  setEventType(val);
-                  if (val === 'exam') setHasExamTimetable(true);
-                }}
-                className="w-full px-3 py-2 rounded-xl focus:outline-none"
-                style={{
-                  background: t.inputBg,
-                  border: `1px solid ${t.inputBorder}`,
-                  color: t.textPrimary,
-                }}
-              >
-                <option value="exam">Examination / Assessment Period</option>
-                <option value="sports">Sports &amp; Athletics</option>
-                <option value="tour">School Tour / Excursion</option>
-                <option value="term_dates">Term Dates (Opening/Closing)</option>
-                <option value="meeting">Meeting / Parent Visitation</option>
-                <option value="cultural">Cultural Gala &amp; Speech Day</option>
-                <option value="holiday">School / Public Holiday</option>
-                <option value="other">General Event</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block font-semibold mb-1" style={{ color: t.textMuted }}>
-                Target Audience
-              </label>
-              <select
-                value={targetAudience}
-                onChange={(e) => setTargetAudience(e.target.value as TargetAudience)}
-                className="w-full px-3 py-2 rounded-xl focus:outline-none"
-                style={{
-                  background: t.inputBg,
-                  border: `1px solid ${t.inputBorder}`,
-                  color: t.textPrimary,
-                }}
-              >
-                <option value="all">Entire School Community</option>
-                <option value="students">Students Only</option>
-                <option value="staff">Teaching &amp; Support Staff</option>
-                <option value="parents">Parents &amp; Guardians</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold mb-1" style={{ color: t.textMuted }}>
-                Start Date *
-              </label>
-              <input
-                type="date"
-                required
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl focus:outline-none"
-                style={{
-                  background: t.inputBg,
-                  border: `1px solid ${t.inputBorder}`,
-                  color: t.textPrimary,
-                }}
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold mb-1" style={{ color: t.textMuted }}>
-                End Date (For multi-day blocks) *
-              </label>
-              <input
-                type="date"
-                required
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl focus:outline-none"
-                style={{
-                  background: t.inputBg,
-                  border: `1px solid ${t.inputBorder}`,
-                  color: t.textPrimary,
-                }}
-              />
-            </div>
-          </div>
-
           <div>
-            <label className="block font-semibold mb-1" style={{ color: t.textMuted }}>
-              Location / Venue
+            <label className="block text-xs font-semibold text-white/70 mb-1">
+              End Date (For multi-day blocks) *
             </label>
             <input
-              type="text"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="e.g. Main Examination Hall, Sports Grounds, Jinja Source of Nile"
-              className="w-full px-3 py-2 rounded-xl focus:outline-none"
-              style={{
-                background: t.inputBg,
-                border: `1px solid ${t.inputBorder}`,
-                color: t.textPrimary,
-              }}
+              type="date"
+              required
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
             />
           </div>
+        </div>
 
-          <div>
-            <label className="block font-semibold mb-1" style={{ color: t.textMuted }}>
-              Event Notes / Instructions
-            </label>
-            <textarea
-              rows={2}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="e.g. Full uniform required. Examination identity cards to be inspected at the door."
-              className="w-full px-3 py-2 rounded-xl focus:outline-none"
-              style={{
-                background: t.inputBg,
-                border: `1px solid ${t.inputBorder}`,
-                color: t.textPrimary,
-              }}
-            />
-          </div>
+        <div>
+          <label className="block text-xs font-semibold text-white/70 mb-1">
+            Location / Venue
+          </label>
+          <input
+            type="text"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            placeholder="e.g. Main Examination Hall, Sports Grounds, Jinja Source of Nile"
+            className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+          />
+        </div>
 
-          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200 dark:border-slate-800">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-semibold hover:bg-slate-500/10 transition-colors"
-              style={{ color: t.textMuted }}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2 rounded-xl text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 transition-colors shadow-sm"
-            >
-              {initialEvent ? 'Save Changes' : 'Create Event'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div>
+          <label className="block text-xs font-semibold text-white/70 mb-1">
+            Event Notes / Instructions
+          </label>
+          <textarea
+            rows={2}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="e.g. Full uniform required. Examination identity cards to be inspected at the door."
+            className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+          />
+        </div>
+
+        <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-white/10">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl px-4 py-2.5 text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="px-5 py-2.5 rounded-xl text-xs font-semibold text-white bg-emerald-500 hover:bg-emerald-400 transition shadow-lg shadow-emerald-500/25"
+          >
+            {initialEvent ? 'Save Changes' : 'Create Event'}
+          </button>
+        </div>
+      </form>
+    </NativeModal>
   );
 }
 
@@ -1731,255 +1671,179 @@ function AddExamSessionModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
-      onClick={onClose}
+    <NativeModal
+      isOpen={true}
+      onClose={onClose}
+      title="Schedule Examination Paper"
+      subtitle="Add to the class exam timetable"
+      icon={GraduationCap}
+      size="lg"
     >
-      <div
-        className="w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto"
-        style={{
-          background: t.cardBg,
-          border: `1px solid ${t.cardBorder}`,
-          color: t.textPrimary,
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-500">
-              <GraduationCap className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold" style={{ fontFamily: SORA }}>
-                Schedule Examination Paper
-              </h3>
-              <p className="text-xs" style={{ color: t.textMuted }}>
-                Add to the class exam timetable
-              </p>
-            </div>
-          </div>
-          <button type="button" onClick={onClose} className="p-1 rounded-lg hover:bg-slate-500/10 text-slate-400">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
-          {examEvents.length > 0 && (
-            <div>
-              <label className="block font-semibold mb-1" style={{ color: t.textMuted }}>
-                Parent Examination Period
-              </label>
-              <select
-                value={selectedEventId}
-                onChange={(e) => setSelectedEventId(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl focus:outline-none"
-                style={{
-                  background: t.inputBg,
-                  border: `1px solid ${t.inputBorder}`,
-                  color: t.textPrimary,
-                }}
-              >
-                {examEvents.map((ev) => (
-                  <option key={ev.event_id} value={ev.event_id}>
-                    {ev.title} ({formatDateDisplay(ev.start_date)} - {formatDateDisplay(ev.end_date)})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold mb-1" style={{ color: t.textMuted }}>
-                Paper Name *
-              </label>
-              <input
-                type="text"
-                required
-                value={paperName}
-                onChange={(e) => setPaperName(e.target.value)}
-                placeholder="e.g. Mathematics Paper 1"
-                className="w-full px-3 py-2 rounded-xl focus:outline-none"
-                style={{
-                  background: t.inputBg,
-                  border: `1px solid ${t.inputBorder}`,
-                  color: t.textPrimary,
-                }}
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold mb-1" style={{ color: t.textMuted }}>
-                Paper Code (Optional)
-              </label>
-              <input
-                type="text"
-                value={paperCode}
-                onChange={(e) => setPaperCode(e.target.value)}
-                placeholder="e.g. 456/1, PHY-P3"
-                className="w-full px-3 py-2 rounded-xl focus:outline-none font-mono"
-                style={{
-                  background: t.inputBg,
-                  border: `1px solid ${t.inputBorder}`,
-                  color: t.textPrimary,
-                }}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold mb-1" style={{ color: t.textMuted }}>
-                Class / Cohort *
-              </label>
-              <input
-                type="text"
-                required
-                value={className}
-                onChange={(e) => setClassName(e.target.value)}
-                placeholder="e.g. Senior 4, Senior 1, Primary 7"
-                className="w-full px-3 py-2 rounded-xl focus:outline-none font-semibold"
-                style={{
-                  background: t.inputBg,
-                  border: `1px solid ${t.inputBorder}`,
-                  color: t.textPrimary,
-                }}
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold mb-1" style={{ color: t.textMuted }}>
-                Examination Date *
-              </label>
-              <input
-                type="date"
-                required
-                value={examDate}
-                onChange={(e) => setExamDate(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl focus:outline-none"
-                style={{
-                  background: t.inputBg,
-                  border: `1px solid ${t.inputBorder}`,
-                  color: t.textPrimary,
-                }}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold mb-1" style={{ color: t.textMuted }}>
-                Start Time *
-              </label>
-              <input
-                type="time"
-                required
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl focus:outline-none"
-                style={{
-                  background: t.inputBg,
-                  border: `1px solid ${t.inputBorder}`,
-                  color: t.textPrimary,
-                }}
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold mb-1" style={{ color: t.textMuted }}>
-                End Time *
-              </label>
-              <input
-                type="time"
-                required
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl focus:outline-none"
-                style={{
-                  background: t.inputBg,
-                  border: `1px solid ${t.inputBorder}`,
-                  color: t.textPrimary,
-                }}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold mb-1" style={{ color: t.textMuted }}>
-                Hall / Examination Room *
-              </label>
-              <input
-                type="text"
-                required
-                value={room}
-                onChange={(e) => setRoom(e.target.value)}
-                placeholder="e.g. Main Exam Hall A, Lab 2"
-                className="w-full px-3 py-2 rounded-xl focus:outline-none"
-                style={{
-                  background: t.inputBg,
-                  border: `1px solid ${t.inputBorder}`,
-                  color: t.textPrimary,
-                }}
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold mb-1" style={{ color: t.textMuted }}>
-                Invigilator / Supervisor
-              </label>
-              <input
-                type="text"
-                value={invigilator}
-                onChange={(e) => setInvigilator(e.target.value)}
-                placeholder="e.g. Mr. Mukasa John"
-                className="w-full px-3 py-2 rounded-xl focus:outline-none"
-                style={{
-                  background: t.inputBg,
-                  border: `1px solid ${t.inputBorder}`,
-                  color: t.textPrimary,
-                }}
-              />
-            </div>
-          </div>
-
+      <form onSubmit={handleSubmit} className="space-y-4 text-white">
+        {examEvents.length > 0 && (
           <div>
-            <label className="block font-semibold mb-1" style={{ color: t.textMuted }}>
-              Special Paper Instructions
+            <label className="block text-xs font-semibold text-white/70 mb-1">
+              Parent Examination Period
+            </label>
+            <select
+              value={selectedEventId}
+              onChange={(e) => setSelectedEventId(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-slate-900/90 dark:bg-black/90 hover:border-white/35 focus:border-white/70 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+            >
+              {examEvents.map((ev) => (
+                <option key={ev.event_id} value={ev.event_id} className="bg-slate-900 text-white">
+                  {ev.title} ({formatDateDisplay(ev.start_date)} - {formatDateDisplay(ev.end_date)})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-semibold text-white/70 mb-1">
+              Paper Name *
             </label>
             <input
               type="text"
-              value={instructions}
-              onChange={(e) => setInstructions(e.target.value)}
-              placeholder="e.g. Calculators allowed. Bring drawing instruments."
-              className="w-full px-3 py-2 rounded-xl focus:outline-none"
-              style={{
-                background: t.inputBg,
-                border: `1px solid ${t.inputBorder}`,
-                color: t.textPrimary,
-              }}
+              required
+              value={paperName}
+              onChange={(e) => setPaperName(e.target.value)}
+              placeholder="e.g. Mathematics Paper 1"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200 dark:border-slate-800">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-semibold hover:bg-slate-500/10 transition-colors"
-              style={{ color: t.textMuted }}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2 rounded-xl text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors shadow-sm"
-            >
-              Schedule Paper
-            </button>
+          <div>
+            <label className="block text-xs font-semibold text-white/70 mb-1">
+              Paper Code (Optional)
+            </label>
+            <input
+              type="text"
+              value={paperCode}
+              onChange={(e) => setPaperCode(e.target.value)}
+              placeholder="e.g. 456/1, PHY-P3"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+            />
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-semibold text-white/70 mb-1">
+              Class / Cohort *
+            </label>
+            <input
+              type="text"
+              required
+              value={className}
+              onChange={(e) => setClassName(e.target.value)}
+              placeholder="e.g. Senior 4, Senior 1, Primary 7"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition font-semibold"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-white/70 mb-1">
+              Examination Date *
+            </label>
+            <input
+              type="date"
+              required
+              value={examDate}
+              onChange={(e) => setExamDate(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-semibold text-white/70 mb-1">
+              Start Time *
+            </label>
+            <input
+              type="time"
+              required
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-white/70 mb-1">
+              End Time *
+            </label>
+            <input
+              type="time"
+              required
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-semibold text-white/70 mb-1">
+              Hall / Examination Room *
+            </label>
+            <input
+              type="text"
+              required
+              value={room}
+              onChange={(e) => setRoom(e.target.value)}
+              placeholder="e.g. Main Exam Hall A, Lab 2"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-white/70 mb-1">
+              Invigilator / Supervisor
+            </label>
+            <input
+              type="text"
+              value={invigilator}
+              onChange={(e) => setInvigilator(e.target.value)}
+              placeholder="e.g. Mr. Mukasa John"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-white/70 mb-1">
+            Special Paper Instructions
+          </label>
+          <input
+            type="text"
+            value={instructions}
+            onChange={(e) => setInstructions(e.target.value)}
+            placeholder="e.g. Calculators allowed. Bring drawing instruments."
+            className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+          />
+        </div>
+
+        <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-white/10">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl px-4 py-2.5 text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="px-5 py-2.5 rounded-xl text-xs font-semibold text-white bg-indigo-500 hover:bg-indigo-400 transition shadow-lg shadow-indigo-500/25"
+          >
+            Schedule Paper
+          </button>
+        </div>
+      </form>
+    </NativeModal>
   );
 }
 
@@ -2007,36 +1871,18 @@ function DayInspectorModal({
   onAddEvent: () => void;
 }) {
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
-      onClick={onClose}
+    <NativeModal
+      isOpen={true}
+      onClose={onClose}
+      title={formatDateDisplay(dateStr)}
+      subtitle="Day Agenda & Activities"
+      icon={CalendarDays}
+      size="lg"
     >
-      <div
-        className="w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-4 max-h-[85vh] flex flex-col"
-        style={{
-          background: t.cardBg,
-          border: `1px solid ${t.cardBorder}`,
-          color: t.textPrimary,
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
-          <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-500">
-              Day Agenda &amp; Activities
-            </span>
-            <h3 className="text-lg font-bold" style={{ fontFamily: SORA, color: t.textPrimary }}>
-              {formatDateDisplay(dateStr)}
-            </h3>
-          </div>
-          <button type="button" onClick={onClose} className="p-1 rounded-lg hover:bg-slate-500/10 text-slate-400">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto space-y-3 text-xs">
+      <div className="space-y-4 text-white">
+        <div className="max-h-[55vh] overflow-y-auto space-y-3 pr-1 text-xs">
           {dayData.events.length === 0 && dayData.papers.length === 0 ? (
-            <div className="p-8 text-center" style={{ color: t.textMuted }}>
+            <div className="p-8 text-center text-white/50 bg-white/5 rounded-2xl border border-white/10">
               No special events or exam papers scheduled on this date.
             </div>
           ) : (
@@ -2044,37 +1890,37 @@ function DayInspectorModal({
               {/* Examination Papers Scheduled */}
               {dayData.papers.length > 0 && (
                 <div className="space-y-2">
-                  <div className="font-bold text-indigo-500 flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
+                  <div className="font-bold text-indigo-400 flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
                     <GraduationCap className="w-4 h-4" />
                     <span>Examination Papers ({dayData.papers.length})</span>
                   </div>
                   {dayData.papers.map((p) => (
                     <div
                       key={p.id}
-                      className="p-3 rounded-xl border border-indigo-500/20 bg-indigo-500/5 space-y-1.5"
+                      className="p-3 rounded-xl border border-indigo-400/30 bg-indigo-500/10 space-y-1.5 backdrop-blur-sm"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-sm text-indigo-600 dark:text-indigo-400">
+                        <span className="font-bold text-sm text-indigo-200">
                           {p.class_name}: {p.paper_name}
                         </span>
-                        <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                        <span className="font-semibold text-emerald-300">
                           {formatTimeDisplay(p.start_time)} - {formatTimeDisplay(p.end_time)}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+                      <div className="flex items-center justify-between text-white/70">
                         <span className="flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />
+                          <MapPin className="w-3 h-3 text-indigo-400" />
                           {p.room_or_hall}
                         </span>
                         {p.invigilator_name && (
                           <span className="flex items-center gap-1">
-                            <UserCheck className="w-3 h-3" />
+                            <UserCheck className="w-3 h-3 text-indigo-400" />
                             {p.invigilator_name}
                           </span>
                         )}
                       </div>
                       {p.instructions && (
-                        <div className="text-[11px] text-slate-500 italic">Note: {p.instructions}</div>
+                        <div className="text-[11px] text-white/50 italic">Note: {p.instructions}</div>
                       )}
                     </div>
                   ))}
@@ -2084,37 +1930,36 @@ function DayInspectorModal({
               {/* School Events */}
               {dayData.events.length > 0 && (
                 <div className="space-y-2 pt-2">
-                  <div className="font-bold text-emerald-500 flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
+                  <div className="font-bold text-emerald-400 flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
                     <CalendarDays className="w-4 h-4" />
                     <span>Calendar Events ({dayData.events.length})</span>
                   </div>
                   {dayData.events.map((ev) => {
-                    const badge = getEventTypeBadge(ev.event_type, isDark);
+                    const badge = getEventTypeBadge(ev.event_type, true);
                     return (
                       <div
                         key={ev.event_id}
-                        className="p-3 rounded-xl border space-y-1"
-                        style={{ background: badge.bg, borderColor: badge.border }}
+                        className="p-3 rounded-xl border border-white/15 bg-white/5 space-y-1 backdrop-blur-sm"
                       >
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-sm" style={{ color: badge.color }}>
+                          <span className="font-bold text-sm text-white">
                             {ev.title}
                           </span>
                           <span
-                            className="px-2 py-0.5 rounded text-[10px] font-bold"
+                            className="px-2 py-0.5 rounded text-[10px] font-bold border border-white/20"
                             style={{ background: badge.bg, color: badge.color }}
                           >
                             {badge.label}
                           </span>
                         </div>
                         {ev.location && (
-                          <div className="flex items-center gap-1 text-[11px]" style={{ color: t.textMuted }}>
-                            <MapPin className="w-3 h-3" />
+                          <div className="flex items-center gap-1 text-[11px] text-white/70">
+                            <MapPin className="w-3 h-3 text-white/50" />
                             {ev.location}
                           </div>
                         )}
                         {ev.description && (
-                          <p className="text-[11px] leading-relaxed" style={{ color: t.textMuted }}>
+                          <p className="text-[11px] leading-relaxed text-white/60">
                             {ev.description}
                           </p>
                         )}
@@ -2127,20 +1972,20 @@ function DayInspectorModal({
           )}
         </div>
 
-        <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
+        <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-2">
           {canManage ? (
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={onAddPaper}
-                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600 text-white"
+                className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-500 hover:bg-indigo-400 text-white shadow-md shadow-indigo-500/20 transition"
               >
                 + Paper
               </button>
               <button
                 type="button"
                 onClick={onAddEvent}
-                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 text-white"
+                className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-500 hover:bg-emerald-400 text-white shadow-md shadow-emerald-500/20 transition"
               >
                 + Event
               </button>
@@ -2150,12 +1995,12 @@ function DayInspectorModal({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-1.5 rounded-xl text-xs font-semibold bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200"
+            className="rounded-xl px-4 py-2 text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition"
           >
             Close
           </button>
         </div>
       </div>
-    </div>
+    </NativeModal>
   );
 }

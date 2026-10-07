@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
 import { getTokens, cardGrad, SORA, INTER } from '../../styles/posThemeTokens';
+import NativeModal from '@/components/NativeModal';
 
 interface VisitorItem {
   id: string;
@@ -282,243 +283,131 @@ export default function SecurityVisitorsPage() {
       </div>
 
       {/* Add Modal */}
-      {showAddModal && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.65)',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 20,
-          }}
-          onClick={() => setShowAddModal(false)}
-        >
-          <div
-            style={{
-              background: isDark ? '#0f172a' : '#ffffff',
-              border: `1px solid ${tk.cardBorder}`,
-              borderRadius: 16,
-              width: '100%',
-              maxWidth: 500,
-              padding: 24,
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: tk.text, fontFamily: SORA }}>
-                Check-In Campus Visitor
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowAddModal(false)}
-                style={{ background: 'transparent', border: 'none', color: tk.subText, cursor: 'pointer' }}
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCheckIn} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                  Visitor Full Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Mugisha Dennis"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: 8,
-                    background: isDark ? '#1e293b' : '#f8fafc',
-                    border: `1px solid ${tk.cardBorder}`,
-                    color: tk.text,
-                    fontSize: 13,
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                    National ID / NIN
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. CM89012345ABCD"
-                    value={nin}
-                    onChange={(e) => setNin(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      background: isDark ? '#1e293b' : '#f8fafc',
-                      border: `1px solid ${tk.cardBorder}`,
-                      color: tk.text,
-                      fontSize: 13,
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                    Phone Number
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. +256 701 443 890"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      background: isDark ? '#1e293b' : '#f8fafc',
-                      border: `1px solid ${tk.cardBorder}`,
-                      color: tk.text,
-                      fontSize: 13,
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                    Department to Visit
-                  </label>
-                  <select
-                    value={hostDept}
-                    onChange={(e) => setHostDept(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      background: isDark ? '#1e293b' : '#f8fafc',
-                      border: `1px solid ${tk.cardBorder}`,
-                      color: tk.text,
-                      fontSize: 13,
-                      boxSizing: 'border-box',
-                    }}
-                  >
-                    <option value="Administration">Administration</option>
-                    <option value="Accounts & Bursar">Accounts & Bursar</option>
-                    <option value="Academics / DOS">Academics / DOS</option>
-                    <option value="Staff Room / Teacher">Staff Room / Teacher</option>
-                    <option value="Sickbay & Clinic">Sickbay & Clinic</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                    Host Person Name
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Head Teacher"
-                    value={hostPerson}
-                    onChange={(e) => setHostPerson(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      background: isDark ? '#1e293b' : '#f8fafc',
-                      border: `1px solid ${tk.cardBorder}`,
-                      color: tk.text,
-                      fontSize: 13,
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                  Purpose of Visit *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Audit review, Fee payment, Admission inquiry"
-                  value={purpose}
-                  onChange={(e) => setPurpose(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: 8,
-                    background: isDark ? '#1e293b' : '#f8fafc',
-                    border: `1px solid ${tk.cardBorder}`,
-                    color: tk.text,
-                    fontSize: 13,
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                  Assigned Badge Number
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. V-045"
-                  value={badgeNum}
-                  onChange={(e) => setBadgeNum(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: 8,
-                    background: isDark ? '#1e293b' : '#f8fafc',
-                    border: `1px solid ${tk.cardBorder}`,
-                    color: tk.text,
-                    fontSize: 13,
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 12 }}>
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  style={{
-                    background: 'transparent',
-                    border: `1px solid ${tk.cardBorder}`,
-                    color: tk.subText,
-                    padding: '8px 14px',
-                    borderRadius: 8,
-                    fontSize: 13,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  style={{
-                    background: '#10b981',
-                    border: 'none',
-                    color: '#ffffff',
-                    padding: '8px 18px',
-                    borderRadius: 8,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Check-In Visitor
-                </button>
-              </div>
-            </form>
+      <NativeModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="Check-In Campus Visitor"
+        subtitle="Log visitor details, National ID, department destination, and issue guest badge"
+        icon={UserCheck}
+        size="lg"
+      >
+        <form onSubmit={handleCheckIn} className="flex flex-col gap-3 text-white">
+          <div>
+            <label className="block text-xs font-semibold text-white/70 mb-1">
+              Visitor Full Name *
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. Mugisha Dennis"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+            />
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-white/70 mb-1">
+                National ID / NIN
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. CM89012345ABCD"
+                value={nin}
+                onChange={(e) => setNin(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-white/70 mb-1">
+                Phone Number
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. +256 701 443 890"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-white/70 mb-1">
+                Department to Visit
+              </label>
+              <select
+                value={hostDept}
+                onChange={(e) => setHostDept(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-slate-900/90 dark:bg-black/90 hover:border-white/35 focus:border-white/70 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+              >
+                <option value="Administration" className="bg-slate-900 text-white">Administration</option>
+                <option value="Accounts & Bursar" className="bg-slate-900 text-white">Accounts & Bursar</option>
+                <option value="Academics / DOS" className="bg-slate-900 text-white">Academics / DOS</option>
+                <option value="Staff Room / Teacher" className="bg-slate-900 text-white">Staff Room / Teacher</option>
+                <option value="Sickbay & Clinic" className="bg-slate-900 text-white">Sickbay & Clinic</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-white/70 mb-1">
+                Host Person Name
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Head Teacher"
+                value={hostPerson}
+                onChange={(e) => setHostPerson(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-white/70 mb-1">
+              Purpose of Visit *
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. Audit review, Fee payment, Admission inquiry"
+              value={purpose}
+              onChange={(e) => setPurpose(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-white/70 mb-1">
+              Assigned Badge Number
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. V-045"
+              value={badgeNum}
+              onChange={(e) => setBadgeNum(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-white/15">
+            <button
+              type="button"
+              onClick={() => setShowAddModal(false)}
+              className="px-4 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition active:scale-95"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs shadow-[0_4px_16px_rgba(16,185,129,0.3)] transition active:scale-95"
+            >
+              Check-In Visitor
+            </button>
+          </div>
+        </form>
+      </NativeModal>
     </div>
   );
 }

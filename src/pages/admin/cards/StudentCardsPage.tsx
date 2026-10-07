@@ -19,6 +19,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
+import NativeModal from '@/components/NativeModal';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { getTokens, cardGrad, SORA, INTER } from '@/styles/posThemeTokens';
@@ -716,452 +717,273 @@ export default function StudentCardsPage() {
         </div>
 
         {/* BATCH ISSUANCE MODAL */}
-        {showIssueModal && (
-          <div
-            style={{
-              position: 'fixed',
-              inset: 0,
-              background: 'rgba(0,0,0,0.7)',
-              zIndex: 1000,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 20,
-            }}
-            onClick={() => setShowIssueModal(false)}
-          >
-            <div
-              style={{
-                background: isDark ? '#0f172a' : '#ffffff',
-                border: `1px solid ${tk.cardBorder}`,
-                borderRadius: 16,
-                width: '100%',
-                maxWidth: 680,
-                maxHeight: '90vh',
-                display: 'flex',
-                flexDirection: 'column',
-                boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Modal Header */}
-              <div
-                style={{
-                  padding: '20px 24px',
-                  borderBottom: `1px solid ${tk.cardBorder}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <div>
-                  <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: tk.text, fontFamily: SORA }}>
-                    Issue Student Service Access Cards
-                  </h3>
-                  <p style={{ margin: '4px 0 0', fontSize: 12, color: tk.subText }}>
-                    Create entrance cards with fee threshold gating, exam cards, or meal cards.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowIssueModal(false)}
-                  style={{ background: 'transparent', border: 'none', color: tk.subText, cursor: 'pointer' }}
+        <NativeModal
+          isOpen={showIssueModal}
+          onClose={() => setShowIssueModal(false)}
+          title="Issue Student Service Access Cards"
+          subtitle="Create entrance cards with fee threshold gating, exam cards, or meal cards."
+          icon={CreditCard}
+          size="2xl"
+        >
+          <div className="flex flex-col gap-4 text-white">
+            {/* Step 1: Card Type Selector */}
+            <div>
+              <label className="block text-xs font-bold text-white/90 mb-2">
+                1. Select Card Type
+              </label>
+              <div className="grid grid-cols-3 gap-2.5">
+                <div
+                  onClick={() => handleTypeChange('entrance')}
+                  className={`p-3 rounded-xl border cursor-pointer text-center transition ${
+                    batchType === 'entrance'
+                      ? 'border-emerald-400 bg-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
+                      : 'border-white/15 bg-white/5 hover:bg-white/10'
+                  }`}
                 >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Modal Body */}
-              <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
-                {/* Step 1: Card Type Selector */}
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 700, color: tk.text, display: 'block', marginBottom: 8 }}>
-                    1. Select Card Type
-                  </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-                    <div
-                      onClick={() => handleTypeChange('entrance')}
-                      style={{
-                        padding: 12,
-                        borderRadius: 10,
-                        border: `2px solid ${batchType === 'entrance' ? '#10b981' : tk.cardBorder}`,
-                        background: batchType === 'entrance' ? 'rgba(16,185,129,0.1)' : 'transparent',
-                        cursor: 'pointer',
-                        textAlign: 'center',
-                      }}
-                    >
-                      <ShieldCheck className="w-5 h-5 text-emerald-400" style={{ margin: '0 auto 6px' }} />
-                      <div style={{ fontSize: 12, fontWeight: 700, color: tk.text }}>Entrance Pass</div>
-                      <div style={{ fontSize: 10, color: tk.subText, marginTop: 2 }}>Fee Gated Access</div>
-                    </div>
-
-                    <div
-                      onClick={() => handleTypeChange('examination')}
-                      style={{
-                        padding: 12,
-                        borderRadius: 10,
-                        border: `2px solid ${batchType === 'examination' ? '#6366f1' : tk.cardBorder}`,
-                        background: batchType === 'examination' ? 'rgba(99,102,241,0.1)' : 'transparent',
-                        cursor: 'pointer',
-                        textAlign: 'center',
-                      }}
-                    >
-                      <Award className="w-5 h-5 text-indigo-400" style={{ margin: '0 auto 6px' }} />
-                      <div style={{ fontSize: 12, fontWeight: 700, color: tk.text }}>Exam Card</div>
-                      <div style={{ fontSize: 10, color: tk.subText, marginTop: 2 }}>Exam Room Entry</div>
-                    </div>
-
-                    <div
-                      onClick={() => handleTypeChange('meal')}
-                      style={{
-                        padding: 12,
-                        borderRadius: 10,
-                        border: `2px solid ${batchType === 'meal' ? '#f59e0b' : tk.cardBorder}`,
-                        background: batchType === 'meal' ? 'rgba(245,158,11,0.1)' : 'transparent',
-                        cursor: 'pointer',
-                        textAlign: 'center',
-                      }}
-                    >
-                      <Utensils className="w-5 h-5 text-amber-400" style={{ margin: '0 auto 6px' }} />
-                      <div style={{ fontSize: 12, fontWeight: 700, color: tk.text }}>Meal Card</div>
-                      <div style={{ fontSize: 10, color: tk.subText, marginTop: 2 }}>Dining Hall</div>
-                    </div>
-                  </div>
+                  <ShieldCheck className="w-5 h-5 text-emerald-400 mx-auto mb-1.5" />
+                  <div className="text-xs font-bold text-white">Entrance Pass</div>
+                  <div className="text-[10px] text-white/60 mt-0.5">Fee Gated Access</div>
                 </div>
 
-                {/* Step 2: Form fields */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <div>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                      Card Title / Heading *
-                    </label>
-                    <input
-                      type="text"
-                      value={batchTitle}
-                      onChange={(e) => setBatchTitle(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '8px 12px',
-                        borderRadius: 8,
-                        background: isDark ? '#1e293b' : '#f8fafc',
-                        border: `1px solid ${tk.cardBorder}`,
-                        color: tk.text,
-                        fontSize: 13,
-                        boxSizing: 'border-box',
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                      Target Class Group
-                    </label>
-                    <select
-                      value={batchClass}
-                      onChange={(e) => setBatchClass(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '8px 12px',
-                        borderRadius: 8,
-                        background: isDark ? '#1e293b' : '#f8fafc',
-                        border: `1px solid ${tk.cardBorder}`,
-                        color: tk.text,
-                        fontSize: 13,
-                        boxSizing: 'border-box',
-                      }}
-                    >
-                      <option value="">All Classes ({classList.length} active)</option>
-                      {classList.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Step 3: Fee Gating & Expiry */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <div>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                      Minimum Fee Threshold Required (%)
-                    </label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={minFeePercent}
-                        onChange={(e) => setMinFeePercent(Number(e.target.value) || 0)}
-                        style={{
-                          width: 80,
-                          padding: '8px 12px',
-                          borderRadius: 8,
-                          background: isDark ? '#1e293b' : '#f8fafc',
-                          border: `1px solid ${tk.cardBorder}`,
-                          color: tk.text,
-                          fontSize: 13,
-                        }}
-                      />
-                      <span style={{ fontSize: 12, color: tk.subText }}>
-                        {minFeePercent === 0
-                          ? 'No fee gating required'
-                          : `Only students with ≥${minFeePercent}% fees paid`}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                      Card Expiration Date & Time *
-                    </label>
-                    <input
-                      type="datetime-local"
-                      value={batchExpiry}
-                      onChange={(e) => setBatchExpiry(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '8px 12px',
-                        borderRadius: 8,
-                        background: isDark ? '#1e293b' : '#f8fafc',
-                        border: `1px solid ${tk.cardBorder}`,
-                        color: tk.text,
-                        fontSize: 13,
-                        boxSizing: 'border-box',
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {/* Step 4: Live Eligible Students List */}
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <label style={{ fontSize: 12, fontWeight: 700, color: tk.text }}>
-                      Students to Receive Cards ({selectedStudentIds.size} of {eligibilityList.length} selected)
-                    </label>
-                    <div style={{ display: 'flex', gap: 8, fontSize: 11 }}>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedStudentIds(new Set(eligibilityList.map((s) => s.student_id)))}
-                        style={{ background: 'transparent', border: 'none', color: '#10b981', cursor: 'pointer', fontWeight: 600 }}
-                      >
-                        Select All
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setSelectedStudentIds(
-                            new Set(eligibilityList.filter((s) => s.is_eligible).map((s) => s.student_id))
-                          )
-                        }
-                        style={{ background: 'transparent', border: 'none', color: '#6366f1', cursor: 'pointer', fontWeight: 600 }}
-                      >
-                        Select Eligible Only
-                      </button>
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      maxHeight: 220,
-                      overflowY: 'auto',
-                      border: `1px solid ${tk.cardBorder}`,
-                      borderRadius: 8,
-                      background: isDark ? '#1e293b' : '#f8fafc',
-                    }}
-                  >
-                    {loadingEligibility ? (
-                      <div style={{ padding: 24, textAlign: 'center', color: tk.subText, fontSize: 12 }}>
-                        Calculating fee percentages & eligibility...
-                      </div>
-                    ) : eligibilityList.length === 0 ? (
-                      <div style={{ padding: 24, textAlign: 'center', color: tk.subText, fontSize: 12 }}>
-                        No students found in this selection.
-                      </div>
-                    ) : (
-                      eligibilityList.map((st) => {
-                        const isChecked = selectedStudentIds.has(st.student_id);
-                        return (
-                          <div
-                            key={st.student_id}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              padding: '8px 12px',
-                              borderBottom: `1px solid ${tk.cardBorder}`,
-                              background: isChecked ? (isDark ? 'rgba(16,185,129,0.06)' : 'rgba(16,185,129,0.04)') : 'transparent',
-                            }}
-                          >
-                            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', flex: 1 }}>
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={(e) => {
-                                  const next = new Set(selectedStudentIds);
-                                  if (e.target.checked) next.add(st.student_id);
-                                  else next.delete(st.student_id);
-                                  setSelectedStudentIds(next);
-                                }}
-                              />
-                              <div>
-                                <span style={{ fontWeight: 600, color: tk.text, fontSize: 12 }}>{st.name}</span>
-                                <span style={{ fontSize: 11, color: tk.subText, marginLeft: 8 }}>
-                                  {st.current_class} {st.admission_number ? `(${st.admission_number})` : ''}
-                                </span>
-                              </div>
-                            </label>
-
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <span
-                                style={{
-                                  fontSize: 10.5,
-                                  fontWeight: 700,
-                                  padding: '2px 6px',
-                                  borderRadius: 4,
-                                  background: st.is_eligible ? '#dcfce7' : '#fee2e2',
-                                  color: st.is_eligible ? '#166534' : '#991b1b',
-                                }}
-                              >
-                                {st.fee_percentage}% Fees Paid
-                              </span>
-                              {!st.is_eligible && (
-                                <span style={{ fontSize: 10, color: '#ef4444' }}>Below threshold</span>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Modal Footer */}
-              <div
-                style={{
-                  padding: '16px 24px',
-                  borderTop: `1px solid ${tk.cardBorder}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'flex-end',
-                  gap: 10,
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => setShowIssueModal(false)}
-                  style={{
-                    background: 'transparent',
-                    border: `1px solid ${tk.cardBorder}`,
-                    color: tk.text,
-                    padding: '8px 16px',
-                    borderRadius: 8,
-                    fontSize: 13,
-                    cursor: 'pointer',
-                  }}
+                <div
+                  onClick={() => handleTypeChange('examination')}
+                  className={`p-3 rounded-xl border cursor-pointer text-center transition ${
+                    batchType === 'examination'
+                      ? 'border-indigo-400 bg-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.2)]'
+                      : 'border-white/15 bg-white/5 hover:bg-white/10'
+                  }`}
                 >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  disabled={isIssuing || selectedStudentIds.size === 0}
-                  onClick={handleGenerateCards}
-                  style={{
-                    background: '#10b981',
-                    color: '#ffffff',
-                    border: 'none',
-                    padding: '8px 20px',
-                    borderRadius: 8,
-                    fontSize: 13,
-                    fontWeight: 700,
-                    cursor: selectedStudentIds.size === 0 ? 'not-allowed' : 'pointer',
-                    opacity: selectedStudentIds.size === 0 ? 0.5 : 1,
-                  }}
+                  <Award className="w-5 h-5 text-indigo-400 mx-auto mb-1.5" />
+                  <div className="text-xs font-bold text-white">Exam Card</div>
+                  <div className="text-[10px] text-white/60 mt-0.5">Exam Room Entry</div>
+                </div>
+
+                <div
+                  onClick={() => handleTypeChange('meal')}
+                  className={`p-3 rounded-xl border cursor-pointer text-center transition ${
+                    batchType === 'meal'
+                      ? 'border-amber-400 bg-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.2)]'
+                      : 'border-white/15 bg-white/5 hover:bg-white/10'
+                  }`}
                 >
-                  {isIssuing ? 'Issuing...' : `Generate ${selectedStudentIds.size} Cards`}
-                </button>
+                  <Utensils className="w-5 h-5 text-amber-400 mx-auto mb-1.5" />
+                  <div className="text-xs font-bold text-white">Meal Card</div>
+                  <div className="text-[10px] text-white/60 mt-0.5">Dining Hall</div>
+                </div>
               </div>
             </div>
-          </div>
-        )}
 
-        {/* PREVIEW SINGLE CARD MODAL */}
-        {previewCard && (
-          <div
-            style={{
-              position: 'fixed',
-              inset: 0,
-              background: 'rgba(0,0,0,0.7)',
-              zIndex: 1000,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 20,
-            }}
-            onClick={() => setPreviewCard(null)}
-          >
-            <div
-              style={{
-                background: isDark ? '#0f172a' : '#ffffff',
-                border: `1px solid ${tk.cardBorder}`,
-                borderRadius: 16,
-                padding: 24,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 16,
-                maxWidth: 420,
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: tk.text }}>Official Access Card</h3>
-                <button
-                  type="button"
-                  onClick={() => setPreviewCard(null)}
-                  style={{ background: 'transparent', border: 'none', color: tk.subText, cursor: 'pointer' }}
-                >
-                  <X className="w-5 h-5" />
-                </button>
+            {/* Step 2: Form fields */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-white/70 mb-1">
+                  Card Title / Heading *
+                </label>
+                <input
+                  type="text"
+                  value={batchTitle}
+                  onChange={(e) => setBatchTitle(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+                />
               </div>
 
+              <div>
+                <label className="block text-xs font-semibold text-white/70 mb-1">
+                  Target Class Group
+                </label>
+                <select
+                  value={batchClass}
+                  onChange={(e) => setBatchClass(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-slate-900/90 dark:bg-black/90 hover:border-white/35 focus:border-white/70 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+                >
+                  <option value="" className="bg-slate-900 text-white">All Classes ({classList.length} active)</option>
+                  {classList.map((c) => (
+                    <option key={c} value={c} className="bg-slate-900 text-white">
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Step 3: Fee Gating & Expiry */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-white/70 mb-1">
+                  Minimum Fee Threshold Required (%)
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={minFeePercent}
+                    onChange={(e) => setMinFeePercent(Number(e.target.value) || 0)}
+                    className="w-20 px-3 py-2 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+                  />
+                  <span className="text-xs text-white/60">
+                    {minFeePercent === 0
+                      ? 'No fee gating required'
+                      : `Only students with ≥${minFeePercent}% fees paid`}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-white/70 mb-1">
+                  Card Expiration Date & Time *
+                </label>
+                <input
+                  type="datetime-local"
+                  value={batchExpiry}
+                  onChange={(e) => setBatchExpiry(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition [color-scheme:dark]"
+                />
+              </div>
+            </div>
+
+            {/* Step 4: Live Eligible Students List */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-bold text-white/90">
+                  Students to Receive Cards ({selectedStudentIds.size} of {eligibilityList.length} selected)
+                </label>
+                <div className="flex gap-2 text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedStudentIds(new Set(eligibilityList.map((s) => s.student_id)))}
+                    className="text-emerald-400 hover:text-emerald-300 font-semibold transition"
+                  >
+                    Select All
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedStudentIds(
+                        new Set(eligibilityList.filter((s) => s.is_eligible).map((s) => s.student_id))
+                      )
+                    }
+                    className="text-indigo-400 hover:text-indigo-300 font-semibold transition"
+                  >
+                    Select Eligible Only
+                  </button>
+                </div>
+              </div>
+
+              <div className="max-h-52 overflow-y-auto rounded-xl border border-white/15 bg-black/25 divide-y divide-white/10">
+                {loadingEligibility ? (
+                  <div className="p-6 text-center text-white/60 text-xs">
+                    Calculating fee percentages & eligibility...
+                  </div>
+                ) : eligibilityList.length === 0 ? (
+                  <div className="p-6 text-center text-white/60 text-xs">
+                    No students found in this selection.
+                  </div>
+                ) : (
+                  eligibilityList.map((st) => {
+                    const isChecked = selectedStudentIds.has(st.student_id);
+                    return (
+                      <div
+                        key={st.student_id}
+                        className={`flex items-center justify-between p-2.5 px-3 transition hover:bg-white/5 ${
+                          isChecked ? 'bg-emerald-500/10' : ''
+                        }`}
+                      >
+                        <label className="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              const next = new Set(selectedStudentIds);
+                              if (e.target.checked) next.add(st.student_id);
+                              else next.delete(st.student_id);
+                              setSelectedStudentIds(next);
+                            }}
+                            className="rounded border-white/30 text-emerald-500 focus:ring-emerald-400"
+                          />
+                          <div className="truncate">
+                            <span className="font-semibold text-white text-xs">{st.name}</span>
+                            <span className="text-[11px] text-white/60 ml-2">
+                              {st.current_class} {st.admission_number ? `(${st.admission_number})` : ''}
+                            </span>
+                          </div>
+                        </label>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span
+                            className={`text-[10.5px] font-bold px-2 py-0.5 rounded-md border ${
+                              st.is_eligible
+                                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                                : 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                            }`}
+                          >
+                            {st.fee_percentage}% Fees Paid
+                          </span>
+                          {!st.is_eligible && (
+                            <span className="text-[10px] text-rose-400 font-medium">Below threshold</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-white/15">
+              <button
+                type="button"
+                onClick={() => setShowIssueModal(false)}
+                className="px-4 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition active:scale-95"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isIssuing || selectedStudentIds.size === 0}
+                onClick={handleGenerateCards}
+                className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs shadow-[0_4px_16px_rgba(16,185,129,0.3)] transition active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+              >
+                {isIssuing ? 'Issuing...' : `Generate ${selectedStudentIds.size} Cards`}
+              </button>
+            </div>
+          </div>
+        </NativeModal>
+
+        {/* PREVIEW SINGLE CARD MODAL */}
+        <NativeModal
+          isOpen={!!previewCard}
+          onClose={() => setPreviewCard(null)}
+          title="Official Access Card"
+          subtitle={previewCard ? `Card: ${previewCard.card_number} (${previewCard.student?.name})` : undefined}
+          icon={QrCode}
+          size="md"
+        >
+          {previewCard && (
+            <div className="flex flex-col items-center gap-4 text-white">
               <StudentCardBadge
                 card={previewCard}
                 schoolName={schoolInfo.name}
                 schoolLogo={schoolInfo.badge_url}
               />
 
-              <div style={{ display: 'flex', gap: 10, width: '100%', marginTop: 8 }}>
+              <div className="flex gap-2.5 w-full mt-2">
                 <button
                   type="button"
                   onClick={() => {
                     setBatchPrintCards([previewCard]);
                     setPreviewCard(null);
                   }}
-                  style={{
-                    flex: 1,
-                    background: '#10b981',
-                    color: '#ffffff',
-                    border: 'none',
-                    padding: '8px 16px',
-                    borderRadius: 8,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 6,
-                  }}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs shadow-[0_4px_16px_rgba(16,185,129,0.3)] transition active:scale-95 flex items-center justify-center gap-2"
                 >
                   <Printer className="w-4 h-4" />
                   <span>Print Single Card</span>
                 </button>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </NativeModal>
 
         {/* BATCH PRINT SHEET MODAL */}
         {batchPrintCards && (
@@ -1235,94 +1057,47 @@ export default function StudentCardsPage() {
         )}
 
         {/* EXTEND EXPIRY MODAL */}
-        {extendExpiryCard && (
-          <div
-            style={{
-              position: 'fixed',
-              inset: 0,
-              background: 'rgba(0,0,0,0.7)',
-              zIndex: 1000,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 20,
-            }}
-            onClick={() => setExtendExpiryCard(null)}
-          >
-            <div
-              style={{
-                background: isDark ? '#0f172a' : '#ffffff',
-                border: `1px solid ${tk.cardBorder}`,
-                borderRadius: 16,
-                padding: 24,
-                width: '100%',
-                maxWidth: 400,
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h3 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 700, color: tk.text }}>
-                Extend Card Expiration
-              </h3>
-              <p style={{ margin: '0 0 16px', fontSize: 12, color: tk.subText }}>
-                Card: <strong>{extendExpiryCard.card_number}</strong> ({extendExpiryCard.student?.name})
-              </p>
+        <NativeModal
+          isOpen={!!extendExpiryCard}
+          onClose={() => setExtendExpiryCard(null)}
+          title="Extend Card Expiration"
+          subtitle={extendExpiryCard ? `Card: ${extendExpiryCard.card_number} (${extendExpiryCard.student?.name})` : undefined}
+          icon={Clock}
+          size="sm"
+        >
+          {extendExpiryCard && (
+            <div className="flex flex-col gap-3 text-white">
+              <div>
+                <label className="block text-xs font-semibold text-white/70 mb-1">
+                  New Expiry Date & Time
+                </label>
+                <input
+                  type="datetime-local"
+                  value={newExpiryInput}
+                  onChange={(e) => setNewExpiryInput(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition [color-scheme:dark]"
+                />
+              </div>
 
-              <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                New Expiry Date & Time
-              </label>
-              <input
-                type="datetime-local"
-                value={newExpiryInput}
-                onChange={(e) => setNewExpiryInput(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  borderRadius: 8,
-                  background: isDark ? '#1e293b' : '#f8fafc',
-                  border: `1px solid ${tk.cardBorder}`,
-                  color: tk.text,
-                  fontSize: 13,
-                  boxSizing: 'border-box',
-                  marginBottom: 16,
-                }}
-              />
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-white/15">
                 <button
                   type="button"
                   onClick={() => setExtendExpiryCard(null)}
-                  style={{
-                    background: 'transparent',
-                    border: `1px solid ${tk.cardBorder}`,
-                    color: tk.text,
-                    padding: '8px 16px',
-                    borderRadius: 8,
-                    fontSize: 13,
-                    cursor: 'pointer',
-                  }}
+                  className="px-4 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition active:scale-95"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={handleExtendExpiry}
-                  style={{
-                    background: '#10b981',
-                    color: '#ffffff',
-                    border: 'none',
-                    padding: '8px 16px',
-                    borderRadius: 8,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs shadow-[0_4px_16px_rgba(16,185,129,0.3)] transition active:scale-95"
                 >
                   Save & Renew
                 </button>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </NativeModal>
       </div>
     </AdminPageWrapper>
   );

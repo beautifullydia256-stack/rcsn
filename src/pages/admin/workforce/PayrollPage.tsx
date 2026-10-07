@@ -6,6 +6,7 @@ import { useUIStore } from '@/store/uiStore';
 import { usePermission } from '@/hooks/usePermission';
 import { PERMISSION_KEYS } from '@/lib/permissions';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
+import NativeModal from '@/components/NativeModal';
 import PosEmptyState from '@/components/finance/pos/PosEmptyState';
 import { fetchPayrollPageData, fetchPayrollPayslips, type PayslipRow } from '@/pages/admin/workforce/workforceApi';
 import { workforceQueryKeys } from '@/pages/admin/workforce/workforceQueryKeys';
@@ -602,57 +603,37 @@ export default function PayrollPage() {
 
         {/* Voucher Preview Modal */}
         {selectedVoucher && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm print:p-0">
-            <div
-              className="w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-4"
-              style={{
-                backgroundColor: t.surface,
-                border: `1px solid ${t.border}`,
-              }}
-            >
-              <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: t.border }}>
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500/15 text-teal-400">
-                    <FileText className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-100" style={{ fontFamily: SORA }}>
-                      Staff Payment Voucher
-                    </h3>
-                    <p className="text-xs text-slate-400">{activePeriodObj?.label}</p>
-                  </div>
+          <NativeModal
+            isOpen={!!selectedVoucher}
+            onClose={() => setSelectedVoucher(null)}
+            title="Staff Payment Voucher"
+            subtitle={activePeriodObj?.label}
+            icon={FileText}
+            size="md"
+          >
+            <div className="space-y-4 text-white">
+              <div className="space-y-2.5 text-sm rounded-2xl bg-black/30 border border-white/10 p-4">
+                <div className="flex justify-between border-b border-white/10 pb-2">
+                  <span className="text-white/60">Employee Name:</span>
+                  <span className="font-semibold text-white">{staffName(selectedVoucher)}</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedVoucher(null)}
-                  className="rounded-lg p-1 text-slate-400 hover:text-slate-200"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between border-b border-white/10 py-2">
-                  <span className="text-slate-400">Employee Name:</span>
-                  <span className="font-semibold text-slate-100">{staffName(selectedVoucher)}</span>
+                <div className="flex justify-between border-b border-white/10 pb-2">
+                  <span className="text-white/60">Category:</span>
+                  <span className="capitalize text-white/90">{selectedVoucher.staff_kind.replace('_', ' ')}</span>
                 </div>
-                <div className="flex justify-between border-b border-white/10 py-2">
-                  <span className="text-slate-400">Category:</span>
-                  <span className="capitalize text-slate-200">{selectedVoucher.staff_kind.replace('_', ' ')}</span>
-                </div>
-                <div className="flex justify-between border-b border-white/10 py-2">
-                  <span className="text-slate-400">Gross Earnings:</span>
-                  <span className="font-semibold text-slate-100">
+                <div className="flex justify-between border-b border-white/10 pb-2">
+                  <span className="text-white/60">Gross Earnings:</span>
+                  <span className="font-semibold text-white">
                     UGX {Number(selectedVoucher.gross).toLocaleString()}
                   </span>
                 </div>
-                <div className="flex justify-between border-b border-white/10 py-2">
-                  <span className="text-slate-400">Total Deductions:</span>
-                  <span className="text-amber-400">
+                <div className="flex justify-between border-b border-white/10 pb-2">
+                  <span className="text-white/60">Total Deductions:</span>
+                  <span className="text-amber-400 font-medium">
                     UGX {(Number(selectedVoucher.gross) - Number(selectedVoucher.net)).toLocaleString()}
                   </span>
                 </div>
-                <div className="flex justify-between rounded-xl bg-emerald-500/10 p-3">
+                <div className="flex justify-between rounded-xl bg-emerald-500/15 border border-emerald-500/30 p-3 mt-1">
                   <span className="font-semibold text-emerald-300">Net Disbursable:</span>
                   <span className="text-base font-bold text-emerald-400" style={{ fontFamily: SORA }}>
                     UGX {Number(selectedVoucher.net).toLocaleString()}
@@ -660,267 +641,218 @@ export default function PayrollPage() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-3">
+              <div className="flex justify-end gap-2 pt-2 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setSelectedVoucher(null)}
+                  className="rounded-xl px-4 py-2.5 text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition"
+                >
+                  Close
+                </button>
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-teal-600 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-500"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-teal-500 hover:bg-teal-400 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-teal-500/25 transition"
                 >
                   <Printer className="h-3.5 w-3.5" />
                   Print Voucher
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedVoucher(null)}
-                  className="rounded-xl px-4 py-2 text-xs font-medium text-slate-400 hover:text-slate-200"
-                >
-                  Close
-                </button>
               </div>
             </div>
-          </div>
+          </NativeModal>
         )}
 
         {/* Modal: New Pay Period */}
-        {showNewPeriodModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-            <div
-              className="w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4"
-              style={{
-                backgroundColor: t.surface,
-                border: `1px solid ${t.border}`,
-              }}
-            >
-              <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: t.border }}>
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500/15 text-teal-400">
-                    <Calendar className="h-4 w-4" />
-                  </div>
-                  <h3 className="font-semibold text-slate-100" style={{ fontFamily: SORA }}>
-                    New Payroll Period
-                  </h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowNewPeriodModal(false)}
-                  className="rounded-lg p-1 text-slate-400 hover:text-slate-200"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              <form onSubmit={createPeriod} className="space-y-3.5">
-                <div>
-                  <label className="text-xs font-medium text-slate-300">Period Label</label>
-                  <input
-                    type="text"
-                    required
-                    value={newLabel}
-                    onChange={(e) => setNewLabel(e.target.value)}
-                    placeholder="e.g. October 2026"
-                    className="mt-1 w-full rounded-xl border px-3 py-2 text-sm text-slate-100"
-                    style={{ backgroundColor: t.surfaceSubtle, borderColor: t.border }}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-medium text-slate-300">Period Start</label>
-                    <input
-                      type="date"
-                      required
-                      value={newStart}
-                      onChange={(e) => setNewStart(e.target.value)}
-                      className="mt-1 w-full rounded-xl border px-3 py-2 text-sm text-slate-100"
-                      style={{ backgroundColor: t.surfaceSubtle, borderColor: t.border }}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-slate-300">Period End</label>
-                    <input
-                      type="date"
-                      required
-                      value={newEnd}
-                      onChange={(e) => setNewEnd(e.target.value)}
-                      className="mt-1 w-full rounded-xl border px-3 py-2 text-sm text-slate-100"
-                      style={{ backgroundColor: t.surfaceSubtle, borderColor: t.border }}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPeriodModal(false)}
-                    className="rounded-xl px-4 py-2 text-xs font-medium text-slate-400 hover:text-slate-200"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={savingPeriod}
-                    className="rounded-xl bg-teal-600 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-500 disabled:opacity-50"
-                  >
-                    {savingPeriod ? 'Creating…' : 'Create Period'}
-                  </button>
-                </div>
-              </form>
+        <NativeModal
+          isOpen={showNewPeriodModal}
+          onClose={() => setShowNewPeriodModal(false)}
+          title="New Payroll Period"
+          subtitle="Define new payroll cycle dates and label"
+          icon={Calendar}
+          size="md"
+        >
+          <form onSubmit={createPeriod} className="space-y-4 text-white">
+            <div>
+              <label className="block text-xs font-semibold text-white/70 mb-1">Period Label *</label>
+              <input
+                type="text"
+                required
+                value={newLabel}
+                onChange={(e) => setNewLabel(e.target.value)}
+                placeholder="e.g. October 2026"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-teal-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+              />
             </div>
-          </div>
-        )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-white/70 mb-1">Period Start *</label>
+                <input
+                  type="date"
+                  required
+                  value={newStart}
+                  onChange={(e) => setNewStart(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-teal-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-white/70 mb-1">Period End *</label>
+                <input
+                  type="date"
+                  required
+                  value={newEnd}
+                  onChange={(e) => setNewEnd(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-teal-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => setShowNewPeriodModal(false)}
+                className="rounded-xl px-4 py-2.5 text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={savingPeriod}
+                className="rounded-xl bg-teal-500 hover:bg-teal-400 px-5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-teal-500/25 transition disabled:opacity-50"
+              >
+                {savingPeriod ? 'Creating…' : 'Create Period'}
+              </button>
+            </div>
+          </form>
+        </NativeModal>
 
         {/* Modal: Add Payslip Line */}
-        {showNewPayslipModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-            <div
-              className="w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4"
-              style={{
-                backgroundColor: t.surface,
-                border: `1px solid ${t.border}`,
-              }}
-            >
-              <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: t.border }}>
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-400">
-                    <CreditCard className="h-4 w-4" />
-                  </div>
-                  <h3 className="font-semibold text-slate-100" style={{ fontFamily: SORA }}>
-                    Add Payslip Record
-                  </h3>
-                </div>
+        <NativeModal
+          isOpen={showNewPayslipModal}
+          onClose={() => setShowNewPayslipModal(false)}
+          title="Add Payslip Record"
+          subtitle="Issue pay record for teaching or support staff"
+          icon={CreditCard}
+          size="md"
+        >
+          <form onSubmit={addPayslip} className="space-y-4 text-white">
+            <div>
+              <label className="block text-xs font-semibold text-white/70 mb-1.5">Staff Category</label>
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowNewPayslipModal(false)}
-                  className="rounded-lg p-1 text-slate-400 hover:text-slate-200"
+                  onClick={() => {
+                    setPKind('teacher');
+                    setPStaff('');
+                  }}
+                  className={`rounded-xl border py-2.5 text-xs font-semibold transition ${
+                    pKind === 'teacher'
+                      ? 'border-emerald-400 bg-emerald-500/20 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
+                      : 'border-white/15 bg-white/5 hover:bg-white/10 text-white/70'
+                  }`}
                 >
-                  <X className="h-5 w-5" />
+                  Teaching Staff
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPKind('other_staff');
+                    setPStaff('');
+                  }}
+                  className={`rounded-xl border py-2.5 text-xs font-semibold transition ${
+                    pKind === 'other_staff'
+                      ? 'border-purple-400 bg-purple-500/20 text-purple-300 shadow-[0_0_15px_rgba(168,85,247,0.2)]'
+                      : 'border-white/15 bg-white/5 hover:bg-white/10 text-white/70'
+                  }`}
+                >
+                  Support Staff
                 </button>
               </div>
-
-              <form onSubmit={addPayslip} className="space-y-3.5">
-                <div>
-                  <label className="text-xs font-medium text-slate-300">Staff Category</label>
-                  <div className="mt-1 grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPKind('teacher');
-                        setPStaff('');
-                      }}
-                      className={`rounded-xl border py-2 text-xs font-medium transition-all ${
-                        pKind === 'teacher'
-                          ? 'border-emerald-500/50 bg-emerald-500/15 text-emerald-300'
-                          : 'border-white/10 bg-white/5 text-slate-400'
-                      }`}
-                    >
-                      Teaching Staff
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPKind('other_staff');
-                        setPStaff('');
-                      }}
-                      className={`rounded-xl border py-2 text-xs font-medium transition-all ${
-                        pKind === 'other_staff'
-                          ? 'border-purple-500/50 bg-purple-500/15 text-purple-300'
-                          : 'border-white/10 bg-white/5 text-slate-400'
-                      }`}
-                    >
-                      Support Staff
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-slate-300">Staff Member</label>
-                  <select
-                    required
-                    value={pStaff}
-                    onChange={(e) => setPStaff(e.target.value)}
-                    className="mt-1 w-full rounded-xl border px-3 py-2 text-sm text-slate-100"
-                    style={{ backgroundColor: t.surfaceSubtle, borderColor: t.border }}
-                  >
-                    <option value="">Choose a staff member…</option>
-                    {pKind === 'teacher'
-                      ? tList.map((t) => (
-                          <option key={t.teacher_id} value={t.teacher_id}>
-                            {t.name}
-                          </option>
-                        ))
-                      : oList.map((o) => (
-                          <option key={o.id} value={o.id}>
-                            {o.full_name}
-                          </option>
-                        ))}
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-medium text-slate-300">Gross Pay (UGX)</label>
-                    <input
-                      type="number"
-                      required
-                      min="0"
-                      placeholder="e.g. 1500000"
-                      value={gross}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setGross(val);
-                        if (!net) setNet(val);
-                      }}
-                      className="mt-1 w-full rounded-xl border px-3 py-2 text-sm text-slate-100"
-                      style={{ backgroundColor: t.surfaceSubtle, borderColor: t.border }}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-slate-300">Net Pay (UGX)</label>
-                    <input
-                      type="number"
-                      required
-                      min="0"
-                      placeholder="e.g. 1350000"
-                      value={net}
-                      onChange={(e) => setNet(e.target.value)}
-                      className="mt-1 w-full rounded-xl border px-3 py-2 text-sm text-slate-100"
-                      style={{ backgroundColor: t.surfaceSubtle, borderColor: t.border }}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-slate-300">Remarks / Breakdown Notes</label>
-                  <input
-                    type="text"
-                    value={pNotes}
-                    onChange={(e) => setPNotes(e.target.value)}
-                    placeholder="e.g. Base salary + transport allowance"
-                    className="mt-1 w-full rounded-xl border px-3 py-2 text-sm text-slate-100"
-                    style={{ backgroundColor: t.surfaceSubtle, borderColor: t.border }}
-                  />
-                </div>
-
-                <div className="flex justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPayslipModal(false)}
-                    className="rounded-xl px-4 py-2 text-xs font-medium text-slate-400 hover:text-slate-200"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={savingPayslip}
-                    className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
-                  >
-                    {savingPayslip ? 'Saving…' : 'Record Payslip'}
-                  </button>
-                </div>
-              </form>
             </div>
-          </div>
-        )}
+
+            <div>
+              <label className="block text-xs font-semibold text-white/70 mb-1">Staff Member *</label>
+              <select
+                required
+                value={pStaff}
+                onChange={(e) => setPStaff(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-slate-900/90 dark:bg-black/90 hover:border-white/35 focus:border-white/70 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-teal-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+              >
+                <option value="" className="bg-slate-900 text-white">Choose a staff member…</option>
+                {pKind === 'teacher'
+                  ? tList.map((t) => (
+                      <option key={t.teacher_id} value={t.teacher_id} className="bg-slate-900 text-white">
+                        {t.name}
+                      </option>
+                    ))
+                  : oList.map((o) => (
+                      <option key={o.id} value={o.id} className="bg-slate-900 text-white">
+                        {o.full_name}
+                      </option>
+                    ))}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-white/70 mb-1">Gross Pay (UGX) *</label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  placeholder="e.g. 1500000"
+                  value={gross}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setGross(val);
+                    if (!net) setNet(val);
+                  }}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-teal-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-white/70 mb-1">Net Pay (UGX) *</label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  placeholder="e.g. 1350000"
+                  value={net}
+                  onChange={(e) => setNet(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-teal-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-white/70 mb-1">Remarks / Breakdown Notes</label>
+              <input
+                type="text"
+                value={pNotes}
+                onChange={(e) => setPNotes(e.target.value)}
+                placeholder="e.g. Base salary + transport allowance"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-teal-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => setShowNewPayslipModal(false)}
+                className="rounded-xl px-4 py-2.5 text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={savingPayslip}
+                className="rounded-xl bg-emerald-500 hover:bg-emerald-400 px-5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-emerald-500/25 transition disabled:opacity-50"
+              >
+                {savingPayslip ? 'Saving…' : 'Record Payslip'}
+              </button>
+            </div>
+          </form>
+        </NativeModal>
       </div>
     </AdminPageWrapper>
   );

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
 import { getTokens, cardGrad, SORA, INTER } from '../../styles/posThemeTokens';
+import NativeModal from '@/components/NativeModal';
 
 interface MedicalAlertRecord {
   id: string;
@@ -278,100 +279,55 @@ export default function ClinicianRecordsPage() {
       </div>
 
       {/* Record Details Modal */}
-      {selectedRecord && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.65)',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 20,
-            backdropFilter: 'blur(3px)',
-          }}
-          onClick={() => setSelectedRecord(null)}
-        >
-          <div
-            style={{
-              background: isDark ? '#0f172a' : '#ffffff',
-              border: `1px solid ${tk.cardBorder}`,
-              borderRadius: 16,
-              width: '100%',
-              maxWidth: 540,
-              padding: 24,
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: tk.text, fontFamily: SORA }}>
-                  {selectedRecord.studentName}
-                </h3>
-                <div style={{ fontSize: 12, color: tk.subText }}>
-                  {selectedRecord.className} • {selectedRecord.admissionNo}
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedRecord(null)}
-                style={{ background: 'transparent', border: 'none', color: tk.subText, cursor: 'pointer' }}
-              >
-                <X className="w-5 h-5" />
-              </button>
+      <NativeModal
+        isOpen={!!selectedRecord}
+        onClose={() => setSelectedRecord(null)}
+        title={selectedRecord?.studentName || 'Student Medical Record'}
+        subtitle={selectedRecord ? `${selectedRecord.className} • ${selectedRecord.admissionNo}` : undefined}
+        icon={HeartPulse}
+        size="lg"
+      >
+        {selectedRecord && (
+          <div className="flex flex-col gap-3 text-white">
+            <div className="p-3.5 rounded-xl border border-white/15 bg-black/25">
+              <div className="text-xs font-semibold text-white/70">Condition Description</div>
+              <div className="text-sm font-medium text-white mt-1">{selectedRecord.condition}</div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: 13 }}>
-              <div style={{ background: isDark ? '#1e293b' : '#f8fafc', padding: 12, borderRadius: 8 }}>
-                <div style={{ fontWeight: 600, color: tk.text }}>Condition Description</div>
-                <div style={{ color: tk.subText, marginTop: 4 }}>{selectedRecord.condition}</div>
-              </div>
-
-              <div style={{ background: 'rgba(244, 63, 94, 0.08)', border: '1px solid rgba(244, 63, 94, 0.2)', padding: 12, borderRadius: 8 }}>
-                <div style={{ fontWeight: 700, color: '#f43f5e' }}>Emergency Action Protocol</div>
-                <div style={{ color: tk.text, marginTop: 4, lineHeight: 1.5 }}>
-                  {selectedRecord.emergencyProtocol}
-                </div>
-              </div>
-
-              <div style={{ background: isDark ? '#1e293b' : '#f8fafc', padding: 12, borderRadius: 8 }}>
-                <div style={{ fontWeight: 600, color: tk.text }}>Medication Stored on Campus</div>
-                <div style={{ color: '#10b981', marginTop: 4 }}>{selectedRecord.medicationStored}</div>
-              </div>
-
-              <div style={{ background: isDark ? '#1e293b' : '#f8fafc', padding: 12, borderRadius: 8 }}>
-                <div style={{ fontWeight: 600, color: tk.text }}>Emergency Contact</div>
-                <div style={{ color: tk.subText, marginTop: 4 }}>{selectedRecord.parentContact}</div>
-              </div>
-
-              <div style={{ background: isDark ? '#1e293b' : '#f8fafc', padding: 12, borderRadius: 8 }}>
-                <div style={{ fontWeight: 600, color: tk.text }}>Physician Guidance</div>
-                <div style={{ color: tk.subText, marginTop: 4 }}>{selectedRecord.doctorNotes}</div>
+            <div className="p-3.5 rounded-xl border border-rose-500/30 bg-rose-500/15">
+              <div className="text-xs font-bold text-rose-300">Emergency Action Protocol</div>
+              <div className="text-sm text-white/90 mt-1 leading-relaxed">
+                {selectedRecord.emergencyProtocol}
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+            <div className="p-3.5 rounded-xl border border-white/15 bg-black/25">
+              <div className="text-xs font-semibold text-white/70">Medication Stored on Campus</div>
+              <div className="text-sm font-bold text-emerald-400 mt-1">{selectedRecord.medicationStored}</div>
+            </div>
+
+            <div className="p-3.5 rounded-xl border border-white/15 bg-black/25">
+              <div className="text-xs font-semibold text-white/70">Emergency Contact</div>
+              <div className="text-sm font-medium text-white mt-1">{selectedRecord.parentContact}</div>
+            </div>
+
+            <div className="p-3.5 rounded-xl border border-white/15 bg-black/25">
+              <div className="text-xs font-semibold text-white/70">Physician Guidance</div>
+              <div className="text-sm text-white/80 mt-1">{selectedRecord.doctorNotes}</div>
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-white/15">
               <button
                 type="button"
                 onClick={() => setSelectedRecord(null)}
-                style={{
-                  background: '#10b981',
-                  border: 'none',
-                  color: '#ffffff',
-                  padding: '8px 20px',
-                  borderRadius: 8,
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
+                className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs shadow-[0_4px_16px_rgba(16,185,129,0.3)] transition active:scale-95"
               >
                 Close
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </NativeModal>
     </div>
   );
 }

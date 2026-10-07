@@ -7,6 +7,7 @@ import { usePermission } from '@/hooks/usePermission';
 import { PERMISSION_KEYS } from '@/lib/permissions';
 import { useAcademicPeriod } from '@/lib/academicPeriodTerminology';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
+import NativeModal from '@/components/NativeModal';
 import PosEmptyState from '@/components/finance/pos/PosEmptyState';
 import { fetchPerformancePageData, fetchPerformanceGoals } from '@/pages/admin/workforce/workforceApi';
 import { workforceQueryKeys } from '@/pages/admin/workforce/workforceQueryKeys';
@@ -584,227 +585,179 @@ export default function PerformancePage() {
         </div>
 
         {/* Modal: Add Review Cycle */}
-        {showNewCycleModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-            <div
-              className="w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4"
-              style={{
-                backgroundColor: t.surface,
-                border: `1px solid ${t.border}`,
-              }}
-            >
-              <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: t.border }}>
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500/15 text-teal-400">
-                    <Calendar className="h-4 w-4" />
-                  </div>
-                  <h3 className="font-semibold text-slate-100" style={{ fontFamily: SORA }}>
-                    New Review Cycle
-                  </h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowNewCycleModal(false)}
-                  className="rounded-lg p-1 text-slate-400 hover:text-slate-200"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              <form onSubmit={addCycle} className="space-y-3.5">
-                <div>
-                  <label className="text-xs font-medium text-slate-300">Cycle Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={cname}
-                    onChange={(e) => setCname(e.target.value)}
-                    placeholder={`e.g. ${labels.periodNoun} 1 2026`}
-                    className="mt-1 w-full rounded-xl border px-3 py-2 text-sm text-slate-100"
-                    style={{ backgroundColor: t.surfaceSubtle, borderColor: t.border }}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-medium text-slate-300">Start Date</label>
-                    <input
-                      type="date"
-                      required
-                      value={cstart}
-                      onChange={(e) => setCstart(e.target.value)}
-                      className="mt-1 w-full rounded-xl border px-3 py-2 text-sm text-slate-100"
-                      style={{ backgroundColor: t.surfaceSubtle, borderColor: t.border }}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-slate-300">End Date</label>
-                    <input
-                      type="date"
-                      required
-                      value={cend}
-                      onChange={(e) => setCend(e.target.value)}
-                      className="mt-1 w-full rounded-xl border px-3 py-2 text-sm text-slate-100"
-                      style={{ backgroundColor: t.surfaceSubtle, borderColor: t.border }}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-slate-300">Initial Status</label>
-                  <select
-                    value={cstatus}
-                    onChange={(e) => setCstatus(e.target.value)}
-                    className="mt-1 w-full rounded-xl border px-3 py-2 text-sm text-slate-100"
-                    style={{ backgroundColor: t.surfaceSubtle, borderColor: t.border }}
-                  >
-                    <option value="active">Active</option>
-                    <option value="draft">Draft</option>
-                    <option value="completed">Completed</option>
-                  </select>
-                </div>
-
-                <div className="flex justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowNewCycleModal(false)}
-                    className="rounded-xl px-4 py-2 text-xs font-medium text-slate-400 hover:text-slate-200"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={savingCycle}
-                    className="rounded-xl bg-teal-600 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-500 disabled:opacity-50"
-                  >
-                    {savingCycle ? 'Creating…' : 'Create Cycle'}
-                  </button>
-                </div>
-              </form>
+        <NativeModal
+          isOpen={showNewCycleModal}
+          onClose={() => setShowNewCycleModal(false)}
+          title="New Review Cycle"
+          subtitle={`Configure academic evaluation period for ${labels.periodNoun}`}
+          icon={Calendar}
+          size="md"
+        >
+          <form onSubmit={addCycle} className="space-y-4 text-white">
+            <div>
+              <label className="block text-xs font-semibold text-white/70 mb-1">Cycle Name *</label>
+              <input
+                type="text"
+                required
+                value={cname}
+                onChange={(e) => setCname(e.target.value)}
+                placeholder={`e.g. ${labels.periodNoun} 1 2026`}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-teal-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+              />
             </div>
-          </div>
-        )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-white/70 mb-1">Start Date *</label>
+                <input
+                  type="date"
+                  required
+                  value={cstart}
+                  onChange={(e) => setCstart(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-teal-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-white/70 mb-1">End Date *</label>
+                <input
+                  type="date"
+                  required
+                  value={cend}
+                  onChange={(e) => setCend(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-teal-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-white/70 mb-1">Initial Status</label>
+              <select
+                value={cstatus}
+                onChange={(e) => setCstatus(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-slate-900/90 dark:bg-black/90 hover:border-white/35 focus:border-white/70 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-teal-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+              >
+                <option value="active" className="bg-slate-900 text-white">Active</option>
+                <option value="draft" className="bg-slate-900 text-white">Draft</option>
+                <option value="completed" className="bg-slate-900 text-white">Completed</option>
+              </select>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => setShowNewCycleModal(false)}
+                className="rounded-xl px-4 py-2.5 text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={savingCycle}
+                className="rounded-xl bg-teal-500 hover:bg-teal-400 px-5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-teal-500/25 transition disabled:opacity-50"
+              >
+                {savingCycle ? 'Creating…' : 'Create Cycle'}
+              </button>
+            </div>
+          </form>
+        </NativeModal>
 
         {/* Modal: Add Staff Goal */}
-        {showNewGoalModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-            <div
-              className="w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4"
-              style={{
-                backgroundColor: t.surface,
-                border: `1px solid ${t.border}`,
-              }}
-            >
-              <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: t.border }}>
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-400">
-                    <Target className="h-4 w-4" />
-                  </div>
-                  <h3 className="font-semibold text-slate-100" style={{ fontFamily: SORA }}>
-                    Add Performance Goal
-                  </h3>
-                </div>
+        <NativeModal
+          isOpen={showNewGoalModal}
+          onClose={() => setShowNewGoalModal(false)}
+          title="Add Performance Goal"
+          subtitle="Assign objective or metric to teacher or staff"
+          icon={Target}
+          size="md"
+        >
+          <form onSubmit={addGoal} className="space-y-4 text-white">
+            <div>
+              <label className="block text-xs font-semibold text-white/70 mb-1.5">Staff Category</label>
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowNewGoalModal(false)}
-                  className="rounded-lg p-1 text-slate-400 hover:text-slate-200"
+                  onClick={() => {
+                    setGKind('teacher');
+                    setGStaff('');
+                  }}
+                  className={`rounded-xl border py-2.5 text-xs font-semibold transition ${
+                    gKind === 'teacher'
+                      ? 'border-emerald-400 bg-emerald-500/20 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
+                      : 'border-white/15 bg-white/5 hover:bg-white/10 text-white/70'
+                  }`}
                 >
-                  <X className="h-5 w-5" />
+                  Teaching Staff
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGKind('other_staff');
+                    setGStaff('');
+                  }}
+                  className={`rounded-xl border py-2.5 text-xs font-semibold transition ${
+                    gKind === 'other_staff'
+                      ? 'border-purple-400 bg-purple-500/20 text-purple-300 shadow-[0_0_15px_rgba(168,85,247,0.2)]'
+                      : 'border-white/15 bg-white/5 hover:bg-white/10 text-white/70'
+                  }`}
+                >
+                  Support Staff
                 </button>
               </div>
-
-              <form onSubmit={addGoal} className="space-y-3.5">
-                <div>
-                  <label className="text-xs font-medium text-slate-300">Staff Category</label>
-                  <div className="mt-1 grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setGKind('teacher');
-                        setGStaff('');
-                      }}
-                      className={`rounded-xl border py-2 text-xs font-medium transition-all ${
-                        gKind === 'teacher'
-                          ? 'border-emerald-500/50 bg-emerald-500/15 text-emerald-300'
-                          : 'border-white/10 bg-white/5 text-slate-400'
-                      }`}
-                    >
-                      Teaching Staff
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setGKind('other_staff');
-                        setGStaff('');
-                      }}
-                      className={`rounded-xl border py-2 text-xs font-medium transition-all ${
-                        gKind === 'other_staff'
-                          ? 'border-purple-500/50 bg-purple-500/15 text-purple-300'
-                          : 'border-white/10 bg-white/5 text-slate-400'
-                      }`}
-                    >
-                      Support Staff
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-slate-300">Select Staff Member</label>
-                  <select
-                    required
-                    value={gStaff}
-                    onChange={(e) => setGStaff(e.target.value)}
-                    className="mt-1 w-full rounded-xl border px-3 py-2 text-sm text-slate-100"
-                    style={{ backgroundColor: t.surfaceSubtle, borderColor: t.border }}
-                  >
-                    <option value="">Choose a staff member…</option>
-                    {gKind === 'teacher'
-                      ? teachers.map((tc) => (
-                          <option key={tc.teacher_id} value={tc.teacher_id}>
-                            {tc.name}
-                          </option>
-                        ))
-                      : other.map((os) => (
-                          <option key={os.id} value={os.id}>
-                            {os.full_name}
-                          </option>
-                        ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-slate-300">Goal Description / Milestone</label>
-                  <textarea
-                    required
-                    rows={3}
-                    value={goalTitle}
-                    onChange={(e) => setGoalTitle(e.target.value)}
-                    placeholder="e.g. Complete curriculum milestone for Semester 1, achieve 90% attendance"
-                    className="mt-1 w-full rounded-xl border px-3 py-2 text-sm text-slate-100"
-                    style={{ backgroundColor: t.surfaceSubtle, borderColor: t.border }}
-                  />
-                </div>
-
-                <div className="flex justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowNewGoalModal(false)}
-                    className="rounded-xl px-4 py-2 text-xs font-medium text-slate-400 hover:text-slate-200"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={savingGoal}
-                    className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
-                  >
-                    {savingGoal ? 'Saving…' : 'Save Goal'}
-                  </button>
-                </div>
-              </form>
             </div>
-          </div>
-        )}
+
+            <div>
+              <label className="block text-xs font-semibold text-white/70 mb-1">Select Staff Member *</label>
+              <select
+                required
+                value={gStaff}
+                onChange={(e) => setGStaff(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-slate-900/90 dark:bg-black/90 hover:border-white/35 focus:border-white/70 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-teal-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+              >
+                <option value="" className="bg-slate-900 text-white">Choose a staff member…</option>
+                {gKind === 'teacher'
+                  ? teachers.map((tc) => (
+                      <option key={tc.teacher_id} value={tc.teacher_id} className="bg-slate-900 text-white">
+                        {tc.name}
+                      </option>
+                    ))
+                  : other.map((os) => (
+                      <option key={os.id} value={os.id} className="bg-slate-900 text-white">
+                        {os.full_name}
+                      </option>
+                    ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-white/70 mb-1">Goal Description / Milestone *</label>
+              <textarea
+                required
+                rows={3}
+                value={goalTitle}
+                onChange={(e) => setGoalTitle(e.target.value)}
+                placeholder="e.g. Complete curriculum milestone for Semester 1, achieve 90% attendance"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-teal-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => setShowNewGoalModal(false)}
+                className="rounded-xl px-4 py-2.5 text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={savingGoal}
+                className="rounded-xl bg-emerald-500 hover:bg-emerald-400 px-5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-emerald-500/25 transition disabled:opacity-50"
+              >
+                {savingGoal ? 'Saving…' : 'Save Goal'}
+              </button>
+            </div>
+          </form>
+        </NativeModal>
       </div>
     </AdminPageWrapper>
   );
