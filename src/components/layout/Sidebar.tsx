@@ -39,8 +39,8 @@ export default function Sidebar() {
       }}
       transition={{ type: 'spring', damping: 30, stiffness: 300 }}
       className={cn(
-        'fixed left-0 top-0 h-full z-40 glass-strong glass-rounded-r-xl',
-        'border-r border-white/20 overflow-hidden',
+        'fixed left-0 top-0 h-full z-40 bg-white/75 dark:bg-slate-950/65 backdrop-blur-2xl backdrop-saturate-[180%] rounded-r-2xl',
+        'border-r border-white/40 dark:border-white/10 shadow-[10px_0_35px_-5px_rgba(0,0,0,0.38),inset_-1px_0_1.5px_rgba(255,255,255,0.2)] overflow-hidden',
         !sidebarOpen && 'pointer-events-none'
       )}
     >

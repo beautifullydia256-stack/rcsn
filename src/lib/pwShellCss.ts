@@ -12,16 +12,16 @@ export const POS_SIDEBAR_SHARED_CSS = `
   html.dark,
   [data-theme="dark"],
   body.dark {
-    --pos-side-bg: #070B09;
-    --pos-header-bg: #070B09;
-    --pos-border: rgba(255, 255, 255, 0.07);
-    --pos-border-subtle: rgba(255, 255, 255, 0.04);
+    --pos-side-bg: rgba(10, 15, 29, 0.65);
+    --pos-header-bg: rgba(10, 15, 29, 0.50);
+    --pos-border: rgba(255, 255, 255, 0.12);
+    --pos-border-subtle: rgba(255, 255, 255, 0.06);
     --pos-ink: #f1f5f9;
     --pos-ink-soft: #94a3b8;
     --pos-ink-faint: #475569;
     --pos-brand: #a78bfa;
     --pos-brand-purple: #8b5cf6;
-    --pos-active-bg: rgba(139, 92, 246, 0.85);
+    --pos-active-bg: rgba(139, 92, 246, 0.22);
     --pos-active-text: #ffffff;
     --pos-hover-bg: rgba(255, 255, 255, 0.055);
     --pos-select-border: rgba(255, 255, 255, 0.15);
@@ -54,17 +54,17 @@ export const POS_SIDEBAR_SHARED_CSS = `
   html.light,
   [data-theme="light"],
   :root:not(.dark) {
-    --pos-side-bg: #ffffff;
-    --pos-header-bg: #f8f8fb;
-    --pos-border: #ececef;
-    --pos-border-subtle: #f2f3f5;
+    --pos-side-bg: rgba(255, 255, 255, 0.75);
+    --pos-header-bg: rgba(255, 255, 255, 0.60);
+    --pos-border: rgba(255, 255, 255, 0.85);
+    --pos-border-subtle: rgba(0, 0, 0, 0.05);
     --pos-ink: #1f2430;
     --pos-ink-soft: #6b7280;
     --pos-ink-faint: #9aa0ab;
     --pos-brand: #8b5cf6;
     --pos-brand-purple: #8b5cf6;
-    --pos-active-bg: #8b5cf6;
-    --pos-active-text: #ffffff;
+    --pos-active-bg: rgba(139, 92, 246, 0.12);
+    --pos-active-text: #6d28d9;
     --pos-hover-bg: #f2f3f5;
     --pos-select-border: rgba(139, 92, 246, 0.3);
     --pos-select-color: #8b5cf6;
@@ -103,14 +103,19 @@ export const POS_SIDEBAR_SHARED_CSS = `
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   }
 
-  /* ── Sidebar container (POS 220px desktop rail) ── */
+  /* ── Sidebar container (Apple Liquid Glass Rail) ── */
   .pw-sidebar {
     width: 220px !important;
     min-height: 100vh;
     height: 100vh;
     height: 100dvh;
     background: var(--pos-side-bg);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
     border-right: 1px solid var(--pos-border);
+    box-shadow: 
+      10px 0 35px -5px rgba(0, 0, 0, 0.38),
+      inset -1px 0 1.5px rgba(255, 255, 255, 0.15);
     display: flex;
     flex-direction: column;
     position: fixed;
@@ -121,7 +126,48 @@ export const POS_SIDEBAR_SHARED_CSS = `
     overflow: hidden;
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     user-select: none;
-    transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s, border-color 0.2s;
+    transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s, border-color 0.2s, box-shadow 0.2s;
+  }
+
+  /* Right edge specular reflection sheen (refractive glass edge) */
+  .pw-sidebar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 1.5px;
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.2) 15%,
+      rgba(255, 255, 255, 0.8) 50%,
+      rgba(255, 255, 255, 0.2) 85%,
+      transparent 100%
+    );
+    pointer-events: none;
+    z-index: 205;
+  }
+
+  html.light .pw-sidebar,
+  [data-theme="light"] .pw-sidebar,
+  :root:not(.dark) .pw-sidebar {
+    box-shadow: 
+      10px 0 30px -5px rgba(0, 0, 0, 0.07),
+      inset -1px 0 1.5px rgba(255, 255, 255, 0.95) !important;
+  }
+
+  html.light .pw-sidebar::after,
+  [data-theme="light"] .pw-sidebar::after,
+  :root:not(.dark) .pw-sidebar::after {
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.6) 15%,
+      rgba(255, 255, 255, 1) 50%,
+      rgba(255, 255, 255, 0.6) 85%,
+      transparent 100%
+    ) !important;
   }
 
   /* Subtle 4px scrollbar matching POS Sidebar.tsx */
@@ -243,19 +289,47 @@ export const POS_SIDEBAR_SHARED_CSS = `
     color: var(--pos-ink);
   }
 
-  /* ── Selected / Active state (POS signature purple pill + white text/icons) ── */
+  /* ── Selected / Active state (Apple Liquid Glass Capsule Pill) ── */
   .pw-nav-link--active,
   .pw-nav-link--active:hover {
-    background: var(--pos-active-bg) !important;
-    color: var(--pos-active-text) !important;
+    background: rgba(139, 92, 246, 0.22) !important;
+    color: #ffffff !important;
     font-weight: 700 !important;
-    border-color: transparent !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.45) !important;
+    box-shadow: 
+      0 4px 14px rgba(0, 0, 0, 0.2),
+      inset 0 1px 1.5px rgba(255, 255, 255, 0.35),
+      0 0 18px rgba(139, 92, 246, 0.22) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
   }
 
   .pw-nav-link--active .pw-nav-ic,
   .pw-nav-link--active .pw-nav-ic svg,
   .pw-nav-link--active svg {
     color: #ffffff !important;
+    filter: drop-shadow(0 2px 8px rgba(139, 92, 246, 0.6));
+  }
+
+  html.light .pw-nav-link--active,
+  [data-theme="light"] .pw-nav-link--active,
+  :root:not(.dark) .pw-nav-link--active {
+    background: rgba(139, 92, 246, 0.12) !important;
+    color: #6d28d9 !important;
+    border: 1px solid rgba(139, 92, 246, 0.25) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.95) !important;
+    box-shadow: 
+      0 4px 12px rgba(139, 92, 246, 0.12),
+      inset 0 1.5px 2px rgba(255, 255, 255, 0.95),
+      0 0 14px rgba(139, 92, 246, 0.15) !important;
+  }
+
+  html.light .pw-nav-link--active .pw-nav-ic,
+  html.light .pw-nav-link--active .pw-nav-ic svg,
+  html.light .pw-nav-link--active svg {
+    color: #6d28d9 !important;
+    filter: drop-shadow(0 2px 6px rgba(124, 58, 237, 0.35));
   }
 
   .pw-nav-link--active .pw-nav-badge {

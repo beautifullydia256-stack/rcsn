@@ -33,10 +33,10 @@ body.dark .ow-layout {
 .ow-sidebar {
   width: var(--ow-sidebar-width, 280px);
   min-height: 100vh;
-  background: var(--ow-s1, #0f172a);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-right: 1px solid var(--ow-border, rgba(255,255,255,0.1));
+  background: rgba(10, 15, 29, 0.65);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -46,7 +46,31 @@ body.dark .ow-layout {
   overflow-x: hidden;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  box-shadow: 4px 0 32px rgba(0,0,0,0.2);
+  box-shadow: 10px 0 35px -5px rgba(0, 0, 0, 0.38), inset -1px 0 1.5px rgba(255, 255, 255, 0.15);
+}
+
+.ow-sidebar::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 1.5px;
+  background: linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.2) 15%, rgba(255,255,255,0.8) 50%, rgba(255,255,255,0.2) 85%, transparent 100%);
+  pointer-events: none;
+  z-index: 205;
+}
+
+html.light .ow-sidebar,
+[data-theme="light"] .ow-sidebar,
+:root:not(.dark) .ow-sidebar {
+  background: rgba(255, 255, 255, 0.75) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.85) !important;
+  box-shadow: 10px 0 30px -5px rgba(0, 0, 0, 0.07), inset -1px 0 1.5px rgba(255, 255, 255, 0.95) !important;
+}
+
+html.light .ow-sidebar::after,
+[data-theme="light"] .ow-sidebar::after,
+:root:not(.dark) .ow-sidebar::after {
+  background: linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.6) 15%, rgba(255,255,255,1) 50%, rgba(255,255,255,0.6) 85%, transparent 100%) !important;
 }
 
 @media (max-width: 768px) {
@@ -150,11 +174,14 @@ body.dark .ow-layout {
 }
 
 .ow-nav-link--active {
-  background: var(--ow-accent-s, rgba(6,182,212,0.1)) !important;
-  color: var(--ow-accent, #06b6d4) !important;
-  border-color: rgba(6,182,212,0.2) !important;
-  backdrop-filter: blur(15px) !important;
-  box-shadow: 0 4px 20px rgba(6,182,212,0.15) !important;
+  background: rgba(6, 182, 212, 0.16) !important;
+  color: #06b6d4 !important;
+  font-weight: 700 !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.45) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2), inset 0 1px 1.5px rgba(255, 255, 255, 0.35), 0 0 16px rgba(6, 182, 212, 0.2) !important;
 }
 
 .ow-nav-link--active::before {

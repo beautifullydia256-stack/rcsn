@@ -93,13 +93,13 @@
   will-change: transform;
   background: var(--ac-sidebar-bg);
   background-color: var(--ac-sidebar-bg-fallback);
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
   border-right: 1px solid var(--ac-sidebar-border);
-  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+  box-shadow: 10px 0 30px -5px rgba(0, 0, 0, 0.08), inset -1px 0 1.5px rgba(255, 255, 255, 0.95);
 }
 .accountant-glass[data-theme="dark"] .ac-glass-sidebar {
-  box-shadow: 4px 0 32px rgba(0, 0, 0, 0.4);
+  box-shadow: 10px 0 35px -5px rgba(0, 0, 0, 0.38), inset -1px 0 1.5px rgba(255, 255, 255, 0.15);
 }
 
 /* Sidebar nav item — reference: rounded, hover = subtle glass */
@@ -123,12 +123,16 @@
 .ac-sidebar-nav-item-active {
   background: var(--ac-sidebar-active-bg);
   color: var(--ac-text-primary);
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-top: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15), inset 0 1px 1.5px rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 .accountant-glass[data-theme="dark"] .ac-sidebar-nav-item-active {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  border-top-color: rgba(255, 255, 255, 0.45);
 }
 
 .ac-glass-header {

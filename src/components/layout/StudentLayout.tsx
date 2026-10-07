@@ -219,12 +219,24 @@ export function StudentLayoutContent() {
               left: 0;
               bottom: 0;
               z-index: 118;
-              background: ${t.card};
-              border-right: 1px solid ${t.border};
+              background: ${isDark ? 'rgba(10, 15, 29, 0.65)' : 'rgba(255, 255, 255, 0.75)'};
+              backdrop-filter: blur(24px) saturate(180%);
+              -webkit-backdrop-filter: blur(24px) saturate(180%);
+              border-right: 1px solid ${isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.85)'};
+              box-shadow: ${isDark ? '10px 0 35px -5px rgba(0, 0, 0, 0.38), inset -1px 0 1.5px rgba(255, 255, 255, 0.15)' : '10px 0 30px -5px rgba(0, 0, 0, 0.07), inset -1px 0 1.5px rgba(255, 255, 255, 0.95)'};
               display: flex;
               flex-direction: column;
               transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
               overflow-y: auto;
+            }
+            .pw-student-sidebar::after {
+              content: '';
+              position: absolute;
+              top: 0; right: 0; bottom: 0;
+              width: 1.5px;
+              background: ${isDark ? 'linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.2) 15%, rgba(255,255,255,0.8) 50%, rgba(255,255,255,0.2) 85%, transparent 100%)' : 'linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.6) 15%, rgba(255,255,255,1) 50%, rgba(255,255,255,0.6) 85%, transparent 100%)'};
+              pointer-events: none;
+              z-index: 120;
             }
             .pw-student-main {
               margin-left: 250px;

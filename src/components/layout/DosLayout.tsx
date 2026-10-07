@@ -333,8 +333,11 @@ export default function DosLayout() {
         .pw-sidebar {
           width: var(--pw-sidebar-width, 232px);
           min-height: 100vh;
-          background: var(--pw-s1, #0b1120);
-          border-right: 1px solid var(--pw-border, rgba(255,255,255,0.07));
+          background: rgba(10, 15, 29, 0.65);
+          backdrop-filter: blur(24px) saturate(180%);
+          -webkit-backdrop-filter: blur(24px) saturate(180%);
+          border-right: 1px solid rgba(255, 255, 255, 0.12);
+          box-shadow: 10px 0 35px -5px rgba(0, 0, 0, 0.38), inset -1px 0 1.5px rgba(255, 255, 255, 0.15);
           display: flex;
           flex-direction: column;
           position: fixed;
@@ -345,6 +348,23 @@ export default function DosLayout() {
           scrollbar-width: none;
           -ms-overflow-style: none;
           transition: transform 0.28s cubic-bezier(.4,0,.2,1);
+        }
+        .pw-sidebar::after {
+          content: '';
+          position: absolute;
+          top: 0; right: 0; bottom: 0;
+          width: 1.5px;
+          background: linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.2) 15%, rgba(255,255,255,0.8) 50%, rgba(255,255,255,0.2) 85%, transparent 100%);
+          pointer-events: none;
+          z-index: 205;
+        }
+        html.light .pw-sidebar, html[data-theme="light"] .pw-sidebar, body.light .pw-sidebar, :root:not(.dark) .pw-sidebar {
+          background: rgba(255, 255, 255, 0.75) !important;
+          border-right: 1px solid rgba(255, 255, 255, 0.85) !important;
+          box-shadow: 10px 0 30px -5px rgba(0, 0, 0, 0.07), inset -1px 0 1.5px rgba(255, 255, 255, 0.95) !important;
+        }
+        html.light .pw-sidebar::after, html[data-theme="light"] .pw-sidebar::after, body.light .pw-sidebar::after, :root:not(.dark) .pw-sidebar::after {
+          background: linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.6) 15%, rgba(255,255,255,1) 50%, rgba(255,255,255,0.6) 85%, transparent 100%) !important;
         }
         .pw-sidebar::-webkit-scrollbar { display: none; }
         @media (max-width: 768px) {
@@ -418,9 +438,17 @@ export default function DosLayout() {
         }
         .pw-nav-link:hover { background: var(--pw-s2, #101828); color: var(--pw-t1, #eef3ff); }
         .pw-nav-link--active {
-          background: var(--pw-teal-s, rgba(16,217,168,0.10)) !important;
-          color: var(--pw-teal, #10d9a8) !important;
-          border-color: rgba(16,217,168,0.15) !important;
+          background: rgba(16, 217, 168, 0.16) !important;
+          color: #10d9a8 !important;
+          font-weight: 700 !important;
+          border: 1px solid rgba(255, 255, 255, 0.18) !important;
+          border-top: 1px solid rgba(255, 255, 255, 0.45) !important;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2), inset 0 1px 1.5px rgba(255, 255, 255, 0.35), 0 0 16px rgba(16, 217, 168, 0.2) !important;
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+        }
+        .pw-nav-link--active .pw-nav-ic {
+          filter: drop-shadow(0 2px 6px rgba(16, 217, 168, 0.5));
         }
         .pw-nav-ic {
           display: inline-flex;

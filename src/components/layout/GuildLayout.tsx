@@ -158,10 +158,13 @@ export default function GuildLayout() {
       <aside
         className={`${
           mobileMenuOpen ? 'block' : 'hidden'
-        } md:flex flex-col w-full md:w-64 shrink-0 border-r md:sticky md:top-0 md:h-screen z-30 transition-all`}
+        } md:flex flex-col w-full md:w-64 shrink-0 border-r md:sticky md:top-0 md:h-screen z-30 transition-all backdrop-blur-2xl backdrop-saturate-[180%]`}
         style={{
           backgroundColor: t.sidebarBg,
           borderColor: t.sidebarBorder,
+          boxShadow: isDark
+            ? '10px 0 35px -5px rgba(0, 0, 0, 0.38), inset -1px 0 1.5px rgba(255, 255, 255, 0.15)'
+            : '10px 0 30px -5px rgba(0, 0, 0, 0.07), inset -1px 0 1.5px rgba(255, 255, 255, 0.95)',
         }}
       >
         {/* Brand / Cabinet Badge */}
@@ -246,6 +249,16 @@ export default function GuildLayout() {
                   style={{
                     backgroundColor: isActive ? t.sidebarActiveBg : 'transparent',
                     color: isActive ? t.sidebarActiveText : t.textHi,
+                    border: isActive
+                      ? `1px solid ${isDark ? 'rgba(255,255,255,0.18)' : 'rgba(139,92,246,0.25)'}`
+                      : '1px solid transparent',
+                    borderTop: isActive
+                      ? `1px solid ${isDark ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.95)'}`
+                      : '1px solid transparent',
+                    boxShadow: isActive
+                      ? '0 4px 14px rgba(0,0,0,0.2), inset 0 1px 1.5px rgba(255,255,255,0.35)'
+                      : 'none',
+                    backdropFilter: isActive ? 'blur(8px)' : 'none',
                   }}
                 >
                   <Icon

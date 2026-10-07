@@ -102,12 +102,15 @@ function ParentChrome() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 w-64 flex flex-col transition-transform duration-200 md:translate-x-0 ${
+        className={`fixed top-0 bottom-0 left-0 z-50 w-64 flex flex-col transition-transform duration-200 md:translate-x-0 backdrop-blur-2xl backdrop-saturate-[180%] ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         style={{
-          backgroundColor: t.panel,
-          borderRight: `1px solid ${t.stroke}`,
+          backgroundColor: isDark ? 'rgba(10, 15, 29, 0.65)' : 'rgba(255, 255, 255, 0.75)',
+          borderRight: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.85)'}`,
+          boxShadow: isDark
+            ? '10px 0 35px -5px rgba(0, 0, 0, 0.38), inset -1px 0 1.5px rgba(255, 255, 255, 0.15)'
+            : '10px 0 30px -5px rgba(0, 0, 0, 0.07), inset -1px 0 1.5px rgba(255, 255, 255, 0.95)',
         }}
       >
         {/* Brand Header */}
@@ -222,11 +225,20 @@ function ParentChrome() {
                 style={({ isActive }) => ({
                   backgroundColor: isActive
                     ? isDark
-                      ? 'rgba(255,255,255,0.08)'
-                      : '#ffffff'
+                      ? 'rgba(16, 217, 168, 0.16)'
+                      : 'rgba(13, 148, 136, 0.12)'
                     : 'transparent',
-                  color: isActive ? t.textHi : t.textMid,
-                  border: isActive ? `1px solid ${t.stroke}` : '1px solid transparent',
+                  color: isActive ? (isDark ? '#10d9a8' : '#0d9488') : t.textMid,
+                  border: isActive
+                    ? `1px solid ${isDark ? 'rgba(255,255,255,0.18)' : 'rgba(13,148,136,0.22)'}`
+                    : '1px solid transparent',
+                  borderTop: isActive
+                    ? `1px solid ${isDark ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.95)'}`
+                    : '1px solid transparent',
+                  boxShadow: isActive
+                    ? '0 4px 14px rgba(0,0,0,0.2), inset 0 1px 1.5px rgba(255,255,255,0.35)'
+                    : 'none',
+                  backdropFilter: isActive ? 'blur(8px)' : 'none',
                 })}
               >
                 <div className="flex items-center gap-2.5">

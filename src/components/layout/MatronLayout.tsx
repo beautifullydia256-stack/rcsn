@@ -124,10 +124,13 @@ export default function MatronLayout() {
 
       {/* Sidebar */}
       <aside
-        className={`pw-admin-sidebar ${mobileMenuOpen ? 'pw-admin-sidebar--mobile-open' : ''}`}
+        className={`pw-admin-sidebar backdrop-blur-2xl backdrop-saturate-[180%] ${mobileMenuOpen ? 'pw-admin-sidebar--mobile-open' : ''}`}
         style={{
           backgroundColor: tk.sidebarBg,
           borderColor: tk.sidebarBorder,
+          boxShadow: isDark
+            ? '10px 0 35px -5px rgba(0, 0, 0, 0.38), inset -1px 0 1.5px rgba(255, 255, 255, 0.15)'
+            : '10px 0 30px -5px rgba(0, 0, 0, 0.07), inset -1px 0 1.5px rgba(255, 255, 255, 0.95)',
         }}
       >
         <div className="pw-sidebar-brand" style={{ borderBottomColor: tk.sidebarBorder }}>
