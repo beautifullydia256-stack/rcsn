@@ -99,14 +99,15 @@ export default function NativeModal({
               exit={{ opacity: 0, scale: 0.97, y: 14 }}
               transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
               className={`relative w-full shrink-0 ${sizeClasses[size]} pointer-events-auto my-auto flex flex-col min-h-0 rounded-[28px] 
-                bg-slate-950/45 dark:bg-black/55 
-                backdrop-blur-md backdrop-saturate-[150%] 
-                border border-white/30 border-t-white/60 border-l-white/40 border-b-white/20 
-                shadow-[0_20px_50px_rgba(0,0,0,0.35),inset_0_1.5px_2px_rgba(255,255,255,0.5),inset_0_-1px_1px_rgba(255,255,255,0.15)] 
+                bg-slate-950/75 dark:bg-black/60 
+                backdrop-blur-xl backdrop-saturate-[160%] 
+                ring-1 ring-slate-950/30 dark:ring-white/15
+                border border-white/40 border-t-white/75 border-l-white/55 border-b-white/30 
+                shadow-[0_28px_65px_-8px_rgba(0,0,0,0.32),0_8px_24px_rgba(0,0,0,0.14),inset_0_1.5px_2px_rgba(255,255,255,0.75),inset_0_-1px_1px_rgba(255,255,255,0.2)] 
                 text-white overflow-hidden`}
             >
               {/* Top Specular Sheen (iOS Liquid Edge) */}
-              <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 to-transparent pointer-events-none" />
+              <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/85 to-transparent pointer-events-none" />
               {/* Subtle diagonal liquid light rays */}
               <div className="absolute -top-24 -left-24 w-48 h-48 bg-emerald-500/15 rounded-full blur-2xl pointer-events-none" />
               <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-emerald-400/10 rounded-full blur-2xl pointer-events-none" />
