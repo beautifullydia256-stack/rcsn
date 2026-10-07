@@ -494,7 +494,9 @@ export default function StudentFeeSyncPage() {
                 .eq('student_id', student.student_id);
             }
 
-            const feeRow = feeStructures.find(f => f.class_name === student.current_class);
+            const normalizedClass = (student.current_class || '').replace(/^([A-Za-z]+)\d+\s*(–|-)/, '$1 $2');
+            const feeRow = feeStructures.find(f => f.class_name === student.current_class)
+              || feeStructures.find(f => f.class_name === normalizedClass);
             let amount = 0;
             if (feeRow) {
               if (effectiveBoardingType === 'Boarding') {

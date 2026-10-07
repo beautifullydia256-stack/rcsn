@@ -18,15 +18,21 @@ export function formatSupabaseError(err: unknown): string {
   const e = err as PostgrestErrorLike;
   const parts: string[] = [];
 
-  if (e.code) parts.push(`[${e.code}]`);
-  if (e.message) parts.push(e.message);
+  if (e.code && e.code !== 'P0001') parts.push(`[${e.code}]`);
+  if (e.message) {
+    let cleaned = e.message;
+    if (cleaned.includes('Fee structure not set up for class') || cleaned.includes('Fee structure not configured')) {
+      cleaned = cleaned.replace(/^Fee structure not set up for class\s+([^.]+)\.\s*Please configure fees in Financial Settings first\./i, 'Fee structure not found for "$1". Please check Financial Settings.');
+    }
+    parts.push(cleaned);
+  }
   if (e.details && String(e.details).trim() && e.details !== e.message) {
     parts.push(`Details: ${e.details}`);
   }
   if (e.hint && String(e.hint).trim()) {
     parts.push(`Hint: ${e.hint}`);
   }
-  if (e.status != null && e.status >= 400) {
+  if (e.status != null && e.status >= 400 && e.status !== 400) {
     parts.push(`(HTTP ${e.status})`);
   }
 
@@ -44,6 +50,9 @@ export function fieldHintForStudentInsert(err: unknown): string | null {
   const det = String((err as PostgrestErrorLike)?.details || '');
   const raw = `${msg} ${det}`.toLowerCase();
 
+  if (raw.includes('fee structure') || raw.includes('p0001')) {
+    return 'Go to Financial Settings → Fee Structure to confirm tuition has been entered and saved for this course & semester.';
+  }
   if (raw.includes('student_email') || raw.includes('(student_email')) {
     return 'Change the student email — this address is already in use.';
   }

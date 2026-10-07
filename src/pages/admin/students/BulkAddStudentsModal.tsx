@@ -190,11 +190,31 @@ export default function BulkAddStudentsModal({ isOpen, onClose }: Props) {
     }
 
     // DB insert runs in the background
-    supabase
-      .from('students')
-      .insert(studentPayload)
-      .select('student_id, admission_number')
-      .single()
+    const executeInsert = async () => {
+      if (isTertiary && finalClass && schoolId && computedExpectedFee != null && computedExpectedFee > 0) {
+        try {
+          await supabase.from('school_fee_structure').upsert(
+            {
+              school_id: schoolId,
+              class_name: finalClass,
+              tuition_amount: computedExpectedFee,
+              boarding_tuition_amount: computedExpectedFee,
+            },
+            { onConflict: 'school_id,class_name' }
+          );
+        } catch {
+          // Non-blocking
+        }
+      }
+
+      return supabase
+        .from('students')
+        .insert(studentPayload)
+        .select('student_id, admission_number')
+        .single();
+    };
+
+    executeInsert()
       .then(({ data: inserted, error: insErr }) => {
         if (insErr) {
           updateEntry(id, { status: 'error', errorMsg: insErr.message });

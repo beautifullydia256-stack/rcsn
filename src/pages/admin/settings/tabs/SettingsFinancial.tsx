@@ -549,6 +549,19 @@ export default function SettingsFinancial({
           boarding_tuition_amount: totals.boardingTotal,
         });
 
+        // Also generate active cohort set aliases (e.g. "CN26 – Year 1 Semester 1", "CN25 – Year 1 Semester 1", etc.)
+        // so database registration trigger and class fee sync find matching rows directly for all active sets
+        const currentYear = new Date().getFullYear();
+        for (let y = currentYear - 6; y <= currentYear + 4; y++) {
+          const yrCode = String(y).slice(-2);
+          feeRecords.push({
+            school_id: schoolId,
+            class_name: `${course.code}${yrCode} – ${sem.label}`,
+            tuition_amount: totals.dayTotal,
+            boarding_tuition_amount: totals.boardingTotal,
+          });
+        }
+
         // Tuition row
         feeRecords.push({
           school_id: schoolId,

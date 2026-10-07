@@ -743,6 +743,47 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
         studentPayload.admission_number = collegeRegNo.trim();
       }
 
+      if (isTertiary && currentClass && schoolId) {
+        // Ensure fee structure exists for this specific cohort class (e.g. CN26 – Year 1 Semester 1)
+        // so database registration validation trigger accepts the student immediately.
+        const baseFeeDay = resolveFeeForClass({
+          currentClass,
+          isTertiary,
+          tertiaryStageCode,
+          tertiaryCourseCode,
+          stageOptions,
+          boardingType: 'Day',
+          feeByClass,
+          boardingByClass,
+        });
+        const baseFeeBoarding = resolveFeeForClass({
+          currentClass,
+          isTertiary,
+          tertiaryStageCode,
+          tertiaryCourseCode,
+          stageOptions,
+          boardingType: 'Resident',
+          feeByClass,
+          boardingByClass,
+        });
+
+        if (baseFeeDay > 0 || baseFeeBoarding > 0) {
+          try {
+            await supabase.from('school_fee_structure').upsert(
+              {
+                school_id: schoolId,
+                class_name: currentClass,
+                tuition_amount: baseFeeDay,
+                boarding_tuition_amount: baseFeeBoarding || baseFeeDay,
+              },
+              { onConflict: 'school_id,class_name' }
+            );
+          } catch {
+            // Non-blocking fallback
+          }
+        }
+      }
+
       const { data: inserted, error: insertError } = await supabase
         .from('students')
         .insert(studentPayload)
