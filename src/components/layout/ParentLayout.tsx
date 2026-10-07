@@ -65,20 +65,53 @@ function ParentChrome() {
     void logoutWithSyncCheck(() => navigate('/'));
   };
 
-  const navLinks = [
-    { to: '/dashboard/parent', label: 'Dashboard', icon: Home, end: true },
-    { to: '/dashboard/parent/performance', label: 'Academics & Marks', icon: BarChart3 },
-    { to: '/dashboard/parent/attendance', label: 'Term Attendance', icon: ClipboardList },
-    { to: '/dashboard/parent/timetable', label: 'Class Timetable', icon: Calendar },
-    { to: '/dashboard/parent/exams', label: 'Exam Results', icon: PenTool },
-    { to: '/dashboard/parent/reports', label: 'Report Cards', icon: FileText },
-    { to: '/dashboard/parent/assignments', label: 'Homework & Tasks', icon: BookOpen },
-    { to: '/dashboard/parent/fees', label: 'Fees & Ledger', icon: CreditCard },
-    { to: '/dashboard/parent/receipts', label: 'Payment Receipts', icon: Receipt },
-    { to: '/dashboard/parent/gate-pass', label: 'Gate Passes & Exits', icon: ShieldCheck },
-    { to: '/dashboard/parent/notices', label: 'School Notices', icon: Megaphone },
-    { to: '/dashboard/parent/messages', label: 'School Chat', icon: MessageSquare, badge: chatUnread },
-    { to: '/dashboard/parent/profile', label: 'My Profile', icon: User },
+  interface ParentNavItem {
+    to: string;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    end?: boolean;
+    badge?: number;
+  }
+
+  interface ParentNavSection {
+    title: string;
+    items: ParentNavItem[];
+  }
+
+  const navSections: ParentNavSection[] = [
+    {
+      title: 'Overview',
+      items: [
+        { to: '/dashboard/parent', label: 'Dashboard', icon: Home, end: true },
+        { to: '/dashboard/parent/profile', label: 'My Profile', icon: User },
+      ],
+    },
+    {
+      title: 'Finances & Fees',
+      items: [
+        { to: '/dashboard/parent/fees', label: 'Fees & Ledger', icon: CreditCard },
+        { to: '/dashboard/parent/receipts', label: 'Payment Receipts', icon: Receipt },
+      ],
+    },
+    {
+      title: 'Academic Progress',
+      items: [
+        { to: '/dashboard/parent/performance', label: 'Academics & Marks', icon: BarChart3 },
+        { to: '/dashboard/parent/exams', label: 'Exam Results', icon: PenTool },
+        { to: '/dashboard/parent/reports', label: 'Report Cards', icon: FileText },
+        { to: '/dashboard/parent/timetable', label: 'Class Timetable', icon: Calendar },
+        { to: '/dashboard/parent/assignments', label: 'Homework & Tasks', icon: BookOpen },
+        { to: '/dashboard/parent/attendance', label: 'Term Attendance', icon: ClipboardList },
+      ],
+    },
+    {
+      title: 'Safety & Communications',
+      items: [
+        { to: '/dashboard/parent/gate-pass', label: 'Gate Passes & Exits', icon: ShieldCheck },
+        { to: '/dashboard/parent/notices', label: 'School Notices', icon: Megaphone },
+        { to: '/dashboard/parent/messages', label: 'School Chat', icon: MessageSquare, badge: chatUnread },
+      ],
+    },
   ];
 
   const isOnMessages = location.pathname.startsWith('/dashboard/parent/messages');
@@ -206,53 +239,57 @@ function ParentChrome() {
         )}
 
         {/* Navigation Links */}
-        <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-0.5" style={{ scrollbarWidth: 'none' }}>
-          <div className="text-[10px] font-bold uppercase tracking-wider px-2 mb-1" style={{ color: t.textLow }}>
-            Menu
-          </div>
-          {navLinks.map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) =>
-                  `flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
-                    isActive ? 'shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/5'
-                  }`
-                }
-                style={({ isActive }) => ({
-                  backgroundColor: isActive
-                    ? isDark
-                      ? 'rgba(16, 217, 168, 0.16)'
-                      : 'rgba(13, 148, 136, 0.12)'
-                    : 'transparent',
-                  color: isActive ? (isDark ? '#10d9a8' : '#0d9488') : t.textMid,
-                  border: isActive
-                    ? `1px solid ${isDark ? 'rgba(255,255,255,0.18)' : 'rgba(13,148,136,0.22)'}`
-                    : '1px solid transparent',
-                  borderTop: isActive
-                    ? `1px solid ${isDark ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.95)'}`
-                    : '1px solid transparent',
-                  boxShadow: isActive
-                    ? '0 4px 14px rgba(0,0,0,0.2), inset 0 1px 1.5px rgba(255,255,255,0.35)'
-                    : 'none',
-                  backdropFilter: isActive ? 'blur(8px)' : 'none',
-                })}
-              >
-                <div className="flex items-center gap-2.5">
-                  <Icon className="w-4 h-4" />
-                  <span>{item.label}</span>
-                </div>
-                {item.badge !== undefined && item.badge > 0 && (
-                  <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500 text-white">
-                    {item.badge}
-                  </span>
-                )}
-              </NavLink>
-            );
-          })}
+        <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-4" style={{ scrollbarWidth: 'none' }}>
+          {navSections.map((section) => (
+            <div key={section.title} className="space-y-1">
+              <div className="text-[10px] font-bold uppercase tracking-wider px-2 mb-1" style={{ color: t.textLow }}>
+                {section.title}
+              </div>
+              {section.items.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.end}
+                    className={({ isActive }) =>
+                      `flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                        isActive ? 'shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/5'
+                      }`
+                    }
+                    style={({ isActive }) => ({
+                      backgroundColor: isActive
+                        ? isDark
+                          ? 'rgba(16, 217, 168, 0.16)'
+                          : 'rgba(13, 148, 136, 0.12)'
+                        : 'transparent',
+                      color: isActive ? (isDark ? '#10d9a8' : '#0d9488') : t.textMid,
+                      border: isActive
+                        ? `1px solid ${isDark ? 'rgba(255,255,255,0.18)' : 'rgba(13,148,136,0.22)'}`
+                        : '1px solid transparent',
+                      borderTop: isActive
+                        ? `1px solid ${isDark ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.95)'}`
+                        : '1px solid transparent',
+                      boxShadow: isActive
+                        ? '0 4px 14px rgba(0,0,0,0.2), inset 0 1px 1.5px rgba(255,255,255,0.35)'
+                        : 'none',
+                      backdropFilter: isActive ? 'blur(8px)' : 'none',
+                    })}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Icon className="w-4 h-4" />
+                      <span>{item.label}</span>
+                    </div>
+                    {item.badge !== undefined && item.badge > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500 text-white">
+                        {item.badge}
+                      </span>
+                    )}
+                  </NavLink>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         {/* Bottom Actions: Theme Toggle & Logout */}

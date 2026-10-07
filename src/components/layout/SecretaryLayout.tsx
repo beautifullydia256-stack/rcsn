@@ -266,52 +266,62 @@ export default function SecretaryLayout() {
             <span className="pw-brand-pill">{isTertiary ? "Registry" : "Secretary"}</span>
           </div>
 
+          {/* 1. Front Desk & Overview */}
           <div className="pw-nav-section">
-            <span className="pw-nav-label">Main</span>
+            <span className="pw-nav-label">Front Desk &amp; Overview</span>
             <NavItem to={SEC} icon={<LayoutDashboard className="w-4 h-4" />} label="Dashboard" end onClick={close} />
+            <NavItem to={`${SEC}/calendar`} icon={<CalendarDays className="w-4 h-4 text-teal-400" />} label="School Calendar &amp; Events" onClick={close} />
             <NavItem to={`${SEC}/messages`} icon={<MessageSquare className="w-4 h-4" />} label="Messages" badge={chatBadge} badgeColor="rose" onClick={close} />
             <NavItem to={`${SEC}/notifications`} icon={<Bell className="w-4 h-4" />} label="Notifications" badge={notifCount ?? undefined} badgeColor="amber" onClick={close} />
           </div>
 
+          {/* 2. Admissions & Registry */}
           <div className="pw-nav-section">
-            <span className="pw-nav-label">{isTertiary ? "Trainees" : "Students"}</span>
+            <span className="pw-nav-label">{isTertiary ? "Admissions & Registry" : "Students & Admissions"}</span>
             <NavGroup icon={<GraduationCap className="w-4 h-4" />} label={isTertiary ? "Trainees" : "Students"} isOpen={studentsOpen} onToggle={() => setStudentsOpen(!studentsOpen)} matchPaths={[`${SEC}/students`]} badge={studentCount ?? undefined} badgeColor="teal">
               <SubItem to={`${SEC}/students`} label={isTertiary ? "All Trainees" : "All Students"} end onClick={close} />
               <SubItem to={`${SEC}/students/add`} label={isTertiary ? "Admit Trainee" : "Add / Admit Student"} onClick={close} />
             </NavGroup>
-            <NavItem to={`${SEC}/attendance`} icon={<ClipboardCheck className="w-4 h-4" />} label="Attendance" onClick={close} />
+            <NavItem to={`${SEC}/attendance`} icon={<ClipboardCheck className="w-4 h-4" />} label="Daily Attendance" onClick={close} />
             <NavItem to={`${SEC}/attendance-code`} icon={<KeyRound className="w-4 h-4" />} label="Attendance Code" onClick={close} />
           </div>
 
+          {/* 3. Visitors & Campus Exits */}
           <div className="pw-nav-section">
-            <span className="pw-nav-label">Office & Exits</span>
-            <NavItem to={`${SEC}/calendar`} icon={<CalendarDays className="w-4 h-4 text-teal-400" />} label="School Calendar & Events" onClick={close} />
+            <span className="pw-nav-label">Visitors &amp; Campus Exits</span>
             <NavItem to={`${SEC}/visitors`} icon={<UserCheck className="w-4 h-4" />} label="Visitor Logbook" onClick={close} />
-            <NavItem to={`${SEC}/gate-passes`} icon={<ShieldCheck className="w-4 h-4 text-emerald-400" />} label="Gate Passes & Exits" onClick={close} />
+            <NavItem to={`${SEC}/gate-passes`} icon={<ShieldCheck className="w-4 h-4 text-emerald-400" />} label="Gate Passes &amp; Exits" onClick={close} />
             <NavItem to={`${SEC}/staff`} icon={<Building2 className="w-4 h-4" />} label="Staff Directory" onClick={close} />
-            <NavItem to={`${SEC}/property-assets`} icon={<Armchair className="w-4 h-4 text-amber-400" />} label="Furniture & Property" onClick={close} />
+            <NavItem to={`${SEC}/property-assets`} icon={<Armchair className="w-4 h-4 text-amber-400" />} label="Furniture &amp; Property" onClick={close} />
           </div>
 
+          {/* 4. Academic Records */}
           <div className="pw-nav-section">
-            <span className="pw-nav-label">Finance (View)</span>
-            <NavGroup icon={<Wallet className="w-4 h-4" />} label="Finance" isOpen={financeOpen} onToggle={() => setFinanceOpen(!financeOpen)} matchPaths={[`${SEC}/finance`]}>
-              <SubItem to={`${SEC}/finance/outstanding`} label="Outstanding Balances" onClick={close} />
-              <SubItem to={`${SEC}/finance/fee-records`} label="Fee Records" onClick={close} />
-            </NavGroup>
-          </div>
-
-          <div className="pw-nav-section">
-            <span className="pw-nav-label">Documents</span>
-            <NavGroup icon={<FileText className="w-4 h-4" />} label="Documents" isOpen={docsOpen} onToggle={() => setDocsOpen(!docsOpen)} matchPaths={[`${SEC}/admission-form`, `${SEC}/headed-paper`]}>
-              <SubItem to={`${SEC}/admission-form`} label="Admission Form" onClick={close} />
-              <SubItem to={`${SEC}/headed-paper`} label="Headed Paper" onClick={close} />
-            </NavGroup>
+            <span className="pw-nav-label">Academic Records</span>
             <NavItem to={`${SEC}/exam-set-results`} icon={<Trophy className="w-4 h-4" />} label={isTertiary ? "Semester & UHPAB Results" : "Exam Results"} onClick={close} />
-            <NavGroup icon={<BarChart3 className="w-4 h-4" />} label="Reports" isOpen={reportsOpen} onToggle={() => setReportsOpen(!reportsOpen)} matchPaths={[`${SEC}/reports`, `${SEC}/report-records`]}>
+            <NavGroup icon={<BarChart3 className="w-4 h-4" />} label={isTertiary ? "Result Slips & Reports" : "Reports"} isOpen={reportsOpen} onToggle={() => setReportsOpen(!reportsOpen)} matchPaths={[`${SEC}/reports`, `${SEC}/report-records`]}>
               <SubItem to={`${SEC}/reports`} label="Reports Hub" end onClick={close} />
               <SubItem to={`${SEC}/reports/generate`} label={isTertiary ? "Generate Result Slips" : "Generate Report Cards"} onClick={close} />
               <SubItem to={`${SEC}/report-records`} label="Report Records" onClick={close} />
               <SubItem to={`${SEC}/reports/bulk`} label="Bulk Generate" onClick={close} />
+            </NavGroup>
+          </div>
+
+          {/* 5. Stationery & Documents */}
+          <div className="pw-nav-section">
+            <span className="pw-nav-label">Stationery &amp; Forms</span>
+            <NavGroup icon={<FileText className="w-4 h-4" />} label="Official Documents" isOpen={docsOpen} onToggle={() => setDocsOpen(!docsOpen)} matchPaths={[`${SEC}/admission-form`, `${SEC}/headed-paper`]}>
+              <SubItem to={`${SEC}/admission-form`} label="Admission Form" onClick={close} />
+              <SubItem to={`${SEC}/headed-paper`} label="Headed Paper" onClick={close} />
+            </NavGroup>
+          </div>
+
+          {/* 6. Finance Desk (Inquiries) */}
+          <div className="pw-nav-section">
+            <span className="pw-nav-label">Fee Inquiries (Read-Only)</span>
+            <NavGroup icon={<Wallet className="w-4 h-4" />} label="Fee Desk" isOpen={financeOpen} onToggle={() => setFinanceOpen(!financeOpen)} matchPaths={[`${SEC}/finance`]}>
+              <SubItem to={`${SEC}/finance/outstanding`} label="Outstanding Balances" onClick={close} />
+              <SubItem to={`${SEC}/finance/fee-records`} label="Fee Records" onClick={close} />
             </NavGroup>
           </div>
 

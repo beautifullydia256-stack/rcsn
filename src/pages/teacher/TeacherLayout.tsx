@@ -251,8 +251,9 @@ export default function TeacherLayout() {
         </div>
 
         <div className="pw-nav-scroll-area">
+        {/* 1. My Desk & Schedule */}
         <div className="pw-nav-section">
-          <span className="pw-nav-label">Main</span>
+          <span className="pw-nav-label">My Desk &amp; Schedule</span>
           <NavLink
             to="/dashboard/teacher"
             end
@@ -263,6 +264,49 @@ export default function TeacherLayout() {
             <span className="pw-nav-ic"><LayoutDashboard className="w-4 h-4" /></span>
             <span className="pw-nav-text">Dashboard</span>
           </NavLink>
+          <NavLink
+            to="/dashboard/teacher/timetable"
+            onClick={closeSidebar}
+            onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[5])}
+            className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+          >
+            <span className="pw-nav-ic"><Calendar className="w-4 h-4" /></span>
+            <span className="pw-nav-text">{isTertiary ? "Lecture & Clinical Schedule" : "Timetable"}</span>
+          </NavLink>
+          <NavLink
+            to="/dashboard/teacher/calendar"
+            onClick={closeSidebar}
+            className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+          >
+            <span className="pw-nav-ic"><CalendarDays className="w-4 h-4 text-emerald-400" /></span>
+            <span className="pw-nav-text">School Calendar &amp; Exams</span>
+          </NavLink>
+          <NavLink
+            to="/dashboard/teacher/messages"
+            onClick={closeSidebar}
+            onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[10])}
+            className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+          >
+            <span className="pw-nav-ic"><MessageSquare className="w-4 h-4" /></span>
+            <span className="pw-nav-text">Messages</span>
+            {chatUnreadBadge != null && (
+              <span className="pw-nav-badge pw-nav-badge--rose">{chatUnreadBadge}</span>
+            )}
+          </NavLink>
+          <NavLink
+            to="/dashboard/teacher/notifications"
+            onClick={closeSidebar}
+            onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[11])}
+            className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+          >
+            <span className="pw-nav-ic"><Bell className="w-4 h-4" /></span>
+            <span className="pw-nav-text">Notifications</span>
+          </NavLink>
+        </div>
+
+        {/* 2. My Cohorts & Lectures */}
+        <div className="pw-nav-section">
+          <span className="pw-nav-label">My Cohorts &amp; Lectures</span>
           <NavLink
             to="/dashboard/teacher/classes"
             onClick={closeSidebar}
@@ -281,19 +325,44 @@ export default function TeacherLayout() {
             <span className="pw-nav-ic"><Users className="w-4 h-4" /></span>
             <span className="pw-nav-text">{isTertiary ? "My Trainees" : "My Students"}</span>
           </NavLink>
-        </div>
-
-        <div className="pw-nav-section">
-          <span className="pw-nav-label">Teaching</span>
           <NavLink
-            to="/dashboard/teacher/templates"
+            to="/dashboard/teacher/attendance"
             onClick={closeSidebar}
-            onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[14])}
+            onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[4])}
             className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
           >
-            <span className="pw-nav-ic"><FileText className="w-4 h-4" /></span>
-            <span className="pw-nav-text">Templates</span>
+            <span className="pw-nav-ic"><ClipboardCheck className="w-4 h-4" /></span>
+            <span className="pw-nav-text">Attendance</span>
           </NavLink>
+          <NavLink
+            to="/dashboard/teacher/lesson-log"
+            onClick={closeSidebar}
+            onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[21])}
+            className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+          >
+            <span className="pw-nav-ic"><Video className="w-4 h-4" /></span>
+            <span className="pw-nav-text">{isTertiary ? "Lecture & Practical Log" : "Lesson Log"}</span>
+          </NavLink>
+        </div>
+
+        {/* 3. Clinical Supervision */}
+        {isTertiary && (
+          <div className="pw-nav-section">
+            <span className="pw-nav-label">Clinical Supervision</span>
+            <NavLink
+              to="/dashboard/teacher/ward-postings"
+              onClick={closeSidebar}
+              className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+            >
+              <span className="pw-nav-ic"><Stethoscope className="w-4 h-4" /></span>
+              <span className="pw-nav-text">Ward Postings &amp; Clinical</span>
+            </NavLink>
+          </div>
+        )}
+
+        {/* 4. Assessments & Grading */}
+        <div className="pw-nav-section">
+          <span className="pw-nav-label">Assessments &amp; Grading</span>
           <button
             type="button"
             onClick={() => setExamResultsOpen((o) => !o)}
@@ -349,51 +418,6 @@ export default function TeacherLayout() {
             </div>
           )}
           <NavLink
-            to="/dashboard/teacher/attendance"
-            onClick={closeSidebar}
-            onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[4])}
-            className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
-          >
-            <span className="pw-nav-ic"><ClipboardCheck className="w-4 h-4" /></span>
-            <span className="pw-nav-text">Attendance</span>
-          </NavLink>
-          {isTertiary && (
-            <NavLink
-              to="/dashboard/teacher/ward-postings"
-              onClick={closeSidebar}
-              className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
-            >
-              <span className="pw-nav-ic"><Stethoscope className="w-4 h-4" /></span>
-              <span className="pw-nav-text">Ward Postings & Clinical</span>
-            </NavLink>
-          )}
-          <NavLink
-            to="/dashboard/teacher/timetable"
-            onClick={closeSidebar}
-            onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[5])}
-            className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
-          >
-            <span className="pw-nav-ic"><Calendar className="w-4 h-4" /></span>
-            <span className="pw-nav-text">{isTertiary ? "Lecture & Clinical Schedule" : "Timetable"}</span>
-          </NavLink>
-          <NavLink
-            to="/dashboard/teacher/calendar"
-            onClick={closeSidebar}
-            className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
-          >
-            <span className="pw-nav-ic"><CalendarDays className="w-4 h-4 text-emerald-400" /></span>
-            <span className="pw-nav-text">School Calendar & Exams</span>
-          </NavLink>
-          <NavLink
-            to="/dashboard/teacher/lesson-log"
-            onClick={closeSidebar}
-            onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[21])}
-            className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
-          >
-            <span className="pw-nav-ic"><Video className="w-4 h-4" /></span>
-            <span className="pw-nav-text">{isTertiary ? "Lecture & Practical Log" : "Lesson Log"}</span>
-          </NavLink>
-          <NavLink
             to="/dashboard/teacher/grading-system"
             onClick={closeSidebar}
             onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[6])}
@@ -401,15 +425,6 @@ export default function TeacherLayout() {
           >
             <span className="pw-nav-ic"><Percent className="w-4 h-4" /></span>
             <span className="pw-nav-text">{isTertiary ? "UNMEB Grading Scale & Regulations" : "Grading System"}</span>
-          </NavLink>
-          <NavLink
-            to="/dashboard/teacher/ai-planner"
-            onClick={closeSidebar}
-            onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[7])}
-            className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
-          >
-            <span className="pw-nav-ic"><Sparkles className="w-4 h-4" /></span>
-            <span className="pw-nav-text">AI Lesson Planner</span>
           </NavLink>
           <NavLink
             to="/dashboard/teacher/assignments"
@@ -420,19 +435,29 @@ export default function TeacherLayout() {
             <span className="pw-nav-ic"><PenTool className="w-4 h-4" /></span>
             <span className="pw-nav-text">Assignments</span>
           </NavLink>
-          <NavLink
-            to="/dashboard/teacher/resources"
-            onClick={closeSidebar}
-            onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[9])}
-            className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
-          >
-            <span className="pw-nav-ic"><Book className="w-4 h-4" /></span>
-            <span className="pw-nav-text">Resources</span>
-          </NavLink>
         </div>
 
+        {/* 5. Academic Planning & Resources */}
         <div className="pw-nav-section">
-          <span className="pw-nav-label">Academic</span>
+          <span className="pw-nav-label">Academic Planning &amp; Prep</span>
+          <NavLink
+            to="/dashboard/teacher/ai-planner"
+            onClick={closeSidebar}
+            onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[7])}
+            className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+          >
+            <span className="pw-nav-ic"><Sparkles className="w-4 h-4" /></span>
+            <span className="pw-nav-text">AI Lesson Planner</span>
+          </NavLink>
+          <NavLink
+            to="/dashboard/teacher/templates"
+            onClick={closeSidebar}
+            onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[14])}
+            className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+          >
+            <span className="pw-nav-ic"><FileText className="w-4 h-4" /></span>
+            <span className="pw-nav-text">Templates</span>
+          </NavLink>
           <NavLink
             to="/dashboard/teacher/curriculum"
             onClick={closeSidebar}
@@ -469,9 +494,18 @@ export default function TeacherLayout() {
             <span className="pw-nav-ic"><BookOpen className="w-4 h-4" /></span>
             <span className="pw-nav-text">Lesson Notes</span>
           </NavLink>
+          <NavLink
+            to="/dashboard/teacher/resources"
+            onClick={closeSidebar}
+            onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[9])}
+            className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+          >
+            <span className="pw-nav-ic"><Book className="w-4 h-4" /></span>
+            <span className="pw-nav-text">Resources</span>
+          </NavLink>
         </div>
 
-        {/* Assigned Portfolios & Dynamic Department Operations */}
+        {/* 6. Assigned Portfolios & Department Operations */}
         <div className="pw-nav-section">
           <span className="pw-nav-label flex items-center justify-between">
             <span>{assignedDepts.length > 0 ? "My Assigned Portfolios" : "Department Operations"}</span>
@@ -534,29 +568,9 @@ export default function TeacherLayout() {
           )}
         </div>
 
+        {/* 7. Settings */}
         <div className="pw-nav-section">
-          <span className="pw-nav-label">Quick</span>
-          <NavLink
-            to="/dashboard/teacher/messages"
-            onClick={closeSidebar}
-            onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[10])}
-            className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
-          >
-            <span className="pw-nav-ic"><MessageSquare className="w-4 h-4" /></span>
-            <span className="pw-nav-text">Messages</span>
-            {chatUnreadBadge != null && (
-              <span className="pw-nav-badge pw-nav-badge--rose">{chatUnreadBadge}</span>
-            )}
-          </NavLink>
-          <NavLink
-            to="/dashboard/teacher/notifications"
-            onClick={closeSidebar}
-            onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[11])}
-            className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
-          >
-            <span className="pw-nav-ic"><Bell className="w-4 h-4" /></span>
-            <span className="pw-nav-text">Notifications</span>
-          </NavLink>
+          <span className="pw-nav-label">Settings</span>
           <NavLink
             to="/dashboard/teacher/settings"
             onClick={closeSidebar}

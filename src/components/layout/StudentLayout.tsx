@@ -174,24 +174,41 @@ export function StudentLayoutContent() {
 
   const closeSidebar = () => setSidebarOpen(false);
 
-  const navItems = [
-    { to: '/dashboard/student', icon: <LayoutDashboard className="w-4 h-4" />, label: 'Dashboard', end: true, prefetch: STUDENT_ROUTE_CHUNKS[0] },
-    { to: '/dashboard/student/course-registration', icon: <GraduationCap className="w-4 h-4 text-purple-400" />, label: 'Course Registration & Retakes' },
-    { to: '/dashboard/student/assignments', icon: <BookOpen className="w-4 h-4" />, label: 'My Coursework', prefetch: STUDENT_ROUTE_CHUNKS[1] },
-    { to: '/dashboard/student/calendar', icon: <CalendarDays className="w-4 h-4 text-emerald-400" />, label: 'School Calendar & Exams' },
-    { to: '/dashboard/student/timetable', icon: <Calendar className="w-4 h-4" />, label: 'Class Timetable', prefetch: STUDENT_ROUTE_CHUNKS[2] },
-    { to: '/dashboard/student/results', icon: <Award className="w-4 h-4" />, label: 'Exam Results & Reports', prefetch: STUDENT_ROUTE_CHUNKS[3] },
-    { to: '/dashboard/student/attendance', icon: <ClipboardCheck className="w-4 h-4" />, label: 'My Attendance', prefetch: STUDENT_ROUTE_CHUNKS[4] },
-    { to: '/dashboard/student/resources', icon: <FolderOpen className="w-4 h-4" />, label: 'Learning Resources', prefetch: STUDENT_ROUTE_CHUNKS[5] },
-    { to: '/dashboard/student/fees', icon: <CreditCard className="w-4 h-4" />, label: 'Tuition & Fees' },
-    { to: '/dashboard/student/facilities', icon: <Building2 className="w-4 h-4 text-sky-400" />, label: 'Facility Passes & Liabilities' },
-    { to: '/dashboard/student/gate-pass', icon: <ShieldCheck className="w-4 h-4 text-emerald-400" />, label: 'Exit Permissions' },
-    { to: '/dashboard/student/messages', icon: <MessageSquare className="w-4 h-4" />, label: 'School Messages' },
-  ];
-
-  const civicItems = [
-    { to: '/dashboard/student/voting', icon: <Vote className="w-4 h-4" />, label: 'Campus Voting' },
-    { to: '/dashboard/student/grievances', icon: <MessageSquareQuote className="w-4 h-4" />, label: 'Grievances Desk' },
+  const navSections = [
+    {
+      title: 'Academic Journey',
+      items: [
+        { to: '/dashboard/student', icon: <LayoutDashboard className="w-4 h-4" />, label: 'Dashboard', end: true, prefetch: STUDENT_ROUTE_CHUNKS[0] },
+        { to: '/dashboard/student/timetable', icon: <Calendar className="w-4 h-4" />, label: 'Class Timetable', prefetch: STUDENT_ROUTE_CHUNKS[2] },
+        { to: '/dashboard/student/course-registration', icon: <GraduationCap className="w-4 h-4 text-purple-400" />, label: 'Course Registration & Retakes' },
+        { to: '/dashboard/student/assignments', icon: <BookOpen className="w-4 h-4" />, label: 'My Coursework', prefetch: STUDENT_ROUTE_CHUNKS[1] },
+        { to: '/dashboard/student/resources', icon: <FolderOpen className="w-4 h-4" />, label: 'Learning Resources', prefetch: STUDENT_ROUTE_CHUNKS[5] },
+      ],
+    },
+    {
+      title: 'Assessments & Standing',
+      items: [
+        { to: '/dashboard/student/results', icon: <Award className="w-4 h-4" />, label: 'Exam Results & Reports', prefetch: STUDENT_ROUTE_CHUNKS[3] },
+        { to: '/dashboard/student/calendar', icon: <CalendarDays className="w-4 h-4 text-emerald-400" />, label: 'School Calendar & Exams' },
+        { to: '/dashboard/student/attendance', icon: <ClipboardCheck className="w-4 h-4" />, label: 'My Attendance', prefetch: STUDENT_ROUTE_CHUNKS[4] },
+      ],
+    },
+    {
+      title: 'Finances & Clearance',
+      items: [
+        { to: '/dashboard/student/fees', icon: <CreditCard className="w-4 h-4" />, label: 'Tuition & Fees Ledger' },
+        { to: '/dashboard/student/facilities', icon: <Building2 className="w-4 h-4 text-sky-400" />, label: 'Facility Passes & Liabilities' },
+      ],
+    },
+    {
+      title: 'Campus Life & Services',
+      items: [
+        { to: '/dashboard/student/gate-pass', icon: <ShieldCheck className="w-4 h-4 text-emerald-400" />, label: 'Exit Permissions' },
+        { to: '/dashboard/student/messages', icon: <MessageSquare className="w-4 h-4" />, label: 'School Messages' },
+        { to: '/dashboard/student/voting', icon: <Vote className="w-4 h-4" />, label: 'Campus Voting' },
+        { to: '/dashboard/student/grievances', icon: <MessageSquareQuote className="w-4 h-4" />, label: 'Grievances Desk' },
+      ],
+    },
   ];
 
   return (
@@ -462,69 +479,44 @@ export function StudentLayoutContent() {
 
         {/* Navigation Sections */}
         <div style={{ flex: 1, padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: t.textMuted, padding: '6px 12px 2px' }}>
-            Academic Center
-          </div>
-          {navItems.map((item) => {
-            const active = item.end ? location.pathname === item.to : location.pathname.startsWith(item.to);
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                onClick={closeSidebar}
-                onMouseEnter={() => item.prefetch?.()}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '9px 12px',
-                  borderRadius: 10,
-                  fontSize: 13,
-                  fontWeight: active ? 700 : 500,
-                  color: active ? t.mint : t.textSecondary,
-                  background: active ? t.mintDim : 'transparent',
-                  border: `1px solid ${active ? 'rgba(16,217,168,0.2)' : 'transparent'}`,
-                  textDecoration: 'none',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <span style={{ color: active ? t.mint : t.textMuted }}>{item.icon}</span>
-                <span>{item.label}</span>
-              </NavLink>
-            );
-          })}
-
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: t.textMuted, padding: '14px 12px 2px' }}>
-            Civic & Campus Life
-          </div>
-          {civicItems.map((item) => {
-            const active = location.pathname.startsWith(item.to);
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                onClick={closeSidebar}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '9px 12px',
-                  borderRadius: 10,
-                  fontSize: 13,
-                  fontWeight: active ? 700 : 500,
-                  color: active ? t.mint : t.textSecondary,
-                  background: active ? t.mintDim : 'transparent',
-                  border: `1px solid ${active ? 'rgba(16,217,168,0.2)' : 'transparent'}`,
-                  textDecoration: 'none',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <span style={{ color: active ? t.mint : t.textMuted }}>{item.icon}</span>
-                <span>{item.label}</span>
-              </NavLink>
-            );
-          })}
+          {navSections.map((section, sIdx) => (
+            <div key={section.title} style={{ marginBottom: 6 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: t.textMuted, padding: `${sIdx === 0 ? '4px' : '10px'} 12px 4px` }}>
+                {section.title}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {section.items.map((item) => {
+                  const active = item.end ? location.pathname === item.to : location.pathname.startsWith(item.to);
+                  return (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end={item.end}
+                      onClick={closeSidebar}
+                      onMouseEnter={() => item.prefetch?.()}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        padding: '9px 12px',
+                        borderRadius: 10,
+                        fontSize: 13,
+                        fontWeight: active ? 700 : 500,
+                        color: active ? t.mint : t.textSecondary,
+                        background: active ? t.mintDim : 'transparent',
+                        border: `1px solid ${active ? 'rgba(16,217,168,0.2)' : 'transparent'}`,
+                        textDecoration: 'none',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <span style={{ color: active ? t.mint : t.textMuted }}>{item.icon}</span>
+                      <span>{item.label}</span>
+                    </NavLink>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* Sidebar Footer */}

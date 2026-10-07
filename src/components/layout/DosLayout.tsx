@@ -775,17 +775,19 @@ export default function DosLayout() {
             <span className="pw-brand-pill">{dosPillLabel}</span>
           </div>
 
-          {/* ── Main ────────────────────────────────────────────────────────── */}
+          {/* 1. Overview & Command */}
           <div className="pw-nav-section">
-            <span className="pw-nav-label">Main</span>
+            <span className="pw-nav-label">Overview &amp; Command</span>
             <NavItem to={DOS_BASE} icon={<LayoutDashboard className="w-4 h-4" />} label="Dashboard" end onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to={`${DOS_BASE}/messages`} icon={<MessageSquare className="w-4 h-4" />} label="Messages" badge={chatUnreadBadge} badgeColor="rose" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to={`${DOS_BASE}/profile`} icon={<UserCheck className="w-4 h-4" />} label="My profile" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/calendar`} icon={<CalendarDays className="w-4 h-4 text-emerald-400" />} label="Academic Calendar &amp; Exams" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/notifications`} icon={<Bell className="w-4 h-4" />} label="Notifications" badge={notifCount ?? undefined} badgeColor="amber" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/profile`} icon={<UserCheck className="w-4 h-4" />} label="My Profile" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
 
-          {/* ── Students ────────────────────────────────────────────────────── */}
+          {/* 2. Trainee Enrolment & Status */}
           <div className="pw-nav-section">
-            <span className="pw-nav-label">Students</span>
+            <span className="pw-nav-label">Trainee Enrolment</span>
             <NavGroup
               icon={<GraduationCap className="w-4 h-4" />}
               label={navTerms.studentsLabel}
@@ -801,21 +803,30 @@ export default function DosLayout() {
               <SubItemStudentsFilter discipline="suspended" label="Suspended" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItemStudentsFilter discipline="deactivated" label="Deactivated" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>
-            <NavItem to={`${DOS_BASE}/teachers`} icon={<BookOpen className="w-4 h-4" />} label={navTerms.teachersLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
 
-          {/* ── Academic ────────────────────────────────────────────────────── */}
+          {/* 3. Faculty & Scheduling */}
           <div className="pw-nav-section">
-            <span className="pw-nav-label">Academic</span>
-            <NavItem to={`${DOS_BASE}/calendar`} icon={<CalendarDays className="w-4 h-4 text-emerald-400" />} label="Academic Calendar & Exams" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <span className="pw-nav-label">Faculty &amp; Scheduling</span>
+            <NavItem to={`${DOS_BASE}/teachers`} icon={<BookOpen className="w-4 h-4" />} label={navTerms.teachersLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to={`${DOS_BASE}/settings/timetable`} icon={<Calendar className="w-4 h-4" />} label={navTerms.timetableLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/attendance/teachers`} icon={<ClipboardList className="w-4 h-4" />} label={isTertiary ? 'Tutor Sign-In' : 'Teacher Sign-In'} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+          </div>
+
+          {/* 4. Clinical & Attendance */}
+          <div className="pw-nav-section">
+            <span className="pw-nav-label">Clinical &amp; Attendance</span>
             {isTertiary && (
-              <NavItem to="/dashboard/admin/ward-postings" icon={<Stethoscope className="w-4 h-4" />} label="Ward Postings & Clinical" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <NavItem to="/dashboard/admin/ward-postings" icon={<Stethoscope className="w-4 h-4" />} label="Ward Postings &amp; Clinical" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             )}
+            <NavItem to={`${DOS_BASE}/attendance`} icon={<ClipboardCheck className="w-4 h-4" />} label={navTerms.attendanceLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+          </div>
+
+          {/* 5. Examinations & UNMEB */}
+          <div className="pw-nav-section">
+            <span className="pw-nav-label">Examinations &amp; UNMEB</span>
             <NavItem to={`${DOS_BASE}/exam-sets`} icon={<FileEdit className="w-4 h-4" />} label={navTerms.examSetsLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to={`${DOS_BASE}/exam-set-results`} icon={<Trophy className="w-4 h-4" />} label={navTerms.examResultsLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to={`${DOS_BASE}/attendance`} icon={<ClipboardCheck className="w-4 h-4" />} label={navTerms.attendanceLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to={`${DOS_BASE}/attendance/teachers`} icon={<ClipboardList className="w-4 h-4" />} label={isTertiary ? 'Tutor Sign-In' : 'Teacher Sign-In'} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to={`${DOS_BASE}/headteacher-comments-settings`} icon={<MessageSquare className="w-4 h-4" />} label={isTertiary ? 'Grading Regulations' : 'Grade Comments'} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavGroup
               icon={<BarChart3 className="w-4 h-4" />}
@@ -829,11 +840,10 @@ export default function DosLayout() {
             </NavGroup>
           </div>
 
-          {/* ── System ──────────────────────────────────────────────────────── */}
+          {/* 6. Settings */}
           <div className="pw-nav-section">
-            <span className="pw-nav-label">System</span>
-            <NavItem to={`${DOS_BASE}/notifications`} icon={<Bell className="w-4 h-4" />} label="Notifications" badge={notifCount ?? undefined} badgeColor="amber" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to={`${DOS_BASE}/settings`} icon={<Settings className="w-4 h-4" />} label="Settings" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <span className="pw-nav-label">Academic Settings</span>
+            <NavItem to={`${DOS_BASE}/settings`} icon={<Settings className="w-4 h-4" />} label="System Settings" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
 
           <div className="pw-sidebar-bottom">
