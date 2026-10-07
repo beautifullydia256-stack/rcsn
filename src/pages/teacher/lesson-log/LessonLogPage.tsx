@@ -21,6 +21,7 @@ import { registerApiUrl } from '@/lib/registerApiOrigin';
 import { resolveTeacherIdForSchool } from '@/lib/resolveTeacherId';
 import { useUIStore } from '@/store/uiStore';
 import { getTokens } from '@/styles/posThemeTokens';
+import NativeModal from '@/components/NativeModal';
 
 /* ─── Uganda time helpers (UTC+3, no DST) ─────────────────────────── */
 function ugandaNow(): Date {
@@ -207,192 +208,84 @@ function CameraModal({
   };
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 50,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'rgba(0, 0, 0, 0.75)',
-        backdropFilter: 'blur(8px)',
-        padding: '16px',
-      }}
+    <NativeModal
+      isOpen={true}
+      onClose={onClose}
+      title={title}
+      subtitle={instruction}
+      icon={Camera}
+      size="md"
     >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '520px',
-          background: t.card,
-          border: `1px solid ${t.border}`,
-          borderRadius: '20px',
-          overflow: 'hidden',
-          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
-        }}
-      >
-        {/* Modal Header */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '16px 20px',
-            borderBottom: `1px solid ${t.border}`,
-            background: t.surface,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Camera size={18} style={{ color: t.brandBlue }} />
-            <h3 style={{ fontSize: '15px', fontWeight: 700, color: t.textPrimary, margin: 0 }}>{title}</h3>
+      <div className="space-y-4">
+        {camError ? (
+          <div className="rounded-xl p-3.5 bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
+            {camError}
           </div>
+        ) : (
+          <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-black/60 border border-white/15 flex items-center justify-center shadow-inner">
+            {!captured ? (
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <img
+                src={captured}
+                alt="Captured photolog"
+                className="w-full h-full object-cover"
+              />
+            )}
+            <canvas ref={canvasRef} className="hidden" />
+          </div>
+        )}
+
+        {/* Action buttons */}
+        <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
           <button
             type="button"
             onClick={onClose}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: t.textMuted,
-              cursor: 'pointer',
-              padding: '4px',
-            }}
+            className="px-4 py-2.5 rounded-xl text-xs font-semibold text-white/75 hover:text-white bg-white/5 hover:bg-white/10 border border-white/15 transition-all"
           >
-            <X size={18} />
+            Cancel
           </button>
-        </div>
-
-        {/* Viewport Area */}
-        <div style={{ padding: '20px' }}>
-          <p style={{ fontSize: '13px', color: t.textMuted, margin: '0 0 14px 0' }}>{instruction}</p>
-
-          {camError ? (
-            <div
-              style={{
-                borderRadius: '12px',
-                padding: '14px',
-                background: isDark ? 'rgba(239, 68, 68, 0.1)' : '#FEE2E2',
-                color: isDark ? '#F87171' : '#B91C1C',
-                fontSize: '13px',
-              }}
+          {!captured ? (
+            <button
+              type="button"
+              onClick={snap}
+              disabled={!!camError}
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-lg shadow-emerald-500/25 border border-emerald-400/30 transition-all flex items-center gap-2 disabled:opacity-50"
             >
-              {camError}
-            </div>
+              <Camera className="w-4 h-4" />
+              <span>Capture Photo</span>
+            </button>
           ) : (
-            <div
-              style={{
-                position: 'relative',
-                aspectRatio: '4/3',
-                width: '100%',
-                borderRadius: '14px',
-                overflow: 'hidden',
-                background: '#000000',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              {!captured && (
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              )}
-              {captured && (
-                <img
-                  src={captured}
-                  alt="Captured photolog"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              )}
-              <canvas ref={canvasRef} style={{ display: 'none' }} />
-            </div>
-          )}
-
-          {/* Action buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '16px' }}>
-            {!captured ? (
+            <>
               <button
                 type="button"
-                onClick={snap}
-                disabled={!!camError}
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  background: t.brandBlue,
-                  color: '#FFFFFF',
-                  border: 'none',
-                  borderRadius: '10px',
-                  padding: '12px',
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  cursor: camError ? 'not-allowed' : 'pointer',
-                  opacity: camError ? 0.5 : 1,
-                }}
+                onClick={retake}
+                disabled={uploading}
+                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-white/80 hover:text-white bg-white/10 hover:bg-white/15 border border-white/20 transition-all flex items-center gap-1.5"
               >
-                <Camera size={16} />
-                Capture Photolog
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Retake</span>
               </button>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={retake}
-                  disabled={uploading}
-                  style={{
-                    flex: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    background: t.surface,
-                    border: `1px solid ${t.border}`,
-                    color: t.textPrimary,
-                    borderRadius: '10px',
-                    padding: '12px',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    cursor: uploading ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  <RotateCcw size={15} />
-                  Retake Photo
-                </button>
-                <button
-                  type="button"
-                  onClick={confirm}
-                  disabled={uploading}
-                  style={{
-                    flex: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    background: t.brandMint,
-                    color: '#064E3B',
-                    border: 'none',
-                    borderRadius: '10px',
-                    padding: '12px',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    cursor: uploading ? 'not-allowed' : 'pointer',
-                    opacity: uploading ? 0.6 : 1,
-                  }}
-                >
-                  <Check size={16} />
-                  {uploading ? 'Submitting...' : 'Use This Photo'}
-                </button>
-              </>
-            )}
-          </div>
+              <button
+                type="button"
+                onClick={confirm}
+                disabled={uploading}
+                className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-lg shadow-emerald-500/25 border border-emerald-400/30 transition-all flex items-center gap-2 disabled:opacity-50"
+              >
+                <Check className="w-4 h-4" />
+                <span>{uploading ? 'Submitting...' : 'Use This Photo'}</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
-    </div>
+    </NativeModal>
   );
 }
 

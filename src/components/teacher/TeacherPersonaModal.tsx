@@ -18,6 +18,7 @@ import { useUIStore } from '@/store/uiStore';
 import { getTokens } from '@/styles/posThemeTokens';
 import { useTeacherPersonaStore, SimulatedTeacher } from '@/store/teacherPersonaStore';
 import { useSchoolType } from '@/hooks/useSchoolType';
+import NativeModal from '@/components/NativeModal';
 
 interface TeacherPersonaModalProps {
   isOpen: boolean;
@@ -134,126 +135,61 @@ export default function TeacherPersonaModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div
-        className="w-full max-w-2xl rounded-2xl border shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
-        style={{
-          backgroundColor: t.panel,
-          borderColor: t.stroke,
-        }}
-      >
-        {/* Modal Header */}
-        <div
-          className="p-5 border-b relative"
-          style={{
-            backgroundColor: t.surfaceSubtle,
-            borderColor: t.divider,
-          }}
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border"
-                style={{
-                  backgroundColor: t.goldDim,
-                  borderColor: t.gold,
-                  color: t.gold,
-                }}
-              >
-                <Sparkles className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold tracking-tight" style={{ color: t.textHi }}>
-                  {title}
-                </h3>
-                <p className="text-xs mt-0.5" style={{ color: t.textMid }}>
-                  {subtitle}
-                </p>
-              </div>
+    <NativeModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={title}
+      subtitle={subtitle}
+      icon={Sparkles}
+      size="2xl"
+    >
+      <div className="space-y-4">
+        {/* Active Simulation Status Banner */}
+        {simulatedTeacher && (
+          <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2 text-emerald-300">
+              <Check className="w-4 h-4 shrink-0" />
+              <span>
+                Currently simulating: <strong className="text-emerald-400 font-bold">{simulatedTeacher.name}</strong>
+              </span>
             </div>
-
             <button
               type="button"
-              onClick={onClose}
-              className="p-1.5 rounded-lg border text-xs hover:opacity-80 transition-opacity"
-              style={{
-                backgroundColor: t.fieldBg,
-                borderColor: t.stroke,
-                color: t.textLow,
-              }}
+              onClick={handleExitSimulation}
+              className="px-3 py-1.5 rounded-xl text-xs font-bold border border-rose-500/30 text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 transition-colors"
             >
-              <X className="w-4 h-4" />
+              Exit Simulation
             </button>
           </div>
-
-          {/* Active Simulation Status Banner */}
-          {simulatedTeacher && (
-            <div
-              className="mt-3 p-2.5 rounded-xl border flex items-center justify-between gap-2 text-xs"
-              style={{
-                backgroundColor: 'rgba(61, 232, 160, 0.1)',
-                borderColor: 'rgba(61, 232, 160, 0.3)',
-                color: t.textHi,
-              }}
-            >
-              <div className="flex items-center gap-2">
-                <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>
-                  Currently simulating:{' '}
-                  <strong className="text-emerald-400">{simulatedTeacher.name}</strong>
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={handleExitSimulation}
-                className="px-2.5 py-1 rounded-lg text-[11px] font-bold border hover:bg-rose-500/20 text-rose-400 border-rose-500/30 transition-colors"
-              >
-                Exit Simulation
-              </button>
-            </div>
-          )}
-        </div>
+        )}
 
         {/* Search Bar */}
-        <div
-          className="p-3 border-b"
-          style={{
-            backgroundColor: t.fieldBg,
-            borderColor: t.divider,
-          }}
-        >
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-2.5" style={{ color: t.textLow }} />
-            <input
-              type="text"
-              placeholder={`Search ${isTertiary ? 'tutors and instructors' : 'teachers'} by name, email, or course unit...`}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-xl text-xs border outline-none transition-all"
-              style={{
-                backgroundColor: t.surface,
-                borderColor: t.stroke,
-                color: t.textHi,
-              }}
-            />
-          </div>
+        <div className="relative">
+          <Search className="w-4 h-4 absolute left-3.5 top-3 text-white/40" />
+          <input
+            type="text"
+            placeholder={`Search ${isTertiary ? 'tutors and instructors' : 'teachers'} by name, email, or course unit...`}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner"
+          />
         </div>
 
         {/* Teachers List */}
-        <div className="p-4 overflow-y-auto space-y-2.5 flex-1">
+        <div className="max-h-96 overflow-y-auto space-y-2.5 pr-1 no-scrollbar">
           {isLoading && (
-            <div className="py-12 text-center text-xs" style={{ color: t.textLow }}>
+            <div className="py-12 text-center text-xs text-white/50">
               Loading institution educators...
             </div>
           )}
 
           {!isLoading && filteredTeachers.length === 0 && (
             <div className="py-12 text-center space-y-1">
-              <Users className="w-8 h-8 mx-auto opacity-30" style={{ color: t.textLow }} />
-              <div className="text-xs font-semibold" style={{ color: t.textHi }}>
+              <Users className="w-8 h-8 mx-auto text-white/30" />
+              <div className="text-xs font-semibold text-white/80">
                 No instructors found
               </div>
-              <div className="text-[11px]" style={{ color: t.textLow }}>
+              <div className="text-[11px] text-white/50">
                 {searchQuery ? 'Try matching another name or course code.' : 'No teachers registered in this school.'}
               </div>
             </div>
@@ -274,29 +210,26 @@ export default function TeacherPersonaModal({
                 <div
                   key={teacher.id}
                   onClick={() => handleSelect(teacher)}
-                  className={`p-3 rounded-xl border flex items-center justify-between gap-3 cursor-pointer transition-all hover:scale-[1.01] ${
-                    isSelected ? 'ring-2 ring-emerald-500' : 'hover:border-emerald-500/50'
+                  className={`p-3 rounded-2xl border flex items-center justify-between gap-3 cursor-pointer transition-all hover:scale-[1.01] ${
+                    isSelected
+                      ? 'bg-emerald-500/15 border-emerald-400 shadow-lg shadow-emerald-500/20 ring-1 ring-emerald-400/50'
+                      : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
                   }`}
-                  style={{
-                    backgroundColor: isSelected ? 'rgba(61, 232, 160, 0.08)' : t.fieldBg,
-                    borderColor: isSelected ? '#3DE8A0' : t.stroke,
-                  }}
                 >
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 border"
-                      style={{
-                        backgroundColor: t.surfaceSubtle,
-                        borderColor: isSelected ? '#3DE8A0' : t.stroke,
-                        color: isSelected ? '#3DE8A0' : t.textHi,
-                      }}
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 border ${
+                        isSelected
+                          ? 'bg-emerald-500/25 border-emerald-400 text-emerald-300'
+                          : 'bg-white/10 border-white/15 text-white/90'
+                      }`}
                     >
                       {initials}
                     </div>
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-xs truncate" style={{ color: t.textHi }}>
+                        <span className="font-bold text-xs truncate text-white">
                           {teacher.name}
                         </span>
                         {isSelected && (
@@ -306,7 +239,7 @@ export default function TeacherPersonaModal({
                         )}
                       </div>
 
-                      <div className="text-[11px] truncate mt-0.5" style={{ color: t.textLow }}>
+                      <div className="text-[11px] truncate mt-0.5 text-white/60">
                         {teacher.email || teacher.phone || 'Staff Member'}
                       </div>
 
@@ -315,18 +248,13 @@ export default function TeacherPersonaModal({
                           {teacher.subjects.slice(0, 3).map((sub: string, sIdx: number) => (
                             <span
                               key={sIdx}
-                              className="px-1.5 py-0.5 rounded text-[10px] font-medium"
-                              style={{
-                                backgroundColor: t.surfaceSubtle,
-                                color: t.textMid,
-                                border: `1px solid ${t.stroke}`,
-                              }}
+                              className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-white/5 border border-white/10 text-white/70"
                             >
                               {sub}
                             </span>
                           ))}
                           {teacher.subjects.length > 3 && (
-                            <span className="text-[10px]" style={{ color: t.textLow }}>
+                            <span className="text-[10px] text-white/50">
                               +{teacher.subjects.length - 3} more
                             </span>
                           )}
@@ -338,12 +266,11 @@ export default function TeacherPersonaModal({
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       type="button"
-                      className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
-                      style={{
-                        backgroundColor: isSelected ? '#3DE8A0' : t.surfaceSubtle,
-                        color: isSelected ? '#000000' : t.textHi,
-                        border: `1px solid ${isSelected ? '#3DE8A0' : t.stroke}`,
-                      }}
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm ${
+                        isSelected
+                          ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white border border-emerald-400/30'
+                          : 'bg-white/10 hover:bg-white/20 text-white border border-white/15'
+                      }`}
                     >
                       <span>{isSelected ? 'Simulating' : 'Present As'}</span>
                       <ArrowRight className="w-3.5 h-3.5" />
@@ -355,31 +282,19 @@ export default function TeacherPersonaModal({
         </div>
 
         {/* Modal Footer */}
-        <div
-          className="p-3 border-t flex items-center justify-between text-xs"
-          style={{
-            backgroundColor: t.surfaceSubtle,
-            borderColor: t.divider,
-            color: t.textLow,
-          }}
-        >
+        <div className="flex items-center justify-between pt-3 border-t border-white/10 text-xs text-white/60">
           <span>
             {teachers.length} total {isTertiary ? 'instructors' : 'teachers'} available for presentation
           </span>
           <button
             type="button"
             onClick={onClose}
-            className="px-3 py-1 rounded-lg border font-semibold hover:opacity-90"
-            style={{
-              backgroundColor: t.fieldBg,
-              borderColor: t.stroke,
-              color: t.textMid,
-            }}
+            className="px-4 py-2 rounded-xl text-xs font-semibold text-white/75 hover:text-white bg-white/5 hover:bg-white/10 border border-white/15 transition-all"
           >
             Close
           </button>
         </div>
       </div>
-    </div>
+    </NativeModal>
   );
 }

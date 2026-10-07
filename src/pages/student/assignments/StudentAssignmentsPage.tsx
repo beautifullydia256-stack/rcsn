@@ -486,89 +486,86 @@ export default function StudentAssignmentsPage() {
         isOpen={!!selectedSubmission}
         onClose={() => setSelectedSubmission(null)}
         title={selectedSubmission ? `${selectedSubmission.subject}: ${selectedSubmission.title}` : 'Assignment Review'}
+        subtitle="Review submission timestamp, awarded score, evaluation rubric, and educator feedback."
+        icon={BookOpen}
         size="lg"
       >
         {selectedSubmission && (
-          <div style={{ color: t.textPrimary }}>
-            <div
-              style={{
-                background: t.surface,
-                border: `1px solid ${t.border}`,
-                borderRadius: 14,
-                padding: '16px 20px',
-                marginBottom: 20,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
+          <div className="space-y-4">
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-4">
               <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: 'uppercase' }}>Submission Status</div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: selectedSubmission.status === 'graded' ? t.mint : t.blue, textTransform: 'capitalize' }}>
+                <span className="block text-[11px] font-bold text-white/60 uppercase tracking-wider">
+                  Submission Status
+                </span>
+                <span className={`text-base font-extrabold capitalize ${
+                  selectedSubmission.status === 'graded' ? 'text-emerald-400' : 'text-blue-400'
+                }`}>
                   {selectedSubmission.status}
-                </div>
+                </span>
               </div>
 
               {selectedSubmission.submission?.grade !== null && (
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: 'uppercase' }}>Score Awarded</div>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: t.mint }}>
+                <div className="text-right">
+                  <span className="block text-[11px] font-bold text-white/60 uppercase tracking-wider">
+                    Score Awarded
+                  </span>
+                  <span className="text-xl font-black text-emerald-400 font-mono">
                     {selectedSubmission.submission?.grade} / {selectedSubmission.total_marks}
-                  </div>
+                  </span>
                 </div>
               )}
             </div>
 
             {selectedSubmission.submission?.feedback && (
-              <div
-                style={{
-                  background: isDark ? 'rgba(16,217,168,0.06)' : 'rgba(16,217,168,0.1)',
-                  border: `1px solid rgba(16,217,168,0.25)`,
-                  borderRadius: 12,
-                  padding: '14px 16px',
-                  marginBottom: 20,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: t.mint, marginBottom: 4 }}>
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Teacher's Evaluation & Feedback</span>
+              <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 space-y-2">
+                <div className="flex items-center gap-2 text-xs font-bold text-emerald-300">
+                  <Sparkles className="w-4 h-4 text-emerald-400" />
+                  <span>Teacher&apos;s Evaluation &amp; Feedback</span>
                 </div>
-                <div style={{ fontSize: 13, color: t.textPrimary, lineHeight: 1.5 }}>
+                <p className="text-xs text-white/90 leading-relaxed">
                   {selectedSubmission.submission.feedback}
-                </div>
+                </p>
               </div>
             )}
 
-            <div style={{ fontSize: 12, color: t.textMuted, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div>Submitted on: <strong style={{ color: t.textPrimary }}>{new Date(selectedSubmission.submission?.submitted_at || '').toLocaleString()}</strong></div>
+            <div className="p-3.5 rounded-xl bg-black/20 border border-white/10 text-xs text-white/70 space-y-2">
+              <div>
+                Submitted on:{' '}
+                <strong className="text-white font-medium">
+                  {new Date(selectedSubmission.submission?.submitted_at || '').toLocaleString()}
+                </strong>
+              </div>
               {selectedSubmission.submission?.total_time_spent_seconds && (
-                <div>Time spent: <strong style={{ color: t.textPrimary }}>{Math.round(selectedSubmission.submission.total_time_spent_seconds / 60)} minutes</strong></div>
+                <div>
+                  Time spent:{' '}
+                  <strong className="text-white font-medium">
+                    {Math.round(selectedSubmission.submission.total_time_spent_seconds / 60)} minutes
+                  </strong>
+                </div>
               )}
               {selectedSubmission.submission?.file_url && (
-                <div style={{ marginTop: 10 }}>
+                <div className="pt-2">
                   <a
                     href={selectedSubmission.submission.file_url}
                     target="_blank"
                     rel="noreferrer"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      padding: '6px 14px',
-                      borderRadius: 8,
-                      background: t.surface,
-                      border: `1px solid ${t.border}`,
-                      color: t.textPrimary,
-                      fontSize: 12,
-                      fontWeight: 600,
-                      textDecoration: 'none',
-                    }}
+                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-semibold text-white transition-all shadow-sm"
                   >
-                    <Download className="w-3.5 h-3.5 text-blue-400" />
+                    <Download className="w-3.5 h-3.5 text-emerald-400" />
                     <span>Download Submitted File</span>
                   </a>
                 </div>
               )}
+            </div>
+
+            <div className="flex items-center justify-end pt-3 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => setSelectedSubmission(null)}
+                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-white/75 hover:text-white bg-white/5 hover:bg-white/10 border border-white/15 transition-all"
+              >
+                Close Review
+              </button>
             </div>
           </div>
         )}

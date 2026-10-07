@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useUIStore } from '@/store/uiStore';
 import { getTokens } from '@/styles/posThemeTokens';
+import NativeModal from '@/components/NativeModal';
 
 interface TertiaryTemplateInfo {
   key: string;
@@ -147,67 +148,51 @@ export default function TemplatesPage() {
       </div>
 
       {/* Modal Details */}
-      {selectedTemplate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="w-full max-w-lg rounded-2xl p-6 border shadow-2xl relative"
-            style={{ background: t.card, borderColor: t.border }}
-          >
-            <button
-              type="button"
-              onClick={() => setSelectedTemplate(null)}
-              className="absolute top-4 right-4 p-2 rounded-lg hover:bg-white/10 transition-colors"
-              style={{ color: t.textMuted }}
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <div className="flex items-center gap-3 mb-4">
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: `${selectedTemplate.badgeColor}20`, color: selectedTemplate.badgeColor }}
-              >
-                <selectedTemplate.icon className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold" style={{ color: t.textPrimary }}>
-                  {selectedTemplate.name}
-                </h3>
-                <span className="text-xs font-semibold" style={{ color: selectedTemplate.badgeColor }}>
-                  {selectedTemplate.category}
-                </span>
-              </div>
-            </div>
-            <p className="text-sm leading-relaxed mb-6" style={{ color: t.textMuted }}>
+      <NativeModal
+        isOpen={!!selectedTemplate}
+        onClose={() => setSelectedTemplate(null)}
+        title={selectedTemplate?.name || 'Template Details'}
+        subtitle={selectedTemplate?.category || 'Institutional Academic Document'}
+        icon={selectedTemplate?.icon || FileCode2}
+        size="md"
+      >
+        {selectedTemplate && (
+          <div className="space-y-5">
+            <p className="text-xs text-white/70 leading-relaxed">
               {selectedTemplate.description}
             </p>
-            <div className="rounded-xl p-4 border text-xs space-y-2 mb-6" style={{ background: t.card, borderColor: t.border }}>
-              <div className="flex justify-between">
-                <span style={{ color: t.textSub }}>Issuing Authority:</span>
-                <span className="font-semibold" style={{ color: t.textPrimary }}>RCSN / UNMEB Center U028</span>
+
+            <div className="rounded-2xl p-4 bg-white/[0.04] border border-white/10 text-xs space-y-2.5">
+              <div className="flex justify-between items-center">
+                <span className="text-white/50">Issuing Authority:</span>
+                <span className="font-semibold text-white/90">RCSN / UNMEB Center U028</span>
               </div>
-              <div className="flex justify-between">
-                <span style={{ color: t.textSub }}>Security:</span>
-                <span className="font-semibold text-emerald-500">QR-Code Cryptographic Signature</span>
+              <div className="flex justify-between items-center">
+                <span className="text-white/50">Security:</span>
+                <span className="font-semibold text-emerald-400">QR-Code Cryptographic Signature</span>
               </div>
-              <div className="flex justify-between">
-                <span style={{ color: t.textSub }}>Status:</span>
-                <span className="font-semibold" style={{ color: t.brandBlue }}>Active Production Template</span>
+              <div className="flex justify-between items-center">
+                <span className="text-white/50">Category:</span>
+                <span className="font-semibold text-teal-400">{selectedTemplate.category}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-white/50">Status:</span>
+                <span className="font-semibold text-emerald-400">Active Production Template</span>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => setSelectedTemplate(null)}
-              className="w-full py-2.5 rounded-xl text-sm font-semibold text-white shadow-lg"
-              style={{ background: t.brandBlue }}
-            >
-              Close
-            </button>
-          </motion.div>
-        </div>
-      )}
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setSelectedTemplate(null)}
+                className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-white/10 hover:bg-white/15 border border-white/15 transition-all"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+      </NativeModal>
     </div>
   );
 }
