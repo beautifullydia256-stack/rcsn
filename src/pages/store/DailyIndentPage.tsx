@@ -29,6 +29,7 @@ import {
   type StoreDailyIndent,
   type DailyIndentItemInput,
 } from '@/features/store-inventory/services/storeIndentService';
+import NativeModal from '@/components/NativeModal';
 
 export default function DailyIndentPage() {
   const navigate = useNavigate();
@@ -762,140 +763,64 @@ export default function DailyIndentPage() {
         )}
 
         {/* Modal: Storekeeper Physical Dispatch Confirmation */}
-        {dispatchIndent && (
-          <div
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(0,0,0,0.7)',
-              backdropFilter: 'blur(4px)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 9999,
-              padding: '20px',
-            }}
-          >
-            <div
-              style={{
-                width: '100%',
-                maxWidth: '600px',
-                borderRadius: '20px',
-                background: t.panel,
-                border: `1px solid ${t.strokeHi}`,
-                boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
-                overflow: 'hidden',
-              }}
-            >
-              <div style={{ padding: '20px 24px', borderBottom: `1px solid ${t.divider}` }}>
-                <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: t.textHi }}>
-                  Confirm Physical Goods Issuance
-                </h2>
-                <p style={{ fontSize: '12px', color: t.textMid, margin: '4px 0 0 0' }}>
-                  Indent: {dispatchIndent.requisition_number} • Target Date: {dispatchIndent.requested_for_date}
-                </p>
+        <NativeModal
+          isOpen={!!dispatchIndent}
+          onClose={() => setDispatchIndent(null)}
+          title="Confirm Physical Goods Issuance"
+          subtitle={dispatchIndent ? `Indent: ${dispatchIndent.requisition_number} • Target Date: ${dispatchIndent.requested_for_date}` : 'Daily Kitchen Store Indent Dispatch'}
+          icon={Package}
+          size="lg"
+        >
+          {dispatchIndent && (
+            <div className="space-y-4">
+              <div className="text-xs font-bold text-white/80">
+                Enter actual quantities physically weighed or released to the Kitchen:
               </div>
 
-              <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: t.textHi }}>
-                  Enter actual quantities physically weighed or released to the Cook:
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {dispatchIndent.items.map((it) => (
-                    <div
-                      key={it.id}
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: '2fr 1fr 1fr',
-                        gap: '12px',
-                        alignItems: 'center',
-                        padding: '10px 14px',
-                        borderRadius: '10px',
-                        background: t.fieldBg,
-                        border: `1px solid ${t.stroke}`,
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontWeight: 800, fontSize: '13px', color: t.textHi }}>{it.item_name}</div>
-                        <div style={{ fontSize: '11px', color: t.textLow }}>
-                          Requested: {it.quantity_requested} {it.unit_of_measure}
-                        </div>
-                      </div>
-
-                      <div>
-                        <label style={{ display: 'block', fontSize: '10px', color: t.textLow, textTransform: 'uppercase', marginBottom: '2px' }}>
-                          Actual Dispensed
-                        </label>
-                        <input
-                          type="number"
-                          value={actualDispatched[it.store_item_id] ?? it.quantity_requested}
-                          onChange={(e) => {
-                            const val = Number(e.target.value);
-                            setActualDispatched((prev) => ({ ...prev, [it.store_item_id]: val }));
-                          }}
-                          style={{
-                            width: '100%',
-                            padding: '6px 10px',
-                            borderRadius: '6px',
-                            background: t.panel,
-                            border: `1px solid ${t.strokeHi}`,
-                            color: t.mint,
-                            fontWeight: 800,
-                            fontSize: '13px',
-                            outline: 'none',
-                          }}
-                        />
-                      </div>
-
-                      <div style={{ fontSize: '12px', color: t.textMid, fontWeight: 600 }}>
-                        {it.unit_of_measure}
+              <div className="space-y-2.5 max-h-[360px] overflow-y-auto no-scrollbar pr-1">
+                {dispatchIndent.items.map((it) => (
+                  <div
+                    key={it.id}
+                    className="grid grid-cols-[2fr_1fr_auto] gap-3 items-center p-3 rounded-xl bg-white/[0.04] border border-white/10"
+                  >
+                    <div>
+                      <div className="font-bold text-xs text-white">{it.item_name}</div>
+                      <div className="text-[11px] text-white/50">
+                        Requested: {it.quantity_requested} {it.unit_of_measure}
                       </div>
                     </div>
-                  ))}
-                </div>
 
-                <div
-                  style={{
-                    padding: '12px 14px',
-                    borderRadius: '10px',
-                    background: isDark ? 'rgba(16, 217, 168, 0.1)' : '#DCFCE7',
-                    border: `1px solid ${t.mint}`,
-                    color: isDark ? t.mint : '#065F46',
-                    fontSize: '12px',
-                    lineHeight: 1.4,
-                  }}
-                >
-                  Confirming this dispatch will instantly deduct the above quantities from current physical stock in the Store inventory.
-                </div>
+                    <div>
+                      <label className="block text-[10px] text-white/60 uppercase font-bold tracking-wider mb-1">
+                        Actual Dispensed
+                      </label>
+                      <input
+                        type="number"
+                        value={actualDispatched[it.store_item_id] ?? it.quantity_requested}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setActualDispatched((prev) => ({ ...prev, [it.store_item_id]: val }));
+                        }}
+                        className="w-full bg-black/30 border border-white/20 rounded-lg px-2.5 py-1.5 text-xs font-bold text-emerald-400 focus:border-emerald-400 focus:bg-black/45 focus:outline-none transition-all"
+                      />
+                    </div>
+
+                    <div className="text-xs text-white/70 font-semibold pt-4">
+                      {it.unit_of_measure}
+                    </div>
+                  </div>
+                ))}
               </div>
 
-              <div
-                style={{
-                  padding: '16px 24px',
-                  borderTop: `1px solid ${t.divider}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'flex-end',
-                  gap: '10px',
-                }}
-              >
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 text-xs leading-relaxed">
+                Confirming this dispatch will instantly deduct the above quantities from current physical stock in institutional store inventory.
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3">
                 <button
                   type="button"
                   onClick={() => setDispatchIndent(null)}
-                  style={{
-                    padding: '9px 18px',
-                    borderRadius: '8px',
-                    border: `1px solid ${t.stroke}`,
-                    background: 'transparent',
-                    color: t.textMid,
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 bg-white/10 hover:bg-white/15 border border-white/15 transition-all"
                 >
                   Cancel
                 </button>
@@ -903,23 +828,14 @@ export default function DailyIndentPage() {
                   type="button"
                   disabled={dispatchMutation.isPending}
                   onClick={() => dispatchMutation.mutate()}
-                  style={{
-                    padding: '9px 20px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    background: t.ctaGradA,
-                    color: t.ctaText,
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    cursor: dispatchMutation.isPending ? 'not-allowed' : 'pointer',
-                  }}
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-950/40 border border-emerald-400/30 disabled:opacity-50 transition-all"
                 >
                   {dispatchMutation.isPending ? 'Deducting Stock...' : 'Confirm Physical Issuance'}
                 </button>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </NativeModal>
 
       </div>
     </div>

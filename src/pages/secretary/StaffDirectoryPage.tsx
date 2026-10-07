@@ -1293,44 +1293,22 @@ export default function StaffDirectoryPage() {
       {/* ── STAFF DOSSIER INSPECTION DRAWER ─────────────────────────────────── */}
       {selectedStaff && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-end"
-          style={{
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            backdropFilter: 'blur(3px)',
-          }}
+          className="fixed inset-0 z-[240] flex items-center justify-end bg-transparent"
           onClick={() => setSelectedStaff(null)}
         >
           <div
-            className="w-full max-w-md h-full overflow-y-auto p-6 space-y-6 shadow-2xl flex flex-col justify-between"
-            style={{
-              backgroundColor: t.panel,
-              borderLeft: `1px solid ${t.stroke}`,
-              color: t.textHi,
-            }}
+            className="w-full max-w-md h-full overflow-y-auto no-scrollbar p-6 space-y-6 shadow-2xl flex flex-col justify-between bg-slate-950/75 dark:bg-black/85 backdrop-blur-md backdrop-saturate-[150%] border-l border-white/20 text-white rounded-l-[28px]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="space-y-6">
               {/* Drawer Header */}
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
-                  <span
-                    className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
-                    style={{
-                      backgroundColor:
-                        selectedStaff.category === 'teaching'
-                          ? isDark
-                            ? 'rgba(16,217,168,0.15)'
-                            : 'rgba(16,185,129,0.12)'
-                          : isDark
-                          ? 'rgba(168,85,247,0.15)'
-                          : 'rgba(147,51,234,0.10)',
-                      color: selectedStaff.category === 'teaching' ? t.mint : '#a855f7',
-                    }}
-                  >
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                     {selectedStaff.category_label}
                   </span>
                   {selectedStaff.employee_id && (
-                    <span className="text-xs font-mono" style={{ color: t.textLow }}>
+                    <span className="text-xs font-mono text-white/50">
                       #{selectedStaff.employee_id}
                     </span>
                   )}
@@ -1339,11 +1317,7 @@ export default function StaffDirectoryPage() {
                 <button
                   type="button"
                   onClick={() => setSelectedStaff(null)}
-                  className="p-1.5 rounded-lg hover:opacity-80 transition-opacity"
-                  style={{
-                    backgroundColor: t.fieldBg,
-                    color: t.textLow,
-                  }}
+                  className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-all border border-white/10"
                   title="Close Profile"
                 >
                   <X className="w-4 h-4" />
@@ -1356,12 +1330,11 @@ export default function StaffDirectoryPage() {
                   <img
                     src={selectedStaff.photo_url}
                     alt={selectedStaff.name}
-                    className="w-16 h-16 rounded-2xl object-cover border-2"
-                    style={{ borderColor: t.mintRing }}
+                    className="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-400/50 shadow-md"
                   />
                 ) : (
                   <div
-                    className="w-16 h-16 rounded-2xl flex items-center justify-center font-extrabold text-xl text-white shrink-0 shadow-sm"
+                    className="w-16 h-16 rounded-2xl flex items-center justify-center font-extrabold text-xl text-white shrink-0 shadow-lg border border-white/20"
                     style={{
                       background: getAvatarGrad(selectedStaff.name),
                       fontFamily: SORA,
@@ -1373,16 +1346,16 @@ export default function StaffDirectoryPage() {
 
                 <div className="min-w-0">
                   <h2
-                    className="text-lg font-extrabold leading-snug"
-                    style={{ fontFamily: SORA, color: t.textHi }}
+                    className="text-lg font-extrabold leading-snug text-white"
+                    style={{ fontFamily: SORA }}
                   >
                     {selectedStaff.name}
                   </h2>
-                  <div className="text-xs font-medium" style={{ color: t.textMid }}>
+                  <div className="text-xs font-medium text-white/70">
                     {selectedStaff.role_title}
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs mt-0.5" style={{ color: t.textLow }}>
-                    <Building2 className="w-3.5 h-3.5" style={{ color: t.blue }} />
+                  <div className="flex items-center gap-1.5 text-xs mt-0.5 text-white/50">
+                    <Building2 className="w-3.5 h-3.5 text-emerald-400" />
                     <span>{selectedStaff.department}</span>
                   </div>
                 </div>
@@ -1393,11 +1366,7 @@ export default function StaffDirectoryPage() {
                 {selectedStaff.phone && (
                   <a
                     href={`tel:${selectedStaff.phone}`}
-                    className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all shadow-sm"
-                    style={{
-                      background: `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`,
-                      color: t.ctaText,
-                    }}
+                    className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white transition-all shadow-md shadow-emerald-950/40 border border-emerald-400/30"
                   >
                     <Phone className="w-4 h-4" />
                     <span>Call Staff</span>
@@ -1409,10 +1378,7 @@ export default function StaffDirectoryPage() {
                     href={`https://wa.me/${sanitizeWhatsAppNumber(selectedStaff.phone)}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold text-white transition-all shadow-sm"
-                    style={{
-                      background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                    }}
+                    className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 transition-all shadow-md border border-white/20"
                   >
                     <MessageSquare className="w-4 h-4" />
                     <span>WhatsApp</span>
@@ -1422,14 +1388,9 @@ export default function StaffDirectoryPage() {
                 {selectedStaff.email && (
                   <a
                     href={`mailto:${selectedStaff.email}`}
-                    className="col-span-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold transition-all shadow-sm"
-                    style={{
-                      backgroundColor: t.fieldBg,
-                      border: `1px solid ${t.stroke}`,
-                      color: t.textHi,
-                    }}
+                    className="col-span-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/15 border border-white/15 text-white/90 transition-all shadow-sm"
                   >
-                    <Mail className="w-4 h-4" style={{ color: t.blue }} />
+                    <Mail className="w-4 h-4 text-emerald-400" />
                     <span>Send Email ({selectedStaff.email})</span>
                   </a>
                 )}
@@ -1438,38 +1399,26 @@ export default function StaffDirectoryPage() {
               {/* Detailed Information Tabs / Panels */}
               <div className="space-y-4">
                 {/* Official Records */}
-                <div
-                  className="p-3.5 rounded-xl space-y-2.5 text-xs"
-                  style={{
-                    backgroundColor: t.fieldBg,
-                    border: `1px solid ${t.stroke}`,
-                  }}
-                >
-                  <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
+                <div className="p-3.5 rounded-xl space-y-2.5 text-xs bg-white/[0.04] border border-white/10">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-white/50">
                     Official Credentials & Registration
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <span className="block text-[10px]" style={{ color: t.textLow }}>
-                        Staff Category
-                      </span>
-                      <strong style={{ color: t.textHi }}>{selectedStaff.category_label}</strong>
+                      <span className="block text-[10px] text-white/50">Staff Category</span>
+                      <strong className="text-white">{selectedStaff.category_label}</strong>
                     </div>
 
                     <div>
-                      <span className="block text-[10px]" style={{ color: t.textLow }}>
-                        Department Wing
-                      </span>
-                      <strong style={{ color: t.textHi }}>{selectedStaff.department}</strong>
+                      <span className="block text-[10px] text-white/50">Department Wing</span>
+                      <strong className="text-white">{selectedStaff.department}</strong>
                     </div>
 
                     {selectedStaff.employee_id && (
                       <div>
-                        <span className="block text-[10px]" style={{ color: t.textLow }}>
-                          Employee Staff ID
-                        </span>
-                        <strong className="font-mono" style={{ color: t.textHi }}>
+                        <span className="block text-[10px] text-white/50">Employee Staff ID</span>
+                        <strong className="font-mono text-emerald-400">
                           {selectedStaff.employee_id}
                         </strong>
                       </div>
@@ -1477,10 +1426,8 @@ export default function StaffDirectoryPage() {
 
                     {selectedStaff.national_id && (
                       <div>
-                        <span className="block text-[10px]" style={{ color: t.textLow }}>
-                          National ID (NIN)
-                        </span>
-                        <strong className="font-mono" style={{ color: t.textHi }}>
+                        <span className="block text-[10px] text-white/50">National ID (NIN)</span>
+                        <strong className="font-mono text-white">
                           {selectedStaff.national_id}
                         </strong>
                       </div>
@@ -1488,10 +1435,8 @@ export default function StaffDirectoryPage() {
 
                     {selectedStaff.hire_date && (
                       <div>
-                        <span className="block text-[10px]" style={{ color: t.textLow }}>
-                          Date of Appointment
-                        </span>
-                        <strong style={{ color: t.textHi }}>{selectedStaff.hire_date}</strong>
+                        <span className="block text-[10px] text-white/50">Date of Appointment</span>
+                        <strong className="text-white">{selectedStaff.hire_date}</strong>
                       </div>
                     )}
                   </div>
@@ -1499,31 +1444,21 @@ export default function StaffDirectoryPage() {
 
                 {/* Faculty Assignments (If Teacher) */}
                 {selectedStaff.category === 'teaching' && (
-                  <div
-                    className="p-3.5 rounded-xl space-y-2.5 text-xs"
-                    style={{
-                      backgroundColor: t.fieldBg,
-                      border: `1px solid ${t.stroke}`,
-                    }}
-                  >
-                    <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
+                  <div className="p-3.5 rounded-xl space-y-2.5 text-xs bg-white/[0.04] border border-white/10">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-white/50">
                       Faculty Teaching Assignments
                     </div>
 
                     {selectedStaff.classes.length > 0 ? (
                       <div>
-                        <span className="block text-[10px] mb-1.5" style={{ color: t.textLow }}>
+                        <span className="block text-[10px] mb-1.5 text-white/50">
                           Active Classes Taught:
                         </span>
                         <div className="flex flex-wrap gap-1.5">
                           {selectedStaff.classes.map((c) => (
                             <span
                               key={c}
-                              className="text-xs font-semibold px-2.5 py-1 rounded-md"
-                              style={{
-                                backgroundColor: isDark ? 'rgba(59,130,246,0.15)' : 'rgba(37,99,235,0.10)',
-                                color: t.blue,
-                              }}
+                              className="text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/25"
                             >
                               {c}
                             </span>
@@ -1531,25 +1466,21 @@ export default function StaffDirectoryPage() {
                         </div>
                       </div>
                     ) : (
-                      <div className="text-xs" style={{ color: t.textMid }}>
-                        General subject instructor. No specific class roster mapped.
+                      <div className="text-xs text-white/60">
+                        General faculty instructor. No specific class roster mapped.
                       </div>
                     )}
 
                     {selectedStaff.subjects.length > 0 && (
-                      <div className="border-t pt-2" style={{ borderColor: t.divider }}>
-                        <span className="block text-[10px] mb-1" style={{ color: t.textLow }}>
+                      <div className="border-t border-white/10 pt-2">
+                        <span className="block text-[10px] mb-1 text-white/50">
                           Assigned Subjects:
                         </span>
                         <div className="flex flex-wrap gap-1">
                           {selectedStaff.subjects.map((sub) => (
                             <span
                               key={sub}
-                              className="text-xs px-2 py-0.5 rounded-md"
-                              style={{
-                                backgroundColor: isDark ? 'rgba(16,217,168,0.12)' : 'rgba(16,185,129,0.08)',
-                                color: t.mint,
-                              }}
+                              className="text-xs px-2 py-0.5 rounded-md bg-teal-500/15 text-teal-300 border border-teal-500/20"
                             >
                               {sub}
                             </span>
@@ -1560,42 +1491,35 @@ export default function StaffDirectoryPage() {
                   </div>
                 )}
 
-                {/* Emergency Contact (Critical for Secretary Front Desk) */}
-                <div
-                  className="p-3.5 rounded-xl space-y-2 text-xs"
-                  style={{
-                    backgroundColor: t.fieldBg,
-                    border: `1px solid ${t.stroke}`,
-                  }}
-                >
-                  <div className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5" style={{ color: t.textLow }}>
-                    <Shield className="w-3.5 h-3.5" style={{ color: t.red }} />
+                {/* Emergency Contact */}
+                <div className="p-3.5 rounded-xl space-y-2 text-xs bg-white/[0.04] border border-white/10">
+                  <div className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 text-white/50">
+                    <Shield className="w-3.5 h-3.5 text-amber-400" />
                     <span>Emergency Contact Info</span>
                   </div>
 
                   {selectedStaff.emergency_contact_name || selectedStaff.emergency_contact_phone ? (
                     <div className="space-y-1">
                       <div className="flex items-center justify-between">
-                        <span style={{ color: t.textLow }}>Contact Name:</span>
-                        <strong style={{ color: t.textHi }}>{selectedStaff.emergency_contact_name || '—'}</strong>
+                        <span className="text-white/50">Contact Name:</span>
+                        <strong className="text-white">{selectedStaff.emergency_contact_name || '—'}</strong>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span style={{ color: t.textLow }}>Emergency Phone:</span>
+                        <span className="text-white/50">Emergency Phone:</span>
                         {selectedStaff.emergency_contact_phone ? (
                           <a
                             href={`tel:${selectedStaff.emergency_contact_phone}`}
-                            className="font-bold hover:underline"
-                            style={{ color: t.mint }}
+                            className="font-bold text-emerald-400 hover:underline"
                           >
                             {selectedStaff.emergency_contact_phone}
                           </a>
                         ) : (
-                          <span style={{ color: t.textLow }}>—</span>
+                          <span className="text-white/50">—</span>
                         )}
                       </div>
                     </div>
                   ) : (
-                    <p className="text-xs" style={{ color: t.textLow }}>
+                    <p className="text-xs text-white/50">
                       No emergency contact details on file for this staff member.
                     </p>
                   )}
@@ -1603,24 +1527,18 @@ export default function StaffDirectoryPage() {
 
                 {/* Additional Notes / Office Location */}
                 {(selectedStaff.address || selectedStaff.notes) && (
-                  <div
-                    className="p-3.5 rounded-xl space-y-1.5 text-xs"
-                    style={{
-                      backgroundColor: t.fieldBg,
-                      border: `1px solid ${t.stroke}`,
-                    }}
-                  >
-                    <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
+                  <div className="p-3.5 rounded-xl space-y-1.5 text-xs bg-white/[0.04] border border-white/10">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-white/50">
                       Location & Institutional Notes
                     </div>
                     {selectedStaff.address && (
-                      <div className="flex items-start gap-1.5" style={{ color: t.textMid }}>
-                        <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: t.gold }} />
+                      <div className="flex items-start gap-1.5 text-white/80">
+                        <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-400" />
                         <span>{selectedStaff.address}</span>
                       </div>
                     )}
                     {selectedStaff.notes && (
-                      <p className="text-xs italic" style={{ color: t.textLow }}>
+                      <p className="text-xs italic text-white/60">
                         "{selectedStaff.notes}"
                       </p>
                     )}
@@ -1630,16 +1548,11 @@ export default function StaffDirectoryPage() {
             </div>
 
             {/* Drawer Bottom Close Button */}
-            <div className="pt-4 border-t" style={{ borderColor: t.divider }}>
+            <div className="pt-4 border-t border-white/10">
               <button
                 type="button"
                 onClick={() => setSelectedStaff(null)}
-                className="w-full py-2.5 rounded-xl text-xs font-semibold shadow-sm transition-all"
-                style={{
-                  backgroundColor: t.panel,
-                  border: `1px solid ${t.stroke}`,
-                  color: t.textHi,
-                }}
+                className="w-full py-2.5 rounded-xl text-xs font-bold text-white/90 bg-white/10 hover:bg-white/15 border border-white/15 transition-all shadow-sm"
               >
                 Close Staff Dossier
               </button>

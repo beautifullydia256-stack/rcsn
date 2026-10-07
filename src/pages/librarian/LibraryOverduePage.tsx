@@ -22,6 +22,8 @@ import {
   StudentLiability,
   FacilityAccessRequest,
 } from '@/services/facilityAndLiabilityService';
+import NativeModal from '@/components/NativeModal';
+import { LiquidGlassSelect } from '@/components/ui/LiquidGlassSelect';
 
 export default function LibraryOverduePage() {
   const { schoolId, user } = useAuthStore();
@@ -436,126 +438,101 @@ export default function LibraryOverduePage() {
       )}
 
       {/* Record Overdue / Lost Book Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <form
-            onSubmit={handleRecordOverdue}
-            className="w-full max-w-lg rounded-2xl border p-6 shadow-2xl space-y-4"
-            style={{ backgroundColor: tk.panel, borderColor: tk.stroke }}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-slate-100">
-                  Record Lost or Overdue Book Penalty
-                </h3>
-                <p className="text-xs text-slate-400">
-                  Debits student billing statement and flags student profile.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowAddModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-200"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      <NativeModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="Record Lost or Overdue Book Penalty"
+        subtitle="Debits student billing statement and updates institutional library status"
+        icon={BookOpen}
+        size="md"
+      >
+        <form onSubmit={handleRecordOverdue} className="space-y-4">
+          <div className="space-y-2 relative z-[45] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block">
+              Responsible Trainee
+            </label>
+            <input
+              type="text"
+              placeholder="Search trainee name or admission number..."
+              value={studentSearch}
+              onChange={(e) => setStudentSearch(e.target.value)}
+              className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+            />
+            <LiquidGlassSelect
+              value={selectedStudentId}
+              onChange={(val) => setSelectedStudentId(val)}
+              options={[
+                { value: '', label: '— Select Trainee —' },
+                ...students
+                  .filter((s) =>
+                    !studentSearch ||
+                    s.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
+                    (s.admission_number && s.admission_number.toLowerCase().includes(studentSearch.toLowerCase()))
+                  )
+                  .map((s) => ({
+                    value: s.student_id,
+                    label: `${s.name} (${s.admission_number || 'NO-ADM'}) • ${s.current_class || 'Nursing'}`,
+                  })),
+              ]}
+            />
+          </div>
 
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">
-                  Responsible Student
-                </label>
-                <input
-                  type="text"
-                  placeholder="Filter student..."
-                  value={studentSearch}
-                  onChange={(e) => setStudentSearch(e.target.value)}
-                  className="w-full p-2 rounded-xl border text-xs outline-none text-slate-200 mb-2"
-                  style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
-                />
-                <select
-                  value={selectedStudentId}
-                  onChange={(e) => setSelectedStudentId(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border text-xs outline-none text-slate-200"
-                  style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
-                >
-                  <option value="">— Select Student —</option>
-                  {students
-                    .filter((s) =>
-                      !studentSearch ||
-                      s.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
-                      (s.admission_number && s.admission_number.toLowerCase().includes(studentSearch.toLowerCase()))
-                    )
-                    .map((s) => (
-                      <option key={s.student_id} value={s.student_id}>
-                        {s.name} (#{s.admission_number || 'NO-ADM'}) - {s.current_class}
-                      </option>
-                    ))}
-                </select>
-              </div>
+          <div className="relative z-[40] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Book Title & Accession Number
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Brunner & Suddarth's Textbook of Medical-Surgical Nursing (ACC-0914)"
+              value={bookTitle}
+              onChange={(e) => setBookTitle(e.target.value)}
+              className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+            />
+          </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">
-                  Book Title &amp; Accession Number
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Brunner & Suddarth's Textbook of Medical-Surgical Nursing (ACC-0914)"
-                  value={bookTitle}
-                  onChange={(e) => setBookTitle(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border text-xs outline-none text-slate-200"
-                  style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
-                />
-              </div>
+          <div className="relative z-[35] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Assessed Fine / Replacement Charge (UGX)
+            </label>
+            <input
+              type="number"
+              value={fineAmountUgx}
+              onChange={(e) => setFineAmountUgx(e.target.value)}
+              className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+            />
+          </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">
-                  Assessed Fine / Replacement Charge (UGX)
-                </label>
-                <input
-                  type="number"
-                  value={fineAmountUgx}
-                  onChange={(e) => setFineAmountUgx(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border text-xs outline-none text-slate-200"
-                  style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
-                />
-              </div>
+          <div className="relative z-[30] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Circumstance Notes
+            </label>
+            <textarea
+              rows={3}
+              placeholder="e.g. Overdue 21 days past return due date; unreturned; pages torn..."
+              value={circumstance}
+              onChange={(e) => setCircumstance(e.target.value)}
+              className="w-full bg-black/25 border border-white/20 rounded-xl p-3 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all resize-none"
+            />
+          </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">
-                  Circumstance Notes
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="e.g. Overdue 21 days past return due date; unreturned; pages torn..."
-                  value={circumstance}
-                  onChange={(e) => setCircumstance(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border text-xs outline-none text-slate-200"
-                  style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 border border-slate-700"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 shadow-md shadow-indigo-600/20 disabled:opacity-50"
-              >
-                {saving ? 'Recording...' : 'Attach Charge & Bill'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+          <div className="flex items-center justify-end gap-3 pt-3">
+            <button
+              type="button"
+              onClick={() => setShowAddModal(false)}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 bg-white/10 hover:bg-white/15 border border-white/15 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-950/40 border border-emerald-400/30 disabled:opacity-50 transition-all"
+            >
+              {saving ? 'Recording...' : 'Attach Charge & Bill'}
+            </button>
+          </div>
+        </form>
+      </NativeModal>
     </div>
   );
 }

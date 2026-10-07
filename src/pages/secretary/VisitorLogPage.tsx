@@ -24,6 +24,7 @@ import {
   Tag,
 } from 'lucide-react';
 import { getTokens, cardGrad, SORA, INTER } from '../../styles/posThemeTokens';
+import NativeModal from '@/components/NativeModal';
 
 interface Visitor {
   id: string;
@@ -656,177 +657,146 @@ export default function VisitorLogPage() {
       </div>
 
       {/* Sign In Visitor Modal */}
-      {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div
-            className="w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-4"
-            style={{
-              backgroundColor: t.panel,
-              border: `1px solid ${t.stroke}`,
-              color: t.textHi,
-            }}
-          >
-            <div className="flex items-center justify-between pb-3 border-b" style={{ borderColor: t.divider }}>
-              <div className="flex items-center gap-2">
-                <UserCheck className="w-5 h-5 text-purple-400" />
-                <h2 className="text-lg font-bold" style={{ fontFamily: SORA }}>
-                  Sign In New Visitor
-                </h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                className="p-1 rounded-lg hover:bg-black/10 dark:hover:bg-white/10"
-              >
-                <X className="w-5 h-5" />
-              </button>
+      <NativeModal
+        isOpen={showForm}
+        onClose={() => setShowForm(false)}
+        title="Sign In New Visitor"
+        subtitle="Campus security reception log, identification & badge assignment"
+        icon={UserCheck}
+        size="md"
+      >
+        <div className="space-y-4">
+          {error && (
+            <div className="p-3 rounded-xl text-xs bg-red-500/10 text-red-400 border border-red-500/20">
+              {error}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+            <div className="sm:col-span-2 relative z-[45] focus-within:z-[50]">
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Visitor Full Name *
+              </label>
+              <input
+                type="text"
+                value={form.visitor_name}
+                onChange={field('visitor_name')}
+                placeholder="e.g. John Mukasa"
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+              />
             </div>
 
-            {error && (
-              <div className="p-3 rounded-xl text-xs bg-red-500/10 text-red-400 border border-red-500/20">
-                {error}
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-              <div className="sm:col-span-2">
-                <label className="block mb-1 font-semibold" style={{ color: t.textMid }}>
-                  Visitor Full Name *
-                </label>
-                <input
-                  type="text"
-                  value={form.visitor_name}
-                  onChange={field('visitor_name')}
-                  placeholder="e.g. John Mukasa"
-                  className="w-full px-3 py-2 rounded-xl outline-none"
-                  style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
-                />
-              </div>
-
-              <div>
-                <label className="block mb-1 font-semibold" style={{ color: t.textMid }}>
-                  Phone Number
-                </label>
-                <input
-                  type="text"
-                  value={form.phone}
-                  onChange={field('phone')}
-                  placeholder="07..."
-                  className="w-full px-3 py-2 rounded-xl outline-none"
-                  style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
-                />
-              </div>
-
-              <div>
-                <label className="block mb-1 font-semibold" style={{ color: t.textMid }}>
-                  National ID / Card No.
-                </label>
-                <input
-                  type="text"
-                  value={form.id_number}
-                  onChange={field('id_number')}
-                  placeholder="CM..."
-                  className="w-full px-3 py-2 rounded-xl outline-none"
-                  style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
-                />
-              </div>
-
-              <div>
-                <label className="block mb-1 font-semibold" style={{ color: t.textMid }}>
-                  Purpose of Visit *
-                </label>
-                <input
-                  type="text"
-                  value={form.purpose}
-                  onChange={field('purpose')}
-                  placeholder="e.g. Fee Inquiry, Admission"
-                  className="w-full px-3 py-2 rounded-xl outline-none"
-                  style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
-                />
-              </div>
-
-              <div>
-                <label className="block mb-1 font-semibold" style={{ color: t.textMid }}>
-                  Visitor Badge Issued #
-                </label>
-                <input
-                  type="text"
-                  value={form.badge_number}
-                  onChange={field('badge_number')}
-                  placeholder="e.g. V-04"
-                  className="w-full px-3 py-2 rounded-xl outline-none"
-                  style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
-                />
-              </div>
-
-              <div>
-                <label className="block mb-1 font-semibold" style={{ color: t.textMid }}>
-                  Host / Staff Visiting *
-                </label>
-                <input
-                  type="text"
-                  value={form.host_name}
-                  onChange={field('host_name')}
-                  placeholder="e.g. Head Teacher, Mrs. Sarah"
-                  className="w-full px-3 py-2 rounded-xl outline-none"
-                  style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
-                />
-              </div>
-
-              <div>
-                <label className="block mb-1 font-semibold" style={{ color: t.textMid }}>
-                  Host Department / Office
-                </label>
-                <input
-                  type="text"
-                  value={form.host_role}
-                  onChange={field('host_role')}
-                  placeholder="e.g. Administration, Accounts"
-                  className="w-full px-3 py-2 rounded-xl outline-none"
-                  style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="block mb-1 font-semibold" style={{ color: t.textMid }}>
-                  Additional Notes (Optional)
-                </label>
-                <textarea
-                  rows={2}
-                  value={form.notes}
-                  onChange={field('notes')}
-                  placeholder="Items carried, vehicle registration, etc."
-                  className="w-full px-3 py-2 rounded-xl outline-none resize-none"
-                  style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
-                />
-              </div>
+            <div className="relative z-[40] focus-within:z-[50]">
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Phone Number
+              </label>
+              <input
+                type="text"
+                value={form.phone}
+                onChange={field('phone')}
+                placeholder="07..."
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+              />
             </div>
 
-            <div className="flex justify-end gap-2.5 pt-3 border-t" style={{ borderColor: t.divider }}>
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold"
-                style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textMid }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleAddVisitor}
-                disabled={saving}
-                className="px-5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-50"
-                style={{
-                  background: 'linear-gradient(135deg,#10d9a8,#0ea5e9)',
-                  color: '#05080f',
-                }}
-              >
-                {saving ? 'Registering...' : 'Sign In Visitor'}
-              </button>
+            <div className="relative z-[40] focus-within:z-[50]">
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                National ID / Card No.
+              </label>
+              <input
+                type="text"
+                value={form.id_number}
+                onChange={field('id_number')}
+                placeholder="CM..."
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+              />
+            </div>
+
+            <div className="relative z-[35] focus-within:z-[50]">
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Purpose of Visit *
+              </label>
+              <input
+                type="text"
+                value={form.purpose}
+                onChange={field('purpose')}
+                placeholder="e.g. Nursing Admissions Inquiry"
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+              />
+            </div>
+
+            <div className="relative z-[35] focus-within:z-[50]">
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Visitor Badge Issued #
+              </label>
+              <input
+                type="text"
+                value={form.badge_number}
+                onChange={field('badge_number')}
+                placeholder="e.g. V-04"
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+              />
+            </div>
+
+            <div className="relative z-[30] focus-within:z-[50]">
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Host / Staff Member Visited *
+              </label>
+              <input
+                type="text"
+                value={form.host_name}
+                onChange={field('host_name')}
+                placeholder="e.g. Academic Registrar"
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+              />
+            </div>
+
+            <div className="relative z-[30] focus-within:z-[50]">
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Host Department / Office
+              </label>
+              <input
+                type="text"
+                value={form.host_role}
+                onChange={field('host_role')}
+                placeholder="e.g. Registrar Office, Accounts"
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+              />
+            </div>
+
+            <div className="sm:col-span-2 relative z-[25] focus-within:z-[50]">
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Additional Notes (Optional)
+              </label>
+              <textarea
+                rows={2}
+                value={form.notes}
+                onChange={field('notes')}
+                placeholder="Items carried, vehicle registration number, etc."
+                className="w-full bg-black/25 border border-white/20 rounded-xl p-3 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all resize-none"
+              />
             </div>
           </div>
+
+          <div className="flex justify-end gap-3 pt-3">
+            <button
+              type="button"
+              onClick={() => setShowForm(false)}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 bg-white/10 hover:bg-white/15 border border-white/15 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleAddVisitor}
+              disabled={saving}
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-950/40 border border-emerald-400/30 disabled:opacity-50 transition-all"
+            >
+              {saving ? 'Registering...' : 'Sign In Visitor'}
+            </button>
+          </div>
         </div>
-      )}
+      </NativeModal>
     </div>
   );
 }

@@ -21,6 +21,8 @@ import {
   HostelRoom,
   HostelAllocation,
 } from '@/services/facilityAndLiabilityService';
+import NativeModal from '@/components/NativeModal';
+import { LiquidGlassSelect } from '@/components/ui/LiquidGlassSelect';
 
 export default function MatronRoomsPage() {
   const { schoolId } = useAuthStore();
@@ -220,100 +222,79 @@ export default function MatronRoomsPage() {
       </div>
 
       {/* Allocation Modal */}
-      {allocatingRoom && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div
-            className="w-full max-w-md rounded-2xl border p-6 shadow-2xl space-y-4"
-            style={{ backgroundColor: tk.panel, borderColor: tk.stroke }}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-slate-100">
-                  Assign Bed in {allocatingRoom.room_number}
-                </h3>
-                <p className="text-xs text-slate-400">Select resident student and bed number.</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setAllocatingRoom(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-200"
-              >
-                <X className="w-5 h-5" />
-              </button>
+      <NativeModal
+        isOpen={!!allocatingRoom}
+        onClose={() => setAllocatingRoom(null)}
+        title={allocatingRoom ? `Assign Bed in Room ${allocatingRoom.room_number}` : 'Hostel Bed Allocation'}
+        subtitle="Select resident trainee and assign bed number in hostel dormitory"
+        icon={Bed}
+        size="md"
+      >
+        {allocatingRoom && (
+          <div className="space-y-4">
+            <div className="relative z-[45] focus-within:z-[50]">
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Bed Number in Room {allocatingRoom.room_number}
+              </label>
+              <LiquidGlassSelect
+                value={String(selectedBedNumber)}
+                onChange={(val) => setSelectedBedNumber(Number(val))}
+                options={Array.from({ length: allocatingRoom.bed_capacity }).map((_, i) => ({
+                  value: String(i + 1),
+                  label: `Dormitory Bed #${i + 1}`,
+                }))}
+              />
             </div>
 
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">
-                  Bed Number
-                </label>
-                <select
-                  value={selectedBedNumber}
-                  onChange={(e) => setSelectedBedNumber(Number(e.target.value))}
-                  className="w-full p-2.5 rounded-xl border text-xs outline-none text-slate-200"
-                  style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
-                >
-                  {Array.from({ length: allocatingRoom.bed_capacity }).map((_, i) => (
-                    <option key={i + 1} value={i + 1}>
-                      Bed #{i + 1}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">
-                  Resident Student (Search by Name or Admission No)
-                </label>
-                <input
-                  type="text"
-                  placeholder="Filter student..."
-                  value={studentSearch}
-                  onChange={(e) => setStudentSearch(e.target.value)}
-                  className="w-full p-2 rounded-xl border text-xs outline-none text-slate-200 mb-2"
-                  style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
-                />
-                <select
-                  value={selectedStudentId}
-                  onChange={(e) => setSelectedStudentId(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border text-xs outline-none text-slate-200"
-                  style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
-                >
-                  <option value="">— Select Resident Student —</option>
-                  {residents
+            <div className="space-y-2 relative z-[40] focus-within:z-[50]">
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block">
+                Resident Trainee (Search by Name or Admission No)
+              </label>
+              <input
+                type="text"
+                placeholder="Search trainee name or admission number..."
+                value={studentSearch}
+                onChange={(e) => setStudentSearch(e.target.value)}
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+              />
+              <LiquidGlassSelect
+                value={selectedStudentId}
+                onChange={(val) => setSelectedStudentId(val)}
+                options={[
+                  { value: '', label: '— Select Resident Trainee —' },
+                  ...residents
                     .filter((r) =>
                       !studentSearch ||
                       r.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
                       (r.admission_number && r.admission_number.toLowerCase().includes(studentSearch.toLowerCase()))
                     )
-                    .map((s) => (
-                      <option key={s.student_id} value={s.student_id}>
-                        {s.name} ({s.admission_number || 'NO ADM'}) - {s.current_class}
-                      </option>
-                    ))}
-                </select>
-              </div>
+                    .map((s) => ({
+                      value: s.student_id,
+                      label: `${s.name} (${s.admission_number || 'NO ADM'}) • ${s.current_class || 'Class'}`,
+                    })),
+                ]}
+              />
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2">
+            <div className="flex items-center justify-end gap-3 pt-3">
               <button
                 type="button"
                 onClick={() => setAllocatingRoom(null)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 border border-slate-700"
+                className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 bg-white/10 hover:bg-white/15 border border-white/15 transition-all"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleAssignBed}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-rose-500 hover:bg-rose-600 shadow-md shadow-rose-500/20"
+                className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-950/40 border border-emerald-400/30 transition-all"
               >
                 Confirm Allocation
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </NativeModal>
     </div>
   );
 }
