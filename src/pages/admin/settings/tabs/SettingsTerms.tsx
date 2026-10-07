@@ -405,15 +405,15 @@ export default function SettingsTerms({
       <div className="mt-4 text-sm ac-text-secondary">Configured {periodNounPlural.toLowerCase()}</div>
       <div className={`mt-2 overflow-x-auto ${settingsInsetSurface}`}>
         <table className="min-w-full text-sm">
-          <thead className="bg-[var(--pw-s3)]">
+          <thead className="border-b border-slate-200/80 bg-slate-50 dark:border-white/10 dark:bg-white/[0.04]">
             <tr className="text-left">
-              <th className="px-4 py-2 ac-text-muted">Year</th>
-              <th className="px-4 py-2 ac-text-muted">{periodNoun}</th>
-              <th className="px-4 py-2 ac-text-muted">Start</th>
-              <th className="px-4 py-2 ac-text-muted">End</th>
+              <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-white/60">Year</th>
+              <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-white/60">{periodNoun}</th>
+              <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-white/60">Start</th>
+              <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-white/60">End</th>
             </tr>
           </thead>
-          <tbody className="[&>tr:nth-child(even)]:bg-[var(--pw-s3)]/40">
+          <tbody className="divide-y divide-slate-200/60 dark:divide-white/10 [&>tr:nth-child(even)]:bg-slate-50/50 dark:[&>tr:nth-child(even)]:bg-white/[0.02]">
             {displayRows.length === 0 ? (
               <tr>
                 <td colSpan={4} className="px-4 py-3 ac-text-secondary">
@@ -424,25 +424,35 @@ export default function SettingsTerms({
               displayRows.map((r) => {
                 const isCurrent = r === currentTermRow;
                 return (
-                  <tr key={`${r.year}-${r.term}`} className="border-t border-[var(--pw-border)]">
-                    <td className="px-4 py-2 ac-text-primary">{r.year}</td>
-                    <td className="px-4 py-2 ac-text-secondary">
-                      <span
-                        className={`rounded px-2.5 py-1 text-xs font-semibold ${
-                          isCurrent
-                            ? 'bg-green-600/25 text-green-300 border border-green-500/30'
-                            : 'bg-blue-600/25 text-blue-300 border border-blue-500/30'
-                        }`}
-                      >
-                        {isTertiary
-                          ? (isCurrent ? `Academic Period ${r.term} (Current)` : `Academic Period ${r.term}`)
-                          : (isCurrent ? `Current (Term ${r.term})` : `Term ${r.term}`)}
-                      </span>
+                  <tr key={`${r.year}-${r.term}`}>
+                    <td className="px-4 py-3 text-slate-700 dark:text-white/80">{r.year}</td>
+                    <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">
+                      {isTertiary
+                        ? (isCurrent ? (
+                            <span>
+                              Academic Period {r.term}{' '}
+                              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                                (Current)
+                              </span>
+                            </span>
+                          ) : (
+                            `Academic Period ${r.term}`
+                          ))
+                        : (isCurrent ? (
+                            <span>
+                              Term {r.term}{' '}
+                              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                                (Current)
+                              </span>
+                            </span>
+                          ) : (
+                            `Term ${r.term}`
+                          ))}
                     </td>
-                    <td className="px-4 py-2 ac-text-secondary">
+                    <td className="px-4 py-3 text-slate-700 dark:text-white/80">
                       {r.start_date ? new Date(r.start_date).toLocaleDateString() : 'TBD'}
                     </td>
-                    <td className="px-4 py-2 ac-text-secondary">
+                    <td className="px-4 py-3 text-slate-700 dark:text-white/80">
                       {new Date(r.end_date).toLocaleDateString()}
                     </td>
                   </tr>

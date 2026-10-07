@@ -75,6 +75,8 @@ export default function TertiaryCohortPicker({
     onChange(buildCohortKey(code, newSemLabel));
   };
 
+  const optionClass = "bg-white text-slate-900 dark:bg-[#070B09] dark:text-white";
+
   return (
     <div
       className={
@@ -96,12 +98,13 @@ export default function TertiaryCohortPicker({
           value={currentProgCode}
           onChange={(e) => handleProgrammeChange(e.target.value)}
           disabled={disabled}
-          className={selectClassName}
+          className={`${selectClassName} bg-white text-slate-900 dark:bg-[#070B09] dark:text-white dark:border-white/15`}
+          style={{ colorScheme: 'inherit' }}
           aria-label={programmeLabel}
         >
-          <option value="">{programmeLabel}</option>
+          <option value="" className={optionClass}>{programmeLabel}</option>
           {TERTIARY_PROGRAMMES.map((prog) => (
-            <option key={prog.code} value={prog.code}>
+            <option key={prog.code} value={prog.code} className={optionClass}>
               {prog.name} ({prog.code})
             </option>
           ))}
@@ -119,14 +122,15 @@ export default function TertiaryCohortPicker({
           value={currentSemesterLabel}
           onChange={(e) => handleSemesterChange(e.target.value)}
           disabled={disabled || !currentProgCode}
-          className={selectClassName}
+          className={`${selectClassName} bg-white text-slate-900 dark:bg-[#070B09] dark:text-white dark:border-white/15`}
+          style={{ colorScheme: 'inherit' }}
           aria-label={semesterLabel}
         >
-          <option value="">
+          <option value="" className={optionClass}>
             {!currentProgCode ? 'Choose programme first' : semesterLabel}
           </option>
           {availableSemesters.map((sem) => (
-            <option key={sem.code} value={sem.label}>
+            <option key={sem.code} value={sem.label} className={optionClass}>
               {sem.label} ({sem.short})
             </option>
           ))}

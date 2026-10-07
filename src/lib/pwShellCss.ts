@@ -774,6 +774,37 @@ export const POS_SIDEBAR_SHARED_CSS = `
   html.light .pw-main table,
   html.light .pw-main th,
   html.light .pw-main td { color: #0d1c2e; }
+
+  html.dark .pw-main select,
+  html.dark select,
+  html.dark select.ac-input {
+    color-scheme: dark !important;
+    background-color: #070B09 !important;
+    color: #f8fafc !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+  }
+
+  html.dark .pw-main select option,
+  html.dark select option,
+  html.dark select.ac-input option,
+  html.dark .ac-input option {
+    background-color: #070B09 !important;
+    color: #f8fafc !important;
+  }
+
+  html.light .pw-main select,
+  html.light select {
+    color-scheme: light !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border-color: #cbd5e1 !important;
+  }
+
+  html.light .pw-main select option,
+  html.light select option {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+  }
 `;
 
 export const ACCOUNTANT_PW_SHELL_CSS = POS_SIDEBAR_SHARED_CSS;

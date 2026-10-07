@@ -235,11 +235,12 @@ export default function SettingsTeacherSubjectClass({
         <select
           value={selectedTeacher}
           onChange={(e) => setSelectedTeacher(e.target.value)}
-          className="ac-input min-h-[44px] w-full"
+          className="ac-input min-h-[44px] w-full bg-white text-slate-900 dark:bg-[#070B09] dark:text-white dark:border-white/15"
+          style={{ colorScheme: 'inherit' }}
         >
-          <option value="">{v.selectTeacher}</option>
+          <option value="" className="bg-white text-slate-900 dark:bg-[#070B09] dark:text-white">{v.selectTeacher}</option>
           {teachers.map((t) => (
-            <option key={t.teacher_id} value={t.teacher_id}>
+            <option key={t.teacher_id} value={t.teacher_id} className="bg-white text-slate-900 dark:bg-[#070B09] dark:text-white">
               {t.name}
             </option>
           ))}

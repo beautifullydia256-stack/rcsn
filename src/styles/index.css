@@ -51,20 +51,21 @@ html.dark,
 .dark {
   color-scheme: dark;
   --pw-t1: #f8fafc;
-  --pw-t2: #c5d4ef;
-  --pw-t3: #94a8d0;
+  --pw-t2: #94a3b8;
+  --pw-t3: #475569;
   --foreground: #f1f5f9;
-  --muted-foreground: #cbd5e1;
-  --background: #0b1120;
-  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --background: #070B09;
+  --muted: #0D1512;
   --border: rgba(255, 255, 255, 0.12);
 }
 
 html.dark select,
 .dark select {
-  background-color: var(--pw-s3, #16213a);
-  color: var(--pw-t1, #f8fafc);
-  border: 1px solid var(--pw-border, rgba(255, 255, 255, 0.12));
+  color-scheme: dark;
+  background-color: #070B09;
+  color: #f8fafc;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 0.375rem;
 }
 
@@ -77,8 +78,8 @@ html.dark select:focus-visible,
 
 html.dark select option,
 .dark select option {
-  background-color: #1e293b;
-  color: #f1f5f9;
+  background-color: #070B09;
+  color: #f8fafc;
 }
 
 @layer base {
@@ -120,7 +121,7 @@ html.dark select option,
   /* Teacher dropdowns (Class, Exam set): reinforce dark option list when classes are used */
   .teacher-dropdown option,
   .teacher-exam-set-select option {
-    background-color: #1e293b;
+    background-color: #070B09;
     color: #f1f5f9;
   }
 }
