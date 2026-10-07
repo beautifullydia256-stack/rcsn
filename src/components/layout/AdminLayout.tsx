@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Suspense, useEffect, useRef, useState, isValidElement, type ReactNode, type ComponentType } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   GraduationCap,
@@ -54,6 +54,16 @@ import { useWorkforceNavVisible, usePermission } from '../../hooks/usePermission
 import { PERMISSION_KEYS } from '../../lib/permissions';
 import { hasRole, ROLE_GROUPS, logRbacDecision } from '../../lib/rbac';
 
+function renderNavIcon(icon: ReactNode) {
+  if (!icon) return null;
+  if (isValidElement(icon)) return icon;
+  if (typeof icon === 'function' || (typeof icon === 'object' && icon !== null)) {
+    const IconCmp = (icon as unknown) as ComponentType<{ className?: string }>;
+    return <IconCmp className="w-4 h-4" />;
+  }
+  return null;
+}
+
 interface AdminUser {
   name: string;
   email: string;
@@ -82,7 +92,7 @@ function NavItem({ to, icon, label, badge, badgeColor = 'rose', onClick, end = f
       onMouseEnter={onPrefetch}
       className={({ isActive }) => ['pw-nav-link', isActive ? 'pw-nav-link--active' : ''].join(' ')}
     >
-      <span className="pw-nav-ic">{icon}</span>
+      <span className="pw-nav-ic">{renderNavIcon(icon)}</span>
       <span className="pw-nav-text">{label}</span>
       {badge !== undefined && badge !== null && String(badge) !== '0' && (
         <span className={`pw-nav-badge pw-nav-badge--${badgeColor}`}>{badge}</span>
@@ -122,7 +132,7 @@ function NavGroup({
         className={['pw-nav-link', 'pw-nav-group-btn', isActive ? 'pw-nav-link--group-active' : ''].join(' ')}
         onClick={onToggle}
       >
-        <span className="pw-nav-ic">{icon}</span>
+        <span className="pw-nav-ic">{renderNavIcon(icon)}</span>
         <span className="pw-nav-text">{label}</span>
         {badge !== undefined && badge !== null && String(badge) !== '0' && (
           <span className={`pw-nav-badge pw-nav-badge--${badgeColor}`}>{badge}</span>
@@ -133,6 +143,8 @@ function NavGroup({
     </div>
   );
 }
+
+
 
 function SubItem({
   to,
@@ -516,7 +528,6 @@ export default function AdminLayout() {
 
           <div className="pw-nav-section">
             <span className="pw-nav-label">System & Operations</span>
-            <NavItem to="/dashboard/admin/departments" icon={<Building2 className="w-4 h-4 text-indigo-400" />} label="Departments & Portfolios" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/notifications" icon={<Bell className="w-4 h-4" />} label="Notifications" badge={notifCount ?? undefined} badgeColor="amber" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/settings" icon={<Settings className="w-4 h-4" />} label="System Settings" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/headed-paper" icon={<FileText className="w-4 h-4" />} label="Headed Paper" onClick={closeSidebar} onPrefetch={onPrefetchNav} />

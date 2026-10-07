@@ -56,6 +56,16 @@ export default function PosEmptyState({
     iconColor = '#a78bfa';
   }
 
+  const renderIcon = () => {
+    if (!icon) return null;
+    if (React.isValidElement(icon)) return icon;
+    if (typeof icon === 'function' || (typeof icon === 'object' && icon !== null)) {
+      const IconCmp = (icon as unknown) as React.ComponentType<{ size?: number; className?: string }>;
+      return <IconCmp size={32} />;
+    }
+    return null;
+  };
+
   return (
     <div
       style={{
@@ -90,7 +100,7 @@ export default function PosEmptyState({
           boxShadow: isDark ? `0 0 24px ${borderRing}` : 'none',
         }}
       >
-        {icon}
+        {renderIcon()}
       </div>
 
       {/* Sora Headline */}

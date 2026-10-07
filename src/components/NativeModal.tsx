@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, ReactNode, ComponentType } from 'react';
+import { useEffect, isValidElement, ReactNode, ComponentType } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, UserPlus, GraduationCap, Users, type LucideIcon } from 'lucide-react';
 
@@ -59,11 +59,14 @@ export default function NativeModal({
 
   const renderHeaderIcon = () => {
     if (icon) {
-      if (typeof icon === 'function') {
-        const IconComponent = icon as ComponentType<{ className?: string }>;
+      if (isValidElement(icon)) {
+        return icon;
+      }
+      if (typeof icon === 'function' || (typeof icon === 'object' && icon !== null)) {
+        const IconComponent = (icon as unknown) as ComponentType<{ className?: string }>;
         return <IconComponent className="w-5 h-5" />;
       }
-      return icon;
+      return null;
     }
     const t = (title || '').toLowerCase();
     if (t.includes('teacher') || t.includes('tutor') || t.includes('instructor')) {
