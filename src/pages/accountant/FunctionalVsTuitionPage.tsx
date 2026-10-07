@@ -642,7 +642,7 @@ export default function FunctionalVsTuitionPage() {
             </span>
           </div>
           <span style={{ fontSize: 11, color: t.textLow }}>
-            Payments first fill Functional Fees (100%) &rarr; remainder fills Tuition Fee
+            All amounts in UGX &bull; Payments first fill Functional Fees (100%) &rarr; remainder fills Tuition Fee
           </span>
         </div>
 
@@ -733,37 +733,37 @@ export default function FunctionalVsTuitionPage() {
 
                     {/* Functional Billed */}
                     <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: SORA, color: t.textMid }}>
-                      UGX {fmtUGX(s.functionalBilled)}
+                      {fmtUGX(s.functionalBilled)}
                     </td>
 
                     {/* Functional Paid (100% first) */}
                     <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: SORA, fontWeight: 700, color: t.mint }}>
-                      UGX {fmtUGX(s.functionalPaid)}
+                      {fmtUGX(s.functionalPaid)}
                     </td>
 
                     {/* Functional Due */}
                     <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: SORA, fontWeight: 700, color: s.functionalBalance > 0 ? t.red : t.mint }}>
-                      UGX {fmtUGX(s.functionalBalance)}
+                      {fmtUGX(s.functionalBalance)}
                     </td>
 
                     {/* Base Tuition Billed */}
                     <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: SORA, color: t.textMid }}>
-                      UGX {fmtUGX(s.baseTuitionBilled)}
+                      {fmtUGX(s.baseTuitionBilled)}
                     </td>
 
                     {/* Base Tuition Paid (residual) */}
                     <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: SORA, fontWeight: 700, color: t.blue }}>
-                      UGX {fmtUGX(s.baseTuitionPaid)}
+                      {fmtUGX(s.baseTuitionPaid)}
                     </td>
 
                     {/* Base Tuition Due */}
                     <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: SORA, fontWeight: 700, color: s.baseTuitionBalance > 0 ? amber : t.mint }}>
-                      UGX {fmtUGX(s.baseTuitionBalance)}
+                      {fmtUGX(s.baseTuitionBalance)}
                     </td>
 
                     {/* Total Balance */}
                     <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: SORA, fontWeight: 800, color: s.totalBalance > 0 ? t.textHi : t.mint }}>
-                      UGX {fmtUGX(s.totalBalance)}
+                      {fmtUGX(s.totalBalance)}
                     </td>
 
                     {/* Status Badge */}
