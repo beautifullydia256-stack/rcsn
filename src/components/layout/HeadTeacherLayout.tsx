@@ -486,6 +486,7 @@ export default function HeadTeacherLayout() {
               <SubItem to="/dashboard/academic-registrar/finance" label="Overview" end onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/academic-registrar/finance/financial-analytics" label="Financial Analytics" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/academic-registrar/finance/outstanding" label="Outstanding Balances &amp; Debtors" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/accountant" label="Accounts page" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/academic-registrar/recurring-expenses" label="Recurring &amp; Utility Bills" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/academic-registrar/budget/consolidated" label="Monthly Board Budget (Quorum)" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/academic-registrar/budget/requisitions" label="Budget Requisitions" onClick={closeSidebar} onPrefetch={onPrefetchNav} />

@@ -386,6 +386,8 @@ export default function AdminLayout() {
           <div className="pw-nav-section">
             <span className="pw-nav-label">Executive Command</span>
             <NavItem to="/dashboard/admin" icon={<LayoutDashboard className="w-4 h-4" />} label="Dashboard" end onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/accountant" icon={<CircleDollarSign className="w-4 h-4 text-emerald-400" />} label="Accounts page" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/academic-registrar" icon={<UserCheck className="w-4 h-4 text-teal-400" />} label="Academic Registrar" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem
               to="/dashboard/admin/messages"
               icon={<MessageSquare className="w-4 h-4" />}
@@ -475,19 +477,20 @@ export default function AdminLayout() {
               label="Financial Operations"
               isOpen={financeOpen}
               onToggle={() => setFinanceOpen(!financeOpen)}
-              matchPaths={['/dashboard/admin/finance', '/dashboard/admin/budget']}
+              matchPaths={['/dashboard/admin/finance', '/dashboard/admin/budget', '/dashboard/accountant']}
             >
               <SubItem to="/dashboard/admin/finance" label="Financial Overview" end onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/admin/finance/financial-analytics" label="Financial Analytics" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/admin/finance/outstanding" label="Outstanding Balances &amp; Debtors" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/accountant" label="Accounts page" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/admin/recurring-expenses" label="Recurring &amp; Utility Bills" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/admin/budget/consolidated" label="Monthly Board Budget (Quorum)" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/admin/budget/requisitions" label="Budget Requisitions" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>
+            <NavItem to="/dashboard/accountant" icon={<CircleDollarSign className="w-4 h-4 text-emerald-400" />} label="Accounts page" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/store/daily-indent" icon={<UtensilsCrossed className="w-4 h-4 text-emerald-400" />} label="Daily Kitchen Indents" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/store" icon={<Package className="w-4 h-4 text-teal-400" />} label="Store &amp; Kitchen Supplies" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/property-assets" icon={<Armchair className="w-4 h-4 text-amber-400" />} label="Furniture &amp; Physical Assets" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/accountant" icon={<CircleDollarSign className="w-4 h-4" />} label="Bursar &amp; Accounts Portal" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
 
           {/* 5. Workforce & Faculty */}
