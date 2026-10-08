@@ -361,9 +361,6 @@ export default function BankPage() {
           >
             Bank & Cash
           </div>
-          <div style={{ fontSize: 13, color: t.textMid }}>
-            Chronological cashbook: fee inflows and approved expense disbursements with real-time running balance.
-          </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

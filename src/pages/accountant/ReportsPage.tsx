@@ -205,9 +205,6 @@ export default function ReportsPage() {
           >
             Financial Reports
           </div>
-          <div style={{ fontSize: 13, color: t.textMid }}>
-            Comprehensive fee collection summary by {isTertiary ? 'cohort / programme' : 'class'} for {labels.currentPeriod}.
-          </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

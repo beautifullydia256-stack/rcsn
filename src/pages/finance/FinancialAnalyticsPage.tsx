@@ -314,9 +314,6 @@ export default function FinancialAnalyticsPage() {
             >
               Financial Analytics & Intelligence
             </div>
-            <div style={{ fontSize: 13, color: t.textMid }}>
-              Executive revenue collections, operational disbursements, and cash flow health for {termLabelForExport}.
-            </div>
           </div>
         </div>
 

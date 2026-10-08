@@ -171,9 +171,6 @@ export default function DailyIndentPage() {
             <h1 style={{ fontSize: '24px', fontWeight: 800, margin: 0, letterSpacing: '-0.02em', color: t.textHi }}>
               Daily Kitchen & Store Indent Station
             </h1>
-            <p style={{ fontSize: '13px', color: t.textMid, margin: '4px 0 0 0' }}>
-              Dynamic daily food requisitions adjusted for on-campus student counts and verified physical store dispatches.
-            </p>
           </div>
 
           {/* Quick Action Tabs */}

@@ -517,9 +517,6 @@ export default function ExpensesPage() {
           >
             School Expenses &amp; Disbursements
           </h1>
-          <p className="mt-0.5 text-xs sm:text-sm" style={{ color: t.textMid }}>
-            Staff payroll, utility payments, operations, and procurement vouchers for {periodTitle}.
-          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">

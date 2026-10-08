@@ -375,9 +375,6 @@ export default function RecurringExpensesPage() {
           >
             Recurring Expenses & Utility Obligations
           </h1>
-          <p className="text-sm mt-1" style={{ color: t.textMuted }}>
-            Schedule, budget, and 1-click pay regular monthly bills (Internet, Electricity, Water, Security, Waste, and Rent) with direct expense ledger posting.
-          </p>
         </div>
 
         {/* Month Picker & Actions */}
@@ -1308,9 +1305,6 @@ function AddOrEditProfileModal({
               <h3 className="text-base sm:text-lg font-black text-white tracking-tight drop-shadow-sm">
                 {initialProfile ? 'Edit Recurring Bill Profile' : 'Add New Recurring Bill / Utility'}
               </h3>
-              <p className="text-[11px] text-white/70">
-                Regular institutional operational commitment
-              </p>
             </div>
           </div>
           <button
@@ -1545,9 +1539,6 @@ function PayRecurringExpenseModal({
               <h3 className="text-base sm:text-lg font-black text-white tracking-tight drop-shadow-sm">
                 Pay & Record Expense
               </h3>
-              <p className="text-[11px] text-white/70">
-                Posts directly to school expense ledger
-              </p>
             </div>
           </div>
           <button

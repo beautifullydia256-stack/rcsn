@@ -734,9 +734,6 @@ export default function StudentFeeSyncPage() {
           >
             {isTertiary ? 'Trainee Fee Synchronization & Ledger Sync' : 'Student Fee Synchronization & Ledger Sync'}
           </h1>
-          <p style={{ fontSize: 13, color: t.textMid, margin: 0 }}>
-            Batch billing, ledger balance corrections, and SchoolPay code assignment with real-time audit protection.
-          </p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

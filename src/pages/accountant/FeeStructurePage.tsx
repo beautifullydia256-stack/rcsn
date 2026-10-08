@@ -145,9 +145,6 @@ export default function FeeStructurePage() {
           >
             {isTertiary ? 'Semester Tuition & Functional Fees' : 'Tuition & Functional Fees'}
           </div>
-          <div style={{ fontSize: 12.5, color: t.textMid }}>
-            Define tuition and functional fees charged per {isTertiary ? 'programme/cohort' : 'class'} for automated billing
-          </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

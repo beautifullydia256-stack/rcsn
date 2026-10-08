@@ -408,9 +408,6 @@ export default function PropertyAssetsPage() {
           >
             Furniture & Property Assets
           </h1>
-          <p className="text-xs sm:text-sm mt-0.5" style={{ color: t.textMid }}>
-            Institutional property counts, classroom & dormitory allocations, breakage reports, and repair expense logs.
-          </p>
         </div>
 
         {/* Action Buttons */}

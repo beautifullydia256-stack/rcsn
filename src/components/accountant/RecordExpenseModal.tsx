@@ -44,7 +44,6 @@ import {
   Zap,
   X,
   ArrowDownRight,
-  ShieldAlert,
   Fuel,
   Utensils,
   GraduationCap,
@@ -584,28 +583,7 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
         size="xl"
       >
         <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
-          {/* Approval Notice Callout */}
-          <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-400/30 text-xs text-amber-200 backdrop-blur-sm">
-            <ShieldAlert size={18} className="text-amber-400 shrink-0 mt-0.5" />
-            <div className="leading-relaxed">
-              <span className="font-bold text-amber-300">Accounting Control: </span>
-              {canDirectApproveExpense && !submitForApprovalOnly ? (
-                <span>
-                  This expense will be posted directly as <strong>Approved</strong> under your administrator authority.
-                </span>
-              ) : (
-                <span>
-                  New disbursements are recorded as <strong>Pending</strong> and route to school administration for review and final audit sign-off.
-                </span>
-              )}
-            </div>
-          </div>
 
-          {useLegacyCategories && (
-            <p className="p-3 rounded-xl border border-amber-400/30 bg-amber-500/10 text-xs text-amber-200">
-              Hierarchy not seeded for this school — using legacy categories. Run the latest Supabase migration for full main/sub reporting.
-            </p>
-          )}
 
           {hierarchyReady && (
             <div className="space-y-4">
@@ -922,25 +900,18 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
           </div>
 
           {/* Approval Mode Toggle */}
-          <div className="relative z-0">
-            {!canDirectApproveExpense ? (
-              <p className="p-3 rounded-xl border border-white/15 bg-white/5 text-xs text-white/70">
-                Your submissions are saved as <strong>Pending</strong> until audited and approved by a school administrator.
-              </p>
-            ) : (
-              <label className="flex items-start gap-2.5 text-xs text-white cursor-pointer p-1">
+          {canDirectApproveExpense && (
+            <div className="relative z-0">
+              <label className="flex items-center gap-2.5 text-xs text-white cursor-pointer p-1">
                 <input
                   type="checkbox"
                   checked={submitForApprovalOnly}
                   onChange={(e) => setSubmitForApprovalOnly(e.target.checked)}
-                  className="mt-0.5"
                 />
-                <span className="leading-relaxed">
-                  Submit for approval review (recommended). Uncheck to post as <strong>Approved</strong> immediately.
-                </span>
+                <span>Submit for approval review</span>
               </label>
-            )}
-          </div>
+            </div>
+          )}
 
           {message && (
             <p

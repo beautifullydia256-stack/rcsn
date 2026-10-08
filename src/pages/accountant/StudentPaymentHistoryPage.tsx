@@ -340,9 +340,6 @@ export default function StudentPaymentHistoryPage() {
           >
             Student Payment History & Statement
           </h1>
-          <p style={{ margin: 0, fontSize: 13, color: t.textMid }}>
-            Comprehensive all-time record of every fee payment, transaction receipt, and balance ledger for any student.
-          </p>
         </div>
 
         {/* Action Controls & Refetch */}

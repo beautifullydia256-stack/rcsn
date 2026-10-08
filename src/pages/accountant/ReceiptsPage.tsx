@@ -377,8 +377,6 @@ export default function AccountantReceiptsPage() {
               gap: 8,
             }}
           >
-            <span>Audited fee collection records & official payment vouchers</span>
-            <span>·</span>
             <span style={{ color: t.mintInk, fontWeight: 600 }}>
               {allReceipts.length} total receipts issued
             </span>

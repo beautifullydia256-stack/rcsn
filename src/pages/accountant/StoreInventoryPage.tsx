@@ -238,9 +238,6 @@ export default function StoreInventoryPage() {
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
             School Store & Food Supplies
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Track posho, rice, cooking oil, and school supplies with planned daily consumption, runway forecasts, and expense integration.
-          </p>
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">

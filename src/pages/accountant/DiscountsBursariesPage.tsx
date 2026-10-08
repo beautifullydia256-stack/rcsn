@@ -259,9 +259,6 @@ export default function DiscountsBursariesPage() {
               >
                 Discounts, Bursaries & Scholarships Audit
               </h1>
-              <p style={{ fontSize: 13, color: t.textMid, margin: '2px 0 0 0' }}>
-                Track fee remissions, 100% full waivers, institutional revenue forgone, and net collections
-              </p>
             </div>
           </div>
         </div>

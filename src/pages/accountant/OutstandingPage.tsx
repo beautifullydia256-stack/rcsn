@@ -494,8 +494,6 @@ export default function AccountantOutstandingPage() {
               gap: 8,
             }}
           >
-            <span>{isTertiary ? 'Semester' : 'Term'} Ageing & Accounts Receivable</span>
-            <span>·</span>
             <span style={{ color: t.mintInk, fontWeight: 600 }}>
               {totals.count} {isTertiary ? 'trainees' : 'students'} with balance
             </span>

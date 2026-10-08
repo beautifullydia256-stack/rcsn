@@ -345,9 +345,6 @@ export default function BillingPage() {
           >
             Learner Invoices & Billing
           </h1>
-          <p className="mt-0.5 text-xs sm:text-sm" style={{ color: t.textMid }}>
-            Generate {labels.studentPeriodNoun.toLowerCase()} fee invoices and supplementary charges for learners with instant ledger reconciliation.
-          </p>
         </div>
 
         <div className="flex items-center gap-2">

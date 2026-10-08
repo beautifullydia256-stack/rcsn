@@ -281,8 +281,6 @@ export default function AccountantPaymentsPage() {
               gap: 8,
             }}
           >
-            <span>Live fee payment collection terminal & transaction feed</span>
-            <span>·</span>
             <span style={{ color: t.mintInk, fontWeight: 600 }}>
               {payments.length} verified transactions
             </span>
