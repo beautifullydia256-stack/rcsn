@@ -1,158 +1,3 @@
-var __defProp = Object.defineProperty;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __esm = (fn, res) => function __init() {
-  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
-};
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-
-// src/lib/supabase.ts
-var supabase_exports = {};
-__export(supabase_exports, {
-  getAuthSessionStorageSnapshot: () => getAuthSessionStorageSnapshot,
-  supabase: () => supabase,
-  supabaseAdmin: () => supabaseAdmin
-});
-import { createClient } from "@supabase/supabase-js";
-function envStr(key) {
-  if (typeof process !== "undefined" && process.env && typeof process.env[key] === "string") {
-    const v = process.env[key];
-    if (v) return v;
-  }
-  return void 0;
-}
-function getServiceRoleKey() {
-  if (typeof window !== "undefined") return void 0;
-  return envStr("SUPABASE_SERVICE_ROLE_KEY") || import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
-}
-function getOrCreateTabId() {
-  if (!isBrowser) return "server";
-  const tabKey = "pwezacore_tab_id";
-  try {
-    let tabId = window.sessionStorage.getItem(tabKey);
-    if (!tabId) {
-      tabId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-      window.sessionStorage.setItem(tabKey, tabId);
-    }
-    return tabId;
-  } catch {
-    return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-  }
-}
-function getAuthSessionStorageSnapshot() {
-  if (!isBrowser) {
-    return { storageKey: "pwezacore-auth:server", storageJson: null };
-  }
-  if (isDesktopBuild || isPWAStandalone) {
-    try {
-      return {
-        storageKey: PERSISTENT_AUTH_KEY,
-        storageJson: window.localStorage.getItem(PERSISTENT_AUTH_KEY)
-      };
-    } catch {
-      return { storageKey: PERSISTENT_AUTH_KEY, storageJson: null };
-    }
-  }
-  const storageKey = `pwezacore-auth:${getOrCreateTabId()}`;
-  try {
-    return { storageKey, storageJson: window.sessionStorage.getItem(storageKey) };
-  } catch {
-    return { storageKey, storageJson: null };
-  }
-}
-function createSupabaseClient() {
-  if (_supabaseInstance) {
-    return _supabaseInstance;
-  }
-  _supabaseInstance = isBrowser ? createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-      storage: typeof window !== "undefined" ? isDesktopBuild || isPWAStandalone ? window.localStorage : window.sessionStorage : void 0,
-      storageKey: isDesktopBuild || isPWAStandalone ? PERSISTENT_AUTH_KEY : `pwezacore-auth:${getOrCreateTabId()}`
-    }
-  }) : createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      // On the server, do not persist or auto-refresh
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false
-    }
-  });
-  return _supabaseInstance;
-}
-function createSupabaseAdmin() {
-  if (!supabaseServiceKey) return null;
-  if (_supabaseAdminInstance) {
-    return _supabaseAdminInstance;
-  }
-  _supabaseAdminInstance = createClient(supabaseUrl, supabaseServiceKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  });
-  return _supabaseAdminInstance;
-}
-var DEFAULT_SUPABASE_URL, DEFAULT_SUPABASE_ANON_KEY, supabaseUrl, supabaseAnonKey, supabaseServiceKey, isBrowser, isDesktopBuild, isPWAStandalone, PERSISTENT_AUTH_KEY, _supabaseInstance, supabase, _supabaseAdminInstance, supabaseAdmin;
-var init_supabase = __esm({
-  "src/lib/supabase.ts"() {
-    "use strict";
-    DEFAULT_SUPABASE_URL = "https://npqjrtspgxhuwrljbemz.supabase.co";
-    DEFAULT_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5wcWpydHNwZ3hodXdybGpiZW16Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA5NjgwNDcsImV4cCI6MjEwNjU0NDA0N30.vyip6RbWLuVGgj1ZrvBqDErpVjCIAPUkNy6VP0fccis";
-    supabaseUrl = envStr("NEXT_PUBLIC_SUPABASE_URL") || envStr("VITE_SUPABASE_URL") || envStr("SUPABASE_URL") || import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_SUPABASE_URL;
-    supabaseAnonKey = envStr("NEXT_PUBLIC_SUPABASE_ANON_KEY") || envStr("VITE_SUPABASE_ANON_KEY") || envStr("SUPABASE_ANON_KEY") || import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY;
-    supabaseServiceKey = getServiceRoleKey();
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error("Missing Supabase environment variables");
-    }
-    isBrowser = typeof window !== "undefined";
-    isDesktopBuild = import.meta.env.VITE_DESKTOP_MODE === "true";
-    isPWAStandalone = isBrowser && !isDesktopBuild && (window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true);
-    PERSISTENT_AUTH_KEY = "pwezacore-auth";
-    _supabaseInstance = null;
-    supabase = createSupabaseClient();
-    _supabaseAdminInstance = null;
-    supabaseAdmin = createSupabaseAdmin();
-  }
-});
-
-// src/lib/registerApiOrigin.ts
-var registerApiOrigin_exports = {};
-__export(registerApiOrigin_exports, {
-  getPwezaCoreApiOrigin: () => getPwezaCoreApiOrigin,
-  registerApiUrl: () => registerApiUrl
-});
-function getPwezaCoreApiOrigin() {
-  const meta = typeof import.meta !== "undefined" ? import.meta.env : void 0;
-  const fromEnv = [meta?.VITE_API_URL, meta?.VITE_API_ORIGIN, meta?.NEXT_PUBLIC_SITE_URL].map((s) => s == null ? "" : String(s).trim().replace(/\/$/, "")).find(Boolean);
-  if (fromEnv) return fromEnv;
-  if (typeof window !== "undefined") {
-    const { protocol, origin } = window.location;
-    if (protocol === "file:") {
-      return "https://www.pwezacore.com";
-    }
-    if (origin && origin !== "null") {
-      return origin.replace(/\/$/, "");
-    }
-  }
-  return "";
-}
-function registerApiUrl(path) {
-  const p = path.startsWith("/") ? path : `/${path}`;
-  const base = getPwezaCoreApiOrigin();
-  if (base) return `${base}${p}`;
-  return p;
-}
-var init_registerApiOrigin = __esm({
-  "src/lib/registerApiOrigin.ts"() {
-    "use strict";
-  }
-});
-
 // src/lib/whatsapp/wasenderClient.ts
 function createWasenderProvider() {
   const base = (process.env.WASENDER_API_BASE || "https://www.wasenderapi.com").replace(/\/$/, "");
@@ -897,65 +742,6 @@ function addCalendarDaysToIsoYmd(isoYmd, deltaDays) {
   return `${y}-${m}-${d}`;
 }
 
-// src/hooks/useSchoolType.ts
-init_supabase();
-import { useQuery } from "@tanstack/react-query";
-
-// src/store/authStore.ts
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
-var useAuthStore = create()(
-  persist(
-    (set) => ({
-      user: null,
-      role: null,
-      activeRole: null,
-      schoolId: null,
-      permissions: [],
-      sessionConfirmed: false,
-      setUser: (user) => set({ user }),
-      setRole: (role) => set({ role }),
-      setActiveRole: (activeRole) => set({ activeRole }),
-      setSchoolId: (schoolId) => set({ schoolId }),
-      setPermissions: (permissions) => set({ permissions }),
-      setSessionConfirmed: (confirmed) => set({ sessionConfirmed: confirmed }),
-      setActiveSchool: async (schoolId, role) => {
-        try {
-          const [{ supabase: supabase2 }, { registerApiUrl: registerApiUrl2 }] = await Promise.all([
-            Promise.resolve().then(() => (init_supabase(), supabase_exports)),
-            Promise.resolve().then(() => (init_registerApiOrigin(), registerApiOrigin_exports))
-          ]);
-          const { data } = await supabase2.auth.getSession();
-          const token = data.session?.access_token;
-          if (!token) return false;
-          const res = await fetch(registerApiUrl2("/api/misc?action=auth-activate-school-role"), {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ schoolId })
-          });
-          if (!res.ok) return false;
-          const json = await res.json().catch(() => ({}));
-          set({ schoolId, role: json.role || role, activeRole: null });
-          return true;
-        } catch {
-          return false;
-        }
-      },
-      logout: () => set({ user: null, role: null, activeRole: null, schoolId: null, permissions: [], sessionConfirmed: false })
-    }),
-    {
-      name: "pwezacore-auth-storage",
-      // sessionConfirmed intentionally omitted — must never be persisted
-      partialize: (state) => ({
-        user: state.user,
-        role: state.role,
-        activeRole: state.activeRole,
-        schoolId: state.schoolId
-      })
-    }
-  )
-);
-
 // src/lib/adminFinanceTerm.ts
 async function loadStudentBalanceAggAllTerms(client, schoolId, studentId) {
   const { data: rows, error } = await client.from("student_balances").select("total_fees, total_paid, balance").eq("school_id", schoolId).eq("student_id", studentId);
@@ -1688,7 +1474,7 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
   function fmt(p) {
     out.push({ type: "text", text: defaultMessageFormatter(p, { greetingName: greet }) });
   }
-  async function persist2() {
+  async function persist() {
     await saveSession(client, waE164, step, ctx);
   }
   if (wantsSoftMenuReset(text) && step !== "" && step !== "entry") {
@@ -1719,7 +1505,7 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
           show_another_school: identity.parentSchools.length > 1
         });
       }
-      await persist2();
+      await persist();
       return out;
     }
   }
@@ -1734,7 +1520,7 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
     if (identity.hasParent && identity.hasStaff && !forcedRole) {
       step = "role_pick";
       fmt({ intent: "role_pick" });
-      await persist2();
+      await persist();
       return out;
     }
     const useParent = forcedRole === "parent" || !forcedRole && identity.hasParent;
@@ -1754,7 +1540,7 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
           show_another_school: false
         });
       }
-      await persist2();
+      await persist();
       return out;
     }
     ctx.role = "staff";
@@ -1775,7 +1561,7 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
         is_librarian: sc.isLibrarian
       });
     }
-    await persist2();
+    await persist();
     return out;
   }
   if (step === "role_pick" && n !== null) {
@@ -1817,14 +1603,14 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
     } else {
       fmt({ intent: "prompt_pick_1_or_2" });
     }
-    await persist2();
+    await persist();
     return out;
   }
   if (step === "parent_pick_school" && n !== null) {
     const g = identity.parentSchools[n - 1];
     if (!g) {
       fmt({ intent: "invalid_option" });
-      await persist2();
+      await persist();
       return out;
     }
     ctx.parentSchoolIndex = n - 1;
@@ -1835,14 +1621,14 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
       show_all_balances: g.students.length > 1,
       show_another_school: identity.parentSchools.length > 1
     });
-    await persist2();
+    await persist();
     return out;
   }
   if (step === "parent_menu" && n !== null) {
     const g = parentGroupFromSession(identity, ctx);
     if (!g) {
       step = "entry";
-      await persist2();
+      await persist();
       return processInboundMessage(client, waDigits, waE164, text);
     }
     const schoolId = g.school_id;
@@ -1858,13 +1644,13 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
         children: balances
       });
       step = "parent_menu";
-      await persist2();
+      await persist();
       return out;
     }
     if (n === anotherSchoolOpt && anotherSchoolOpt > 0) {
       step = "parent_pick_school";
       fmt(selectSchoolPayload(identity.parentSchools));
-      await persist2();
+      await persist();
       return out;
     }
     if (n === 1) {
@@ -1897,7 +1683,7 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
         fmt({ intent: "parent_fee_submenu", student_name: st.name });
         step = "parent_fee_submenu";
       }
-      await persist2();
+      await persist();
       return out;
     }
     if (n === 2) {
@@ -1924,7 +1710,7 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
         }
         step = "parent_menu";
       }
-      await persist2();
+      await persist();
       return out;
     }
     if (n === 3) {
@@ -1945,7 +1731,7 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
         step = "parent_attendance_sub";
         fmt({ intent: "attendance_submenu", student_name: null });
       }
-      await persist2();
+      await persist();
       return out;
     }
     return out;
@@ -1954,13 +1740,13 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
     const g = parentGroupFromSession(identity, ctx);
     if (!g) {
       step = "entry";
-      await persist2();
+      await persist();
       return processInboundMessage(client, waDigits, waE164, text);
     }
     const child = g.students[n - 1];
     if (!child) {
       fmt({ intent: "invalid_option" });
-      await persist2();
+      await persist();
       return out;
     }
     ctx.student_id = child.student_id;
@@ -1993,7 +1779,7 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
       step = "parent_attendance_sub";
       fmt({ intent: "attendance_submenu", student_name: child.name });
     }
-    await persist2();
+    await persist();
     return out;
   }
   if (step === "parent_fee_submenu" && n !== null) {
@@ -2001,7 +1787,7 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
     const sid = ctx.student_id;
     if (!g || !sid) {
       step = "parent_menu";
-      await persist2();
+      await persist();
       return processInboundMessage(client, waDigits, waE164, "");
     }
     const stName = g.students.find((s) => s.student_id === sid)?.name || "Student";
@@ -2016,7 +1802,7 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
     } else {
       step = "parent_menu";
     }
-    await persist2();
+    await persist();
     return out;
   }
   if (step === "parent_attendance_sub" && n !== null) {
@@ -2024,7 +1810,7 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
     const sid = ctx.student_id;
     if (!g || !sid) {
       step = "parent_menu";
-      await persist2();
+      await persist();
       return processInboundMessage(client, waDigits, waE164, "");
     }
     const stName = g.students.find((s) => s.student_id === sid)?.name || "Student";
@@ -2050,7 +1836,7 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
       step = "parent_await_date";
       fmt({ intent: "prompt_date_generic" });
     }
-    await persist2();
+    await persist();
     return out;
   }
   if (step === "parent_await_date") {
@@ -2059,7 +1845,7 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
     const d = parseDdMmYyyy(text);
     if (!g || !sid || !d) {
       fmt({ intent: "invalid_date" });
-      await persist2();
+      await persist();
       return out;
     }
     const stName = g.students.find((s) => s.student_id === sid)?.name || "Student";
@@ -2071,14 +1857,14 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
       body: msg
     });
     step = "parent_menu";
-    await persist2();
+    await persist();
     return out;
   }
   if (step === "staff_pick_school" && n !== null) {
     const s = identity.staffSchools[n - 1];
     if (!s) {
       fmt({ intent: "invalid_option" });
-      await persist2();
+      await persist();
       return out;
     }
     ctx.staffSchool = s;
@@ -2092,14 +1878,14 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
       is_accountant: s.isAccountant,
       is_librarian: s.isLibrarian
     });
-    await persist2();
+    await persist();
     return out;
   }
   if (step === "staff_attendance_followup" && n !== null) {
     const sc = staffContextFromSession(ctx);
     if (!sc) {
       step = "entry";
-      await persist2();
+      await persist();
       return processInboundMessage(client, waDigits, waE164, text);
     }
     if (n !== 1) {
@@ -2115,7 +1901,7 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
       });
       clearStaffSubflowContext(ctx);
       step = "staff_menu";
-      await persist2();
+      await persist();
       return out;
     }
     const breakdown = await getAttendanceBreakdownByClasses(client, sc.school_id, dateIso, classNames);
@@ -2135,21 +1921,21 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
       }))
     });
     step = "staff_attendance_pick_class_absent";
-    await persist2();
+    await persist();
     return out;
   }
   if (step === "staff_attendance_pick_class_absent" && n !== null) {
     const sc = staffContextFromSession(ctx);
     if (!sc) {
       step = "entry";
-      await persist2();
+      await persist();
       return processInboundMessage(client, waDigits, waE164, text);
     }
     const cache = ctx.staffAttendanceByClassCache;
     const dateIso = ctx.staffAttendanceDetailDate || todayIso();
     if (!cache?.length) {
       step = "staff_menu";
-      await persist2();
+      await persist();
       return out;
     }
     const picked = cache[n - 1];
@@ -2175,14 +1961,14 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
       }))
     });
     step = "staff_attendance_pick_class_absent";
-    await persist2();
+    await persist();
     return out;
   }
   if (step === "staff_menu" && n !== null) {
     const sc = staffContextFromSession(ctx);
     if (!sc) {
       step = "entry";
-      await persist2();
+      await persist();
       return processInboundMessage(client, waDigits, waE164, text);
     }
     if (sc.isSecretary) {
@@ -2192,7 +1978,7 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
         ctx.staffAttendanceDetailDate = dateIso;
         fmt({ intent: "staff_attendance_today_intro", date_label: dateIso, present: stats.present, absent: stats.absent });
         step = "staff_attendance_followup";
-        await persist2();
+        await persist();
         return out;
       }
       if (n === 2) {
@@ -2200,7 +1986,7 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
         ctx.secClassList = summary.byClass;
         fmt({ intent: "sec_students_class_list", total: summary.total, byClass: summary.byClass });
         step = "sec_students_class_pick";
-        await persist2();
+        await persist();
         return out;
       }
       if (n === 3) {
@@ -2208,19 +1994,19 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
         ctx.secBalanceClassList = rows;
         fmt({ intent: "sec_outstanding_class_list", rows });
         step = "sec_balances_class_pick";
-        await persist2();
+        await persist();
         return out;
       }
       if (n === 4) {
         const rows = await getSchoolStaffList(client, sc.school_id);
         fmt({ intent: "sec_staff_list", school_name: sc.school_name, rows });
-        await persist2();
+        await persist();
         return out;
       }
       if (n === 5) {
         fmt({ intent: "sec_visitor_range_pick" });
         step = "sec_visitor_range_pick";
-        await persist2();
+        await persist();
         return out;
       }
       if (n === 6) {
@@ -2235,7 +2021,7 @@ ${(r.body || "").trim() || "\u2014"}`;
           });
           fmt({ intent: "staff_notifications_inbox", lines });
         }
-        await persist2();
+        await persist();
         return out;
       }
       return out;
@@ -2244,7 +2030,7 @@ ${(r.body || "").trim() || "\u2014"}`;
       if (n === 1) {
         const summary = await getSchoolFinanceSummary(client, sc.school_id);
         fmt({ intent: "staff_school_summary", school_name: sc.school_name, date_label: todayIso(), ...summary });
-        await persist2();
+        await persist();
         return out;
       }
       if (n === 2) {
@@ -2252,25 +2038,25 @@ ${(r.body || "").trim() || "\u2014"}`;
         ctx.secBalanceClassList = rows;
         fmt({ intent: "sec_outstanding_class_list", rows });
         step = "sec_balances_class_pick";
-        await persist2();
+        await persist();
         return out;
       }
       if (n === 3) {
         step = "staff_await_receipt";
         fmt({ intent: "prompt_receipt_ref" });
-        await persist2();
+        await persist();
         return out;
       }
       if (n === 4) {
         const rows = await getTodaysPayments(client, sc.school_id);
         fmt({ intent: "acc_todays_payments", rows });
-        await persist2();
+        await persist();
         return out;
       }
       if (n === 5) {
         const exp = await getExpensesSummaryThisMonth(client, sc.school_id);
         fmt({ intent: "acc_expenses_summary", ...exp });
-        await persist2();
+        await persist();
         return out;
       }
       if (n === 6) {
@@ -2285,7 +2071,7 @@ ${(r.body || "").trim() || "\u2014"}`;
           });
           fmt({ intent: "staff_notifications_inbox", lines });
         }
-        await persist2();
+        await persist();
         return out;
       }
       return out;
@@ -2296,7 +2082,7 @@ ${(r.body || "").trim() || "\u2014"}`;
         ctx.secClassList = summary.byClass;
         fmt({ intent: "sec_students_class_list", total: summary.total, byClass: summary.byClass });
         step = "sec_students_class_pick";
-        await persist2();
+        await persist();
         return out;
       }
       if (n === 2) {
@@ -2305,7 +2091,7 @@ ${(r.body || "").trim() || "\u2014"}`;
         ctx.staffAttendanceDetailDate = dateIso;
         fmt({ intent: "staff_attendance_today_intro", date_label: dateIso, present: stats.present, absent: stats.absent });
         step = "staff_attendance_followup";
-        await persist2();
+        await persist();
         return out;
       }
       if (n === 3) {
@@ -2320,7 +2106,7 @@ ${(r.body || "").trim() || "\u2014"}`;
           });
           fmt({ intent: "staff_notifications_inbox", lines });
         }
-        await persist2();
+        await persist();
         return out;
       }
       return out;
@@ -2332,7 +2118,7 @@ ${(r.body || "").trim() || "\u2014"}`;
         step = "staff_my_classes_pick";
       }
       fmt({ intent: "staff_my_classes", class_names: classNames });
-      await persist2();
+      await persist();
       return out;
     }
     if (n === 2) {
@@ -2352,7 +2138,7 @@ ${(r.body || "").trim() || "\u2014"}`;
         });
         fmt({ intent: "staff_schedule_today", lines, day_label: timetableDayLabel(timetableDayIndexFromDate(new Date(Date.now() + 3 * 60 * 60 * 1e3))) });
       }
-      await persist2();
+      await persist();
       return out;
     }
     if (n === 3) {
@@ -2366,7 +2152,7 @@ ${(r.body || "").trim() || "\u2014"}`;
         const rows = await getTeacherTimetableRows(client, sc.school_id, sc.teacher_id);
         fmt({ intent: "staff_timetable_week", body: formatTimetableRowsForWhatsapp(rows) });
       }
-      await persist2();
+      await persist();
       return out;
     }
     if (n === 4) {
@@ -2376,7 +2162,7 @@ ${(r.body || "").trim() || "\u2014"}`;
       ctx.staffAttendanceDetailDate = dateIso;
       fmt({ intent: "staff_attendance_today_intro", date_label: dateIso, present: stats.present, absent: stats.absent });
       step = "staff_attendance_followup";
-      await persist2();
+      await persist();
       return out;
     }
     if (n === 5) {
@@ -2395,7 +2181,7 @@ ${(r.body || "").trim() || "\u2014"}`;
         });
         fmt({ intent: "staff_notifications_inbox", lines });
       }
-      await persist2();
+      await persist();
       return out;
     }
     if (n === 6 && sc.canVerifyReceipts) {
@@ -2406,13 +2192,13 @@ ${(r.body || "").trim() || "\u2014"}`;
         date_label: todayIso(),
         ...summary
       });
-      await persist2();
+      await persist();
       return out;
     }
     if (n === 7 && sc.canVerifyReceipts) {
       step = "staff_await_receipt";
       fmt({ intent: "prompt_receipt_ref" });
-      await persist2();
+      await persist();
       return out;
     }
     return out;
@@ -2422,13 +2208,13 @@ ${(r.body || "").trim() || "\u2014"}`;
     const classNames = ctx.staffMyClassesCache ?? [];
     if (!sc || classNames.length === 0) {
       step = "staff_menu";
-      await persist2();
+      await persist();
       return processInboundMessage(client, waDigits, waE164, text);
     }
     const picked = classNames[n - 1];
     if (!picked) {
       fmt({ intent: "invalid_option" });
-      await persist2();
+      await persist();
       return out;
     }
     const students = await getStudentsInClass(client, sc.school_id, picked);
@@ -2439,14 +2225,14 @@ ${(r.body || "").trim() || "\u2014"}`;
     });
     step = "staff_menu";
     delete ctx.staffMyClassesCache;
-    await persist2();
+    await persist();
     return out;
   }
   if (step === "staff_await_receipt") {
     const sc = staffContextFromSession(ctx);
     if (!sc) {
       step = "entry";
-      await persist2();
+      await persist();
       return processInboundMessage(client, waDigits, waE164, text);
     }
     const msg = await verifyReceiptByRef(client, sc.school_id, text);
@@ -2456,56 +2242,56 @@ ${(r.body || "").trim() || "\u2014"}`;
       body: msg || "No receipt matching that reference for this school."
     });
     step = "staff_menu";
-    await persist2();
+    await persist();
     return out;
   }
   if (step === "sec_students_class_pick" && n !== null) {
     const sc = staffContextFromSession(ctx);
     if (!sc) {
       step = "entry";
-      await persist2();
+      await persist();
       return processInboundMessage(client, waDigits, waE164, text);
     }
     const classList = ctx.secClassList ?? [];
     const picked = classList[n - 1];
     if (!picked) {
       fmt({ intent: "invalid_option" });
-      await persist2();
+      await persist();
       return out;
     }
     const students = await getStudentsInClass(client, sc.school_id, picked.class_name);
     fmt({ intent: "sec_students_in_class", class_name: picked.class_name, students: students.map((s, i) => ({ index: i + 1, name: s.name })) });
     step = "staff_menu";
     delete ctx.secClassList;
-    await persist2();
+    await persist();
     return out;
   }
   if (step === "sec_balances_class_pick" && n !== null) {
     const sc = staffContextFromSession(ctx);
     if (!sc) {
       step = "entry";
-      await persist2();
+      await persist();
       return processInboundMessage(client, waDigits, waE164, text);
     }
     const classList = ctx.secBalanceClassList ?? [];
     const picked = classList[n - 1];
     if (!picked) {
       fmt({ intent: "invalid_option" });
-      await persist2();
+      await persist();
       return out;
     }
     const rows = await getStudentsWithOutstandingInClass(client, sc.school_id, picked.class_name);
     fmt({ intent: "sec_outstanding_in_class", class_name: picked.class_name, rows });
     step = "staff_menu";
     delete ctx.secBalanceClassList;
-    await persist2();
+    await persist();
     return out;
   }
   if (step === "sec_visitor_range_pick" && n !== null) {
     const sc = staffContextFromSession(ctx);
     if (!sc) {
       step = "entry";
-      await persist2();
+      await persist();
       return processInboundMessage(client, waDigits, waE164, text);
     }
     const todayStr = todayIso();
@@ -2524,7 +2310,7 @@ ${(r.body || "").trim() || "\u2014"}`;
     const rows = await getVisitorLogForRange(client, sc.school_id, startIso, todayStr);
     fmt({ intent: "sec_visitor_log", label, rows });
     step = "staff_menu";
-    await persist2();
+    await persist();
     return out;
   }
   return out;
@@ -2569,7 +2355,7 @@ function extractInboundPayload(body) {
 }
 
 // src/lib/whatsapp/supabaseAdmin.ts
-import { createClient as createClient2 } from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
 var cached = null;
 function getSupabaseAdmin() {
   if (cached) return cached;
@@ -2578,7 +2364,7 @@ function getSupabaseAdmin() {
   if (!url || !key) {
     throw new Error("NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required for WhatsApp webhook");
   }
-  cached = createClient2(url, key, {
+  cached = createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false }
   });
   return cached;
