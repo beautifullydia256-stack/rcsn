@@ -14,6 +14,9 @@ import {
   getOfflineExpenseMainCategories,
   getOfflineExpenseSubcategories,
   getOfflineExpenseLegacyCategories,
+  cacheExpenseMainCategories,
+  cacheExpenseSubcategories,
+  cacheExpenseLegacyCategories,
 } from "../../lib/offlineDb";
 import { hasPermission, PERMISSION_KEYS } from "../../lib/permissions";
 import { EXPENSES_QUERY_KEY } from "../../pages/accountant/api/expenses";
@@ -197,8 +200,17 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
       setTeachers((teachersRes.data || []) as TeacherLite[]);
       setOtherStaff((otherRes.data || []) as OtherStaffLite[]);
 
+      if (mains.length) void cacheExpenseMainCategories(mains);
+      if (subs.length) void cacheExpenseSubcategories(schoolId, subs);
+
       const legacy = (legacyRes.data || []) as LegacyCat[];
       setLegacyCategories(legacy);
+      if (legacy.length) {
+        void cacheExpenseLegacyCategories(
+          schoolId,
+          legacy.map((l) => ({ category_id: l.category_id, school_id: schoolId, category_name: l.category_name }))
+        );
+      }
       const hierarchyReady = subs.length > 0;
       setUseLegacyCategories(!hierarchyReady);
       if (hierarchyReady && mains.length) {
