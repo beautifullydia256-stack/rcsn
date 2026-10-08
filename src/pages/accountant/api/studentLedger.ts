@@ -210,7 +210,7 @@ export async function fetchStudentLedger(
       .maybeSingle(),
     supabase
       .from('school_terms')
-      .select('id, term, year')
+      .select('id, term, year, is_current')
       .eq('school_id', schoolId)
       .order('year', { ascending: false })
       .order('term', { ascending: false }),

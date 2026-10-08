@@ -237,14 +237,18 @@ export function formatTertiaryStudentPeriod(
     const targetYear = Number(options.year);
     const targetTermNum = Number(periodNumber);
     const periodsAgo = (curTermYear - targetYear) * 2 + (curTermNum - targetTermNum);
-    const currentTotalSem = (curYear - 1) * 2 + curSem;
-    const targetTotalSem = currentTotalSem - periodsAgo;
-    if (targetTotalSem >= 1 && targetTotalSem <= 10) {
-      const calcYear = Math.floor((targetTotalSem - 1) / 2) + 1;
-      const calcSem = ((targetTotalSem - 1) % 2) + 1;
-      const stageStr = options.short ? `Y${calcYear}S${calcSem}` : `Year ${calcYear} Semester ${calcSem}`;
-      const prefixStr = hasPrefix ? `${progPrefix} – ` : '';
-      return `${prefixStr}${stageStr} (${targetYear})`;
+    // Only adjust backward for past historical periods. For current or future periods,
+    // preserve the student's enrolled cohort class exactly.
+    if (periodsAgo > 0) {
+      const currentTotalSem = (curYear - 1) * 2 + curSem;
+      const targetTotalSem = currentTotalSem - periodsAgo;
+      if (targetTotalSem >= 1 && targetTotalSem <= 10) {
+        const calcYear = Math.floor((targetTotalSem - 1) / 2) + 1;
+        const calcSem = ((targetTotalSem - 1) % 2) + 1;
+        const stageStr = options.short ? `Y${calcYear}S${calcSem}` : `Year ${calcYear} Semester ${calcSem}`;
+        const prefixStr = hasPrefix ? `${progPrefix} – ` : '';
+        return `${prefixStr}${stageStr} (${targetYear})`;
+      }
     }
   }
 

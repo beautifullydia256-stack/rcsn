@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { useAcademicPeriod } from '@/lib/academicPeriodTerminology';
+import { resolveCurrentSchoolTerm } from '@/lib/adminFinanceTerm';
 import { getTokens, fmtUGX, fmtUGXCompact, SORA, INTER } from '@/styles/posThemeTokens';
 
 type FeeStructure = {
@@ -67,11 +68,8 @@ interface SyncQueryResult {
 
 async function fetchSyncStudents(schoolId: string, syncMode: SyncMode): Promise<SyncQueryResult> {
   if (syncMode === 'assign_fees') {
-    const [termRes, feeRes, studentsRes] = await Promise.all([
-      supabase.rpc('resolve_current_school_term_id', {
-        p_school_id: schoolId,
-        p_today: new Date().toISOString().split('T')[0]
-      }),
+    const [termBrief, feeRes, studentsRes] = await Promise.all([
+      resolveCurrentSchoolTerm(supabase, schoolId),
       supabase
         .from('school_fee_structure')
         .select('class_name, tuition_amount, boarding_amount, boarding_tuition_amount')
@@ -85,7 +83,7 @@ async function fetchSyncStudents(schoolId: string, syncMode: SyncMode): Promise<
     ]);
 
     if (studentsRes.error) throw studentsRes.error;
-    const termId = termRes.data ?? null;
+    const termId = termBrief?.id ?? null;
 
     if (!termId) {
       return {
