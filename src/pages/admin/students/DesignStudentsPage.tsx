@@ -642,10 +642,7 @@ export default function DesignStudentsPage() {
         <div className="page">
           <div className="page-header fade-up">
             <div className="page-title-block">
-              <div className="page-eyebrow">
-                <span className="page-eyebrow-dot" />
-                <span>{isTertiary ? 'Academic Registry' : 'Student Registry'}</span>
-              </div>
+              <div className="page-eyebrow">{isTertiary ? 'Academic Registry' : 'Student Registry'}</div>
               <h1 className="page-title">{isTertiary ? 'Students & Trainees' : 'Students'}</h1>
               <p className="page-sub">
                 {isTertiary
