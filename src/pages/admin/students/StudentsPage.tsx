@@ -459,16 +459,7 @@ export default function StudentsPage() {
                             )}
                           </td>
                           <td className="px-4 py-3 border-r border-[var(--ac-border)] ac-text-secondary">
-                            {isTertiary ? (
-                              <div className="flex flex-col gap-1 items-start">
-                                <span className="font-medium">{r.current_class || '—'}</span>
-                                <span className="text-[11px] font-semibold text-teal-600 dark:text-teal-400">
-                                  {computeTertiaryProgress(r.current_class).shortPill}
-                                </span>
-                              </div>
-                            ) : (
-                              r.current_class || '—'
-                            )}
+                            <span className="font-medium">{r.current_class || '—'}</span>
                           </td>
                           <td className="px-4 py-3 border-r border-[var(--ac-border)]">
                             {firstParent?.email ? (

@@ -942,26 +942,11 @@ export default function DesignStudentsPage() {
                         </div>
 
                         <div className="td">
-                          {isTertiary ? (() => {
-                            const prog = computeTertiaryProgress(r.current_class);
-                            return (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'flex-start' }}>
-                                <span className={`class-chip ${classChipModifier(r.current_class)}`}>
-                                  {r.current_class || '—'}
-                                </span>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--teal-600, #0d9488)' }}>
-                                    {prog.shortPill}
-                                  </span>
-                                  {r.stream && (
-                                    <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--t3)' }}>
-                                      • {r.stream}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })() : (
+                          {isTertiary ? (
+                            <span className={`class-chip ${classChipModifier(r.current_class)}`}>
+                              {r.current_class || '—'}
+                            </span>
+                          ) : (
                             <>
                               <span className={`class-chip ${classChipModifier(r.current_class)}`}>
                                 {r.current_class || '—'}
@@ -1006,10 +991,15 @@ export default function DesignStudentsPage() {
                             style={{
                               fontSize: 11,
                               fontWeight: 600,
-                              padding: '2px 8px',
+                              padding: '3px 9px',
                               borderRadius: 6,
-                              background: attendanceStatus === 'present' ? 'rgba(16,185,129,0.12)' : 'rgba(148,163,184,0.12)',
-                              color: attendanceStatus === 'present' ? '#10b981' : 'var(--t3)',
+                              border:
+                                attendanceStatus === 'present'
+                                  ? '1px solid rgba(16,185,129,0.32)'
+                                  : '1px solid rgba(148,163,184,0.22)',
+                              background:
+                                attendanceStatus === 'present' ? 'rgba(16,185,129,0.14)' : 'rgba(148,163,184,0.1)',
+                              color: attendanceStatus === 'present' ? '#34d399' : 'var(--t3)',
                             }}
                           >
                             {attendanceStatus === 'present' ? '● Present' : '○ Not Marked'}
@@ -1021,21 +1011,27 @@ export default function DesignStudentsPage() {
                             style={{
                               fontSize: 11,
                               fontWeight: 700,
-                              padding: '2px 8px',
+                              padding: '3px 9px',
                               borderRadius: 6,
                               textTransform: 'capitalize',
+                              border:
+                                paymentStatus === 'full' || paymentStatus === 'cleared' || paymentStatus === 'paid'
+                                  ? '1px solid rgba(16,185,129,0.35)'
+                                  : paymentStatus === 'partial'
+                                  ? '1px solid rgba(245,158,11,0.35)'
+                                  : '1px solid rgba(244,63,94,0.35)',
                               background:
                                 paymentStatus === 'full' || paymentStatus === 'cleared' || paymentStatus === 'paid'
-                                  ? 'rgba(16,185,129,0.12)'
+                                  ? 'rgba(16,185,129,0.14)'
                                   : paymentStatus === 'partial'
-                                  ? 'rgba(245,158,11,0.12)'
-                                  : 'rgba(244,63,94,0.12)',
+                                  ? 'rgba(245,158,11,0.14)'
+                                  : 'rgba(244,63,94,0.14)',
                               color:
                                 paymentStatus === 'full' || paymentStatus === 'cleared' || paymentStatus === 'paid'
-                                  ? '#10b981'
+                                  ? '#34d399'
                                   : paymentStatus === 'partial'
-                                  ? '#f59e0b'
-                                  : '#f43f5e',
+                                  ? '#fbbf24'
+                                  : '#fb7185',
                             }}
                           >
                             {paymentStatus}
@@ -1114,7 +1110,7 @@ export default function DesignStudentsPage() {
                           <div>
                             <div className="sc-name">{name}</div>
                             <div className="sc-sub">
-                              {r.current_class || '—'} {isTertiary ? `· ${computeTertiaryProgress(r.current_class).shortPill}` : ''} {r.stream ? `· ${r.stream}` : ''} · {adm ? (isTertiary ? adm : `#${adm}`) : '—'}
+                              {r.current_class || '—'} · {adm ? (isTertiary ? adm : `#${adm}`) : '—'}
                             </div>
                           </div>
                           <button
