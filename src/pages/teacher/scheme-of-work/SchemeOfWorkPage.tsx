@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
-  LayoutList, Plus, Trash2, Save, Download, Loader2, Check, AlertCircle, RefreshCw, Sparkles, Wand2,
+  LayoutList, Plus, Trash2, Save, Download, Loader2, Check, AlertCircle, RefreshCw, Edit3,
   BookOpen, Layers, Award, CheckCircle2,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -639,7 +639,7 @@ export default function SchemeOfWorkPage() {
             className="w-11 h-11 rounded-xl flex items-center justify-center"
             style={{ background: 'rgba(59, 130, 246, 0.12)', color: t.brandBlue }}
           >
-            <Sparkles className="w-5 h-5" />
+            <BookOpen className="w-5 h-5" />
           </div>
         </div>
 
@@ -785,7 +785,7 @@ export default function SchemeOfWorkPage() {
             disabled={!canLoad || aiGenerating}
             title="Generate a full draft scheme with AI, grounded in Uganda's NCDC curriculum where available"
           >
-            {aiGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+            {aiGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookOpen className="w-4 h-4" />}
             {aiGenerating ? 'Generating…' : 'Generate with AI'}
           </button>
         </div>
@@ -802,7 +802,7 @@ export default function SchemeOfWorkPage() {
       {/* AI status message */}
       {aiMsg && (
         <div className={`flex items-center gap-2 p-3 rounded-lg border text-sm ${aiGrounded === false ? 'border-amber-500/30 bg-amber-500/10 text-amber-400' : 'border-indigo-500/30 bg-indigo-500/10 text-indigo-300'}`}>
-          <Sparkles className="w-4 h-4 shrink-0" />
+          <BookOpen className="w-4 h-4 shrink-0" />
           {aiMsg}
         </div>
       )}
@@ -842,7 +842,7 @@ export default function SchemeOfWorkPage() {
 
           {/* Ask AI to modify */}
           <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-[var(--ac-border)] bg-white/[0.015]">
-            <Wand2 className="w-4 h-4 text-indigo-400 shrink-0" />
+            <Edit3 className="w-4 h-4 text-indigo-400 shrink-0" />
             <input
               className="flex-1 min-w-[220px] h-8 rounded-lg border border-[var(--ac-border)] bg-transparent ac-text-primary text-xs px-2"
               placeholder="Tell the AI what to change, e.g. &quot;Make week 3 more activity-based&quot;"
@@ -856,7 +856,7 @@ export default function SchemeOfWorkPage() {
               disabled={aiEditing || !aiInstruction.trim() || entries.length === 0}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition-colors disabled:opacity-50"
             >
-              {aiEditing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
+              {aiEditing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Edit3 className="w-3.5 h-3.5" />}
               {aiEditing ? 'Applying…' : 'Ask AI to modify'}
             </button>
           </div>

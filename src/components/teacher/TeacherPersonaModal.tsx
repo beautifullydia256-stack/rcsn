@@ -8,7 +8,7 @@ import {
   X,
   BookOpen,
   ArrowRight,
-  Sparkles,
+  UserCheck,
   ShieldAlert,
   GraduationCap,
 } from 'lucide-react';
@@ -140,7 +140,7 @@ export default function TeacherPersonaModal({
       onClose={onClose}
       title={title}
       subtitle={subtitle}
-      icon={Sparkles}
+      icon={UserCheck}
       size="2xl"
     >
       <div className="space-y-4">

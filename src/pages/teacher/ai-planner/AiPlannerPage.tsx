@@ -6,7 +6,6 @@ import { useTeacherContext } from '../useTeacherContext';
 import { useUIStore } from '@/store/uiStore';
 import { getTokens } from '@/styles/posThemeTokens';
 import {
-  Sparkles,
   BookOpen,
   FileText,
   Loader2,
@@ -164,7 +163,7 @@ function ProfessionalDocument({
         {/* Footer */}
         <div className="mt-12 pt-4 border-t-2 border-gray-200 flex items-center justify-between text-xs text-gray-500">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+            <BookOpen className="w-3.5 h-3.5 text-purple-600" />
             <span>Generated with PwezaCore AI Curriculum Assistant</span>
           </div>
           <div>Page 1 of 1</div>
@@ -446,7 +445,7 @@ function AIPlannerContent() {
                 cursor: 'pointer',
               }}
             >
-              <Sparkles size={14} style={{ color: t.brandGold }} />
+              <FileText size={14} style={{ color: t.brandGold }} />
               Sample Document
             </button>
           </div>
@@ -851,7 +850,7 @@ function AIPlannerContent() {
                   </>
                 ) : (
                   <>
-                    <Sparkles size={16} />
+                    <BookOpen size={16} />
                     Generate Lesson Plan
                   </>
                 )}
@@ -1008,7 +1007,7 @@ function AIPlannerContent() {
                   </>
                 ) : (
                   <>
-                    <Sparkles size={16} />
+                    <FileText size={16} />
                     Generate Examination Paper
                   </>
                 )}

@@ -9,7 +9,7 @@ import {
   Megaphone,
   RefreshCw,
   Send,
-  Sparkles,
+  CreditCard,
   UserPlus,
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
@@ -110,7 +110,7 @@ function formatTimeAgo(iso: string): string {
 function categoryAccent(category: string | null): { Icon: typeof Bell; gradient: string } {
   const c = (category || '').toLowerCase();
   if (c.includes('student')) return { Icon: UserPlus, gradient: 'linear-gradient(135deg,#10d9a8,#3d7eff)' };
-  if (c.includes('financ') || c.includes('fee') || c.includes('pay')) return { Icon: Sparkles, gradient: 'linear-gradient(135deg,#ffb547,#ff4f6a)' };
+  if (c.includes('financ') || c.includes('fee') || c.includes('pay')) return { Icon: CreditCard, gradient: 'linear-gradient(135deg,#ffb547,#ff4f6a)' };
   if (c.includes('exam') || c.includes('grade')) return { Icon: Check, gradient: 'linear-gradient(135deg,#9d7eff,#3d7eff)' };
   return { Icon: Bell, gradient: 'linear-gradient(135deg,#3d7eff,#9d7eff)' };
 }

@@ -31,7 +31,6 @@ import {
   CheckCircle,
   Clock,
   XCircle,
-  Sparkles,
   Target,
   Brain,
   Eye,
@@ -420,7 +419,7 @@ export default function StudentProfilePage() {
                     className="flex items-center gap-2"
                     disabled={aiLoading}
                   >
-                    <Sparkles className="w-4 h-4" />
+                    <FileText className="w-4 h-4" />
                     <span className="hidden sm:inline">AI Summary</span>
                   </GlassButton>
                 </div>
@@ -636,7 +635,7 @@ export default function StudentProfilePage() {
             >
               <GlassCard className="p-6" hover>
                 <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                  <Sparkles className="w-5 h-5" style={{ color: '#ae79ff' }} />
+                  <FileText className="w-5 h-5" style={{ color: '#ae79ff' }} />
                   AI Insights
                 </h2>
                 

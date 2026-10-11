@@ -31,6 +31,7 @@ import {
   scheduleInterview,
   recordInterviewResults,
   issueAdmissionOffer,
+  rejectApplication,
   type AdmissionApplicationRecord,
   type ApplicationStatus,
 } from '@/services/admissionsService';
@@ -156,8 +157,8 @@ export default function AdmissionsManagementPage() {
 
     setActionLoading(true);
     try {
-      await updateApplication(app.id, { status: 'rejected', rejection_reason: reason });
-      showNotification(`Application ${app.application_number} rejected.`, 'error');
+      await rejectApplication(app.id, reason);
+      showNotification(`Application ${app.application_number} rejected. Official decision email dispatched.`);
       await loadData();
       if (inspectApp?.id === app.id) setInspectApp(null);
     } catch {
@@ -179,7 +180,7 @@ export default function AdmissionsManagementPage() {
         interviewVenue: schedVenue,
         interviewPanel: schedPanel,
       });
-      showNotification(`Interview scheduled for ${scheduleApp.full_name} on ${schedDate}.`);
+      showNotification(`Interview scheduled for ${scheduleApp.full_name} on ${schedDate}. Invitation email dispatched.`);
       setScheduleApp(null);
       await loadData();
     } catch {
@@ -202,9 +203,11 @@ export default function AdmissionsManagementPage() {
       });
 
       if (interviewDecision === 'passed') {
-        showNotification(`Interview score saved. Candidate marked as Passed (Recommended).`);
+        showNotification(`Interview score saved. Candidate marked as Passed.`);
+      } else if (interviewDecision === 'waitlisted') {
+        showNotification(`Interview score saved. Candidate marked as Waitlisted (Notice email dispatched).`);
       } else {
-        showNotification(`Interview score saved. Candidate marked as ${interviewDecision}.`, 'error');
+        showNotification(`Interview score saved. Candidate marked as failed.`, 'error');
       }
       setScoreApp(null);
       await loadData();
@@ -227,7 +230,7 @@ export default function AdmissionsManagementPage() {
         admittedProgram: prog,
         residentialPreference: admitResidency,
       });
-      showNotification(`Provisional admission offer issued for ${admitApp.full_name}.`);
+      showNotification(`Provisional admission offer issued for ${admitApp.full_name}. Official offer email dispatched.`);
       setAdmitApp(null);
       await loadData();
     } catch {

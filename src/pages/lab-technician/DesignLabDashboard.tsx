@@ -16,7 +16,6 @@ import {
   Search,
   ShieldCheck,
   Building2,
-  Sparkles,
   X,
   FileSpreadsheet,
   Flame,

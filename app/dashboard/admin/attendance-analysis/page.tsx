@@ -10,7 +10,7 @@ import GlassBackground from '../components/GlassBackground';
 import GlassCard from '@/components/ui/GlassCard';
 import {
   Users, CalendarCheck, UserX, TrendingUp, Award, AlertTriangle,
-  Download, FileText, FileSpreadsheet, File, Sparkles, Clock,
+  Download, FileText, FileSpreadsheet, File, Clock,
   MapPin, BarChart3, PieChart, Activity, Target, Brain
 } from 'lucide-react';
 import {
@@ -1015,7 +1015,7 @@ export default function AttendanceAnalysisReport() {
 
                 <div className="bg-black/20 rounded-lg p-4 border border-white/10">
                   <div className="flex items-center gap-2 mb-2">
-                    <Sparkles className="w-4 h-4 text-purple-400" />
+                    <Target className="w-4 h-4 text-purple-400" />
                     <span className="text-sm font-semibold text-white">Recommended Actions</span>
                   </div>
                   <ul className="text-sm text-white/85 space-y-1 list-disc list-inside">

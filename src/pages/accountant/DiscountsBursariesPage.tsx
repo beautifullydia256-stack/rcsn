@@ -11,7 +11,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
-  Sparkles,
   Users,
   Building,
 } from 'lucide-react';
@@ -693,7 +692,7 @@ export default function DiscountsBursariesPage() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           {r.is_100_percent && (
                             <span title="100% Full Bursary" style={{ display: 'inline-flex' }}>
-                              <Sparkles size={14} style={{ color: t.gold, flexShrink: 0 }} />
+                              <Award size={14} style={{ color: t.gold, flexShrink: 0 }} />
                             </span>
                           )}
                           <span>{r.name}</span>

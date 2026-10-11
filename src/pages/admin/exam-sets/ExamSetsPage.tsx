@@ -18,7 +18,6 @@ import {
   Edit3,
   Calendar,
   Layers,
-  Sparkles,
   AlertCircle,
   X,
   ArrowRight,

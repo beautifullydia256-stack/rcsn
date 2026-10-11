@@ -20,7 +20,6 @@ import {
   ArrowUpRight,
   CheckCircle2,
   AlertCircle,
-  Sparkles,
   TrendingUp,
 } from 'lucide-react';
 
@@ -463,7 +462,7 @@ export default function StudentDashboard() {
                   textTransform: 'uppercase',
                 }}
               >
-                <Sparkles className="w-3 h-3" />
+                <GraduationCap className="w-3 h-3" />
                 Active Learner
               </span>
               <span style={{ fontSize: 12, color: t.textMuted }}>· {studentDetails.schoolName}</span>

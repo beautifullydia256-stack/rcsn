@@ -20,7 +20,6 @@ import {
   Plus,
   CheckCircle2,
   Clock,
-  Sparkles,
   Layers,
   ChevronRight,
   Filter,

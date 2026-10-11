@@ -28,7 +28,7 @@ import {
   Edit3,
   Trash2,
   Bell,
-  Sparkles,
+  Award,
   Info,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
@@ -107,7 +107,7 @@ function getEventTypeBadge(type: SchoolEventType, isDark: boolean) {
     case 'cultural':
       return {
         label: 'Cultural & Speech Day',
-        icon: <Sparkles className="w-3.5 h-3.5" />,
+        icon: <Award className="w-3.5 h-3.5" />,
         color: isDark ? '#ec4899' : '#db2777',
         bg: isDark ? 'rgba(236, 72, 153, 0.15)' : '#fdf2f8',
         border: isDark ? 'rgba(236, 72, 153, 0.3)' : '#fbcfe8',

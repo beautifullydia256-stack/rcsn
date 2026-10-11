@@ -17,7 +17,6 @@ import {
   Menu,
   X,
   ExternalLink,
-  Sparkles,
   School,
   Clock,
   Sun,

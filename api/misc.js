@@ -176,6 +176,7 @@ module.exports = async function handler(req, res) {
     case 'lesson-log-photos':        return load('./lesson-log/_photos')(req, res);
     case 'expire-guild-tenures':     return load('./cron/_expire-guild-tenures')(req, res);
     case 'register-school':          return load('./register/_school')(req, res);
+    case 'admissions-send-email':    return load('./admissions/_send-email')(req, res);
     default:
       res.statusCode = 404;
       return res.end(JSON.stringify({ error: `Unknown action: ${action}` }));

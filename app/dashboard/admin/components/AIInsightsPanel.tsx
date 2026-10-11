@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import GlassCard from '@/components/ui/GlassCard';
 import GlassButton from './GlassButton';
-import { Sparkles, TrendingDown, AlertCircle, DollarSign, Users } from 'lucide-react';
+import { Activity, TrendingDown, AlertCircle, DollarSign, Users } from 'lucide-react';
 
 export default function AIInsightsPanel() {
   const [loading, setLoading] = useState(false);
@@ -33,7 +33,7 @@ export default function AIInsightsPanel() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="p-3 rounded-xl" style={{ background: 'rgba(174, 121, 255, 0.2)' }}>
-              <Sparkles className="w-6 h-6" style={{ color: '#ae79ff' }} />
+              <Activity className="w-6 h-6" style={{ color: '#ae79ff' }} />
             </div>
             <div>
               <h2 className="text-lg font-semibold text-white">AI Detected Trends</h2>

@@ -27,7 +27,6 @@ import {
   Bell,
   Stethoscope,
   ChevronRight,
-  Sparkles,
   TrendingUp,
 } from 'lucide-react';
 import { useSchoolType } from '@/hooks/useSchoolType';

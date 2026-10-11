@@ -13,7 +13,6 @@ import {
   AlertCircle,
   TrendingUp,
   Filter,
-  Sparkles,
   ChevronLeft,
   ChevronRight,
   Printer,
@@ -857,7 +856,7 @@ export default function StudentAttendancePage() {
                       >
                         {r.status === 'present' && <CheckCircle2 className="w-3.5 h-3.5" />}
                         {r.status === 'late' && <Clock className="w-3.5 h-3.5" />}
-                        {r.status === 'excused' && <Sparkles className="w-3.5 h-3.5" />}
+                        {r.status === 'excused' && <ShieldCheck className="w-3.5 h-3.5" />}
                         {r.status === 'absent' && <XCircle className="w-3.5 h-3.5" />}
                         {r.status}
                       </span>

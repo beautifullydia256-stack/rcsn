@@ -7,7 +7,6 @@ import {
   BookOpen,
   PenTool,
   Trophy,
-  Sparkles,
   Video,
   Stethoscope,
   Users,
@@ -715,8 +714,8 @@ export default function DesignTeacherDashboard() {
                 boxShadow: '0 4px 12px rgba(168, 85, 247, 0.25)',
               }}
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>AI Lesson Planner</span>
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>Lesson Planner</span>
             </button>
           </div>
         </div>

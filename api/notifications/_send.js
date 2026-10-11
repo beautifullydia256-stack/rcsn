@@ -73,7 +73,7 @@ function escapeHtml(s) {
 
 async function sendEmail(to, subject, body) {
   const apiKey = sanitizeHeaderValue(process.env.RESEND_API_KEY);
-  const from = sanitizeHeaderValue(process.env.RESEND_FROM) || 'PwezaCore <noreply@pwezacore.com>';
+  const from = sanitizeHeaderValue(process.env.RESEND_FROM) || 'RCSN Admissions <admissions@rcsn.ac.ug>';
   if (!apiKey) {
     console.warn('[EMAIL] RESEND_API_KEY not set');
     return { success: false, error: 'RESEND_API_KEY not configured' };

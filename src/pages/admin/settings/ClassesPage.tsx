@@ -9,7 +9,6 @@ import {
   Layers,
   Search,
   ArrowRight,
-  Sparkles,
   Settings,
   ChevronRight,
   School,

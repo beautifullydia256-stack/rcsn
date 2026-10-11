@@ -18,7 +18,6 @@ import {
   Layers,
   Shield,
   Trash2,
-  Sparkles,
   ArrowRight,
   UserCheck,
 } from 'lucide-react';
@@ -395,7 +394,7 @@ export default function DepartmentsPage() {
               </div>
             </div>
             <div style={{ padding: '12px', borderRadius: '12px', background: isDark ? 'rgba(255,255,255,0.04)' : '#F3F4F6' }}>
-              <Sparkles size={22} color={t.mint} />
+              <Layers size={22} color={t.mint} />
             </div>
           </div>
         </div>

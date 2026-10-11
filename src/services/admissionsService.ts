@@ -1,4 +1,11 @@
 import { supabase } from '@/lib/supabase';
+import {
+  sendApplicationSubmittedEmail,
+  sendInterviewScheduledEmail,
+  sendAdmissionOfferEmail,
+  sendApplicationStatusEmail,
+  sendApplicationRejectedEmail,
+} from './admissionsEmailService';
 
 export type ApplicationStatus =
   | 'submitted'
@@ -147,11 +154,11 @@ export async function fetchApplications(options?: {
       if (isMissing) {
         remoteAdmissionsTableAvailable = false;
       }
-    } else if (data && data.length > 0) {
+    } else {
       remoteAdmissionsTableAvailable = true;
       // Merge with any local cache that may not have synced
       const localApps = getLocalApplications();
-      const combined = [...data];
+      const combined = [...(data || [])];
       for (const localApp of localApps) {
         if (!combined.some((a) => a.application_number === localApp.application_number)) {
           combined.push(localApp);
@@ -197,7 +204,7 @@ export async function trackApplication(
       const { data, error } = await supabase
         .from('admission_applications')
         .select('*')
-        .or(`application_number.ilike.%${cleanId}%,phone.ilike.%${cleanId}%`)
+        .or(`application_number.ilike.%${cleanId}%,phone.ilike.%${cleanId}%,email.ilike.%${cleanId}%`)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -224,7 +231,8 @@ export async function trackApplication(
   const found = local.find(
     (a) =>
       a.application_number.toLowerCase().includes(cleanId.toLowerCase()) ||
-      a.phone.replace(/[^0-9]/g, '').includes(cleanId.replace(/[^0-9]/g, ''))
+      a.phone.replace(/[^0-9]/g, '').includes(cleanId.replace(/[^0-9]/g, '')) ||
+      (a.email && a.email.toLowerCase().includes(cleanId.toLowerCase()))
   );
 
   return found || null;
@@ -295,6 +303,14 @@ export async function createApplication(
       const local = getLocalApplications();
       local.unshift(inserted);
       saveLocalApplications(local);
+
+      // Trigger instant confirmation email
+      if (inserted.email) {
+        sendApplicationSubmittedEmail(inserted).catch((err) =>
+          console.warn('[AdmissionsService] Email dispatch note:', err)
+        );
+      }
+
       return { success: true, application: inserted, message: 'Application submitted successfully.' };
     }
   } catch (err) {
@@ -305,6 +321,13 @@ export async function createApplication(
   const local = getLocalApplications();
   local.unshift(newRecord);
   saveLocalApplications(local);
+
+  // Trigger instant confirmation email on local fallback
+  if (newRecord.email) {
+    sendApplicationSubmittedEmail(newRecord).catch((err) =>
+      console.warn('[AdmissionsService] Email dispatch note (fallback):', err)
+    );
+  }
 
   return { success: true, application: newRecord, message: 'Application submitted successfully.' };
 }
@@ -366,13 +389,21 @@ export async function scheduleInterview(
     interviewPanel?: string;
   }
 ) {
-  return updateApplication(id, {
+  const res = await updateApplication(id, {
     status: 'interview_scheduled',
     interview_date: params.interviewDate,
     interview_time: params.interviewTime,
     interview_venue: params.interviewVenue,
     interview_panel: params.interviewPanel,
   });
+
+  if (res.success && res.updated && res.updated.email) {
+    sendInterviewScheduledEmail(res.updated).catch((err) =>
+      console.warn('[AdmissionsService] Interview email dispatch note:', err)
+    );
+  }
+
+  return res;
 }
 
 /**
@@ -393,11 +424,22 @@ export async function recordInterviewResults(
       ? 'waitlisted'
       : 'interview_failed';
 
-  return updateApplication(id, {
+  const res = await updateApplication(id, {
     interview_score: params.score,
     status,
     interview_notes: params.notes,
   });
+
+  if (res.success && res.updated && res.updated.email) {
+    if (params.decision === 'waitlisted') {
+      sendApplicationStatusEmail(
+        res.updated,
+        'Your admission interview assessment has been concluded, and you have been placed on the admissions merit waitlist. Our admissions board will communicate as places become available.'
+      ).catch((err) => console.warn('[AdmissionsService] Waitlist email dispatch note:', err));
+    }
+  }
+
+  return res;
 }
 
 /**
@@ -415,13 +457,42 @@ export async function issueAdmissionOffer(
     params.letterNumber ||
     `RCSN/ADM/${new Date().getFullYear()}/${Math.floor(100 + Math.random() * 900)}`;
 
-  return updateApplication(id, {
+  const res = await updateApplication(id, {
     status: 'admitted',
     admitted_program: params.admittedProgram,
     admission_letter_number: generatedLetterNo,
     admission_issued_at: new Date().toISOString(),
     residential_preference: params.residentialPreference || 'Resident',
   });
+
+  if (res.success && res.updated && res.updated.email) {
+    sendAdmissionOfferEmail(res.updated).catch((err) =>
+      console.warn('[AdmissionsService] Admission offer email dispatch note:', err)
+    );
+  }
+
+  return res;
+}
+
+/**
+ * Reject an application with optional reason and dispatch regret email
+ */
+export async function rejectApplication(
+  id: string,
+  reason?: string
+) {
+  const res = await updateApplication(id, {
+    status: 'rejected',
+    rejection_reason: reason,
+  });
+
+  if (res.success && res.updated && res.updated.email) {
+    sendApplicationRejectedEmail(res.updated, reason).catch((err) =>
+      console.warn('[AdmissionsService] Rejection email dispatch note:', err)
+    );
+  }
+
+  return res;
 }
 
 /**

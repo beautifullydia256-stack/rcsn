@@ -22,6 +22,7 @@
     { "source": "/api/admin/sync-student-balances",          "destination": "/api/admin?action=sync-student-balances" },
     { "source": "/api/admin/broadcast",                      "destination": "/api/admin?action=broadcast" },
     { "source": "/api/notifications/send",                   "destination": "/api/misc?action=notifications-send" },
+    { "source": "/api/admissions/send-email",                "destination": "/api/misc?action=admissions-send-email" },
     { "source": "/api/register/school",                      "destination": "/api/misc?action=register-school" },
     { "source": "/api/cron/expire-guild-tenures",            "destination": "/api/misc?action=expire-guild-tenures" },
     { "source": "/api/integrations/schoolpay/settings",      "destination": "/api/misc?action=schoolpay-settings" },

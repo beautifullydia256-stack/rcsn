@@ -7,7 +7,7 @@ import { resolveCurrentSchoolTerm } from '@/src/lib/adminFinanceTerm';
 import { studentAttendanceRowIsPresent } from '@/src/lib/studentAttendanceRow';
 import GlassCard from '@/components/ui/GlassCard';
 import GlassButton from './GlassButton';
-import { Sparkles, FileText, BarChart3, Mail, AlertTriangle, X, CalendarCheck, Award, BookOpen, Target, Users, TrendingUp, Brain } from 'lucide-react';
+import { Zap, FileText, BarChart3, Mail, AlertTriangle, X, CalendarCheck, Award, BookOpen, Target, Users, TrendingUp, Brain } from 'lucide-react';
 
 interface AnalysisResult {
   title: string;
@@ -674,7 +674,7 @@ ${studentRisks.length > 0 ? `Please review and take action for ${studentRisks.le
           {/* Key Insights */}
           <section className="bg-yellow-50 rounded-lg p-6 border-l-4 border-yellow-500">
             <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Sparkles className="w-6 h-6 text-yellow-600" />
+              <Award className="w-6 h-6 text-yellow-600" />
               Key Insights & Recommendations
             </h2>
             <div className="space-y-2 text-gray-700">
@@ -788,7 +788,7 @@ ${studentRisks.length > 0 ? `Please review and take action for ${studentRisks.le
           {/* Recommendations */}
           <section className="bg-blue-50 rounded-lg p-6 border-l-4 border-blue-500">
             <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Sparkles className="w-6 h-6 text-blue-600" />
+              <Target className="w-6 h-6 text-blue-600" />
               Recommendations
             </h2>
             <ul className="space-y-2 text-gray-700 list-disc list-inside">
@@ -963,7 +963,7 @@ ${studentRisks.length > 0 ? `Please review and take action for ${studentRisks.le
           {/* Recommendations */}
           <section className="bg-blue-50 rounded-lg p-6 border-l-4 border-blue-500">
             <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Sparkles className="w-6 h-6 text-blue-600" />
+              <Target className="w-6 h-6 text-blue-600" />
               Recommended Actions
             </h2>
             <ul className="space-y-2 text-gray-700 list-disc list-inside">
@@ -1368,7 +1368,7 @@ ${studentRisks.length > 0 ? `Please review and take action for ${studentRisks.le
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-4">
             <div className="p-3 rounded-xl" style={{ background: 'rgba(255, 107, 203, 0.2)' }}>
-              <Sparkles className="w-6 h-6" style={{ color: '#ff6bcb' }} />
+              <Zap className="w-6 h-6" style={{ color: '#ff6bcb' }} />
             </div>
             <div>
               <h2 className="text-lg font-semibold text-white">AI Quick Actions</h2>

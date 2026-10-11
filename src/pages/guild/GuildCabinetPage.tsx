@@ -12,7 +12,6 @@ import {
   HeartPulse,
   Trophy,
   Wallet,
-  Sparkles,
   MessageSquare,
   ChevronRight
 } from 'lucide-react';

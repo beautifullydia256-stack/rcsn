@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Loader2, Sparkles, CheckCircle2, UploadCloud, FileText, Package, Zap } from 'lucide-react';
+import { Clock, Loader2, CheckCircle2, UploadCloud, FileText, Package, Zap } from 'lucide-react';
 
 export type ProgressPhase =
   | 'preparing'
@@ -268,7 +268,7 @@ export function ProgressBar({
             fontSize: 12,
           }}
         >
-          <Sparkles size={14} style={{ color: '#f59e0b' }} />
+          <Clock size={14} style={{ color: '#f59e0b' }} />
           <span style={{ color: '#94a3b8' }}>Remaining:</span>
           <span style={{ fontWeight: 700, color: '#fbbf24' }}>
             {etaDisplay}

@@ -26,7 +26,6 @@ import {
   Stethoscope,
   ChevronRight,
   TrendingUp,
-  Sparkles,
 } from 'lucide-react';
 import { useSchoolType } from '@/hooks/useSchoolType';
 import { getNavTerminology, getGreetingLastName } from '@/lib/roleTerminology';
@@ -408,7 +407,7 @@ export default function DosDashboard() {
                 textTransform: 'uppercase',
               }}
             >
-              <Sparkles className="w-3 h-3" />
+              <GraduationCap className="w-3 h-3" />
               Academic Directorate
             </span>
             <span style={{ fontSize: 12, color: t.textMuted }}>· {authData.schoolName}</span>

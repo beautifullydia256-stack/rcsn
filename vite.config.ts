@@ -5,10 +5,38 @@ import path from 'path';
 /** Web (Vercel): do not set VITE_DESKTOP_MODE — BrowserRouter + base '/'. Desktop: VITE_DESKTOP_MODE=true + HashRouter + base './'. */
 const desktop = process.env.VITE_DESKTOP_MODE === 'true';
 
+function admissionsDevEmailPlugin() {
+  return {
+    name: 'admissions-dev-email-plugin',
+    configureServer(server: any) {
+      server.middlewares.use(async (req: any, res: any, next: any) => {
+        if (req.url && req.url.startsWith('/api/admissions/send-email') && req.method === 'POST') {
+          const chunks: any[] = [];
+          req.on('data', (c: any) => chunks.push(c));
+          req.on('end', async () => {
+            try {
+              const bodyStr = Buffer.concat(chunks).toString();
+              // eslint-disable-next-line @typescript-eslint/no-var-requires
+              const handler = require(path.resolve(__dirname, './api/admissions/_send-email.js'));
+              req.body = JSON.parse(bodyStr || '{}');
+              await handler(req, res);
+            } catch (err) {
+              res.writeHead(500, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ success: false, error: String(err) }));
+            }
+          });
+          return;
+        }
+        next();
+      });
+    },
+  };
+}
+
 export default defineConfig({
   /** Relative asset paths for Electron `file://` loading when building the desktop bundle. */
   base: desktop ? './' : '/',
-  plugins: [react()],
+  plugins: [react(), admissionsDevEmailPlugin()],
   envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
   resolve: {
     alias: {

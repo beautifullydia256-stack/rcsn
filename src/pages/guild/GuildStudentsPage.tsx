@@ -11,7 +11,6 @@ import {
   Calendar,
   MessageSquare,
   ChevronRight,
-  Sparkles,
   ShieldAlert,
   GraduationCap,
   Building,

@@ -1,9 +1,9 @@
 import GlassCard from '@/components/ui/GlassCard';
-import { Sparkles, TrendingUp, Zap, Users, DollarSign, Bot } from 'lucide-react';
+import { Layers, TrendingUp, Zap, Users, DollarSign, Bot } from 'lucide-react';
 
 export default function AISection() {
   const cards = [
-    { title: 'AI Insights', desc: 'Smart analytics and recommendations', icon: Sparkles, color: '#8b5cf6' },
+    { title: 'AI Insights', desc: 'Smart analytics and recommendations', icon: Layers, color: '#8b5cf6' },
     { title: 'AI Forecasting', desc: 'Predict trends and enrollment', icon: TrendingUp, color: '#06b6d4' },
     { title: 'AI Quick Actions', desc: 'One-click automation', icon: Zap, color: '#f59e0b' },
     { title: 'AI Teacher Analytics', desc: 'Performance and engagement', icon: Users, color: '#ec4899' },

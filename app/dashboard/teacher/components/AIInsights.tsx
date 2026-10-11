@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, TrendingUp, TrendingDown, AlertCircle, Lightbulb } from 'lucide-react';
+import { TrendingUp, TrendingDown, AlertCircle, Lightbulb } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
 import PerformanceMetrics from './PerformanceMetrics';
 
@@ -66,7 +66,7 @@ export default function AIInsights({
       <GlassCard className="p-6 mb-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-            <Sparkles className="w-5 h-5" style={{ color: '#ae79ff' }} />
+            <Lightbulb className="w-5 h-5" style={{ color: '#ae79ff' }} />
             AI-Powered Insights
           </h2>
           <span 
@@ -93,7 +93,7 @@ export default function AIInsights({
     <GlassCard className="p-6 mb-8" hover>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-          <Sparkles className="w-5 h-5" style={{ color: '#ae79ff' }} />
+          <Lightbulb className="w-5 h-5" style={{ color: '#ae79ff' }} />
             AI-Powered Insights
           </h2>
         <div className="flex items-center gap-2">

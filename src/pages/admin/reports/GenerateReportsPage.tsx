@@ -15,7 +15,6 @@ import {
   Users,
   User,
   GraduationCap,
-  Sparkles,
   School,
   Eye,
   FileDown,
@@ -1832,7 +1831,7 @@ export default function GenerateReportsPage() {
               Generation Scope
             </span>
             <div style={{ width: 26, height: 26, borderRadius: 6, background: isDark ? 'rgba(251,191,36,0.1)' : 'rgba(180,83,9,0.08)', color: isDark ? '#fbbf24' : '#b45309', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Sparkles size={14} />
+              <FileText size={14} />
             </div>
           </div>
           <div style={{ fontFamily: SORA, fontSize: 16, fontWeight: 800, color: textColor }}>

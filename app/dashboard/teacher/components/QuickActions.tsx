@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import {
   ClipboardCheck,
   BookOpen,
-  Sparkles,
   Upload,
   Calendar,
   FileText,
@@ -39,8 +38,8 @@ export default function QuickActions() {
       iconBg: 'rgba(16, 185, 129, 0.2)'
     },
     {
-      icon: Sparkles,
-      label: 'AI Generate Lesson Plan',
+      icon: FileText,
+      label: 'Lesson Planner',
       path: '/dashboard/teacher/ai-planner',
       color: '#ae79ff',
       iconBg: 'rgba(174, 121, 255, 0.2)'

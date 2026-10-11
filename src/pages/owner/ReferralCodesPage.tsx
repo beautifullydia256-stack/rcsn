@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Ticket, CheckCircle2, BarChart3, Wallet, TrendingUp, Trophy, Sparkles } from 'lucide-react';
+import { Ticket, CheckCircle2, BarChart3, Wallet, TrendingUp, Trophy, RefreshCw } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { GlassCard } from '../../components/Glass/GlassCard';
 import { GlassPanel } from '../../components/Glass/GlassPanel';
@@ -624,7 +624,7 @@ export default function ReferralCodesPage() {
                 onClick={generateRandomCode}
                 className="px-4 py-2.5 bg-white/10 hover:bg-white/15 border border-white/15 text-white/90 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
               >
-                <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                <RefreshCw className="w-3.5 h-3.5 text-emerald-400" />
                 <span>Generate</span>
               </button>
             </div>

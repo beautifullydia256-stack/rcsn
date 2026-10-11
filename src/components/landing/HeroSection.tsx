@@ -10,7 +10,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight, ShieldCheck } from 'lucide-react';
 import { getDefaultHeroMessage } from '@/lib/content/transformation-messages';
 import type { HeroSectionProps } from '@/types/pricing';
 
@@ -85,7 +85,7 @@ export function HeroSection({
           {/* Headline */}
           <motion.div variants={itemVariants} className="mb-6">
             <div className="inline-flex items-center gap-2 mb-4 px-4 py-2 bg-blue-100 dark:bg-blue-900/30 rounded-full">
-              <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <ShieldCheck className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
                 Trusted by 150+ Ugandan Schools
               </span>

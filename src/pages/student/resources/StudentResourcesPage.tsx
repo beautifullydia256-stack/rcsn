@@ -14,7 +14,6 @@ import {
   FileQuestion,
   ExternalLink,
   BookOpen,
-  Sparkles,
   Layers,
   Clock,
   HardDrive,
@@ -434,7 +433,7 @@ export default function StudentResourcesPage() {
             [
               { id: 'all', label: 'All Resources', icon: <Layers className="w-3.5 h-3.5" /> },
               { id: 'notes', label: 'Class Notes & Guides', icon: <BookOpen className="w-3.5 h-3.5" /> },
-              { id: 'exam', label: 'Past Exam Papers', icon: <Sparkles className="w-3.5 h-3.5" /> },
+              { id: 'exam', label: 'Past Exam Papers', icon: <FileQuestion className="w-3.5 h-3.5" /> },
               { id: 'worksheet', label: 'Worksheets & Practice', icon: <FileText className="w-3.5 h-3.5" /> },
               { id: 'revision', label: 'Revision Packages', icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
             ] as const

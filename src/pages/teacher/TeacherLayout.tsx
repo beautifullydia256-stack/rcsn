@@ -14,7 +14,7 @@ import {
   CalendarDays,
   Video,
   Percent,
-  Sparkles,
+  UserCheck,
   PenTool,
   Book,
   MessageSquare,
@@ -446,7 +446,7 @@ export default function TeacherLayout() {
             onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[7])}
             className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
           >
-            <span className="pw-nav-ic"><Sparkles className="w-4 h-4" /></span>
+            <span className="pw-nav-ic"><BookOpen className="w-4 h-4" /></span>
             <span className="pw-nav-text">AI Lesson Planner</span>
           </NavLink>
           <NavLink
@@ -680,7 +680,7 @@ export default function TeacherLayout() {
                   color: theme === 'light' ? '#065F46' : '#3DE8A0',
                 }}
               >
-                <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+                <UserCheck className="w-3.5 h-3.5 text-emerald-500" />
                 <span>Presenting as: <strong>{simulatedTeacher.name}</strong></span>
                 <button
                   type="button"

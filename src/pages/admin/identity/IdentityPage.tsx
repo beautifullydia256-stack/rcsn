@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { IdCard, Search, Users, Download, ChevronLeft, ChevronRight, Layers, CheckCircle2, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { IdCard, Search, Users, Download, ChevronLeft, ChevronRight, Layers, CheckCircle2, Image as ImageIcon } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';

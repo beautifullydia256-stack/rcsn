@@ -200,7 +200,7 @@ export default function TrackApplicationPage() {
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="e.g. RCSN-2026-104921 or 0701884192"
+                  placeholder="e.g. RCSN-2026-104921, 0701884192, or applicant@email.com"
                   className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white text-base focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
@@ -215,7 +215,7 @@ export default function TrackApplicationPage() {
             </form>
 
             <div className="mt-4 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1">
-              <span>Example Application IDs: RCSN-2026-104921, RCSN-2026-281903</span>
+              <span>Search by Application Number, Phone Number, or Email</span>
               <Link to="/contact" className="hover:text-emerald-600 transition-colors">
                 Need Help?
               </Link>
@@ -238,7 +238,7 @@ export default function TrackApplicationPage() {
               </div>
               <h3 className="text-xl font-bold text-slate-900 dark:text-white">Application Record Not Found</h3>
               <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto">
-                No application matches <strong>"{query}"</strong>. Please verify the Application ID sent in your initial SMS or check with the admissions office.
+                No application matches <strong>"{query}"</strong>. Please verify the Application ID, phone number, or email address used during submission.
               </p>
               <div className="pt-2">
                 <Link

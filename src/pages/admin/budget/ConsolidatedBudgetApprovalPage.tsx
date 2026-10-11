@@ -12,7 +12,6 @@ import {
   FileCheck2,
   Lock,
   Printer,
-  Sparkles,
   Users,
   AlertCircle,
   HelpCircle,
@@ -305,7 +304,7 @@ export default function ConsolidatedBudgetApprovalPage() {
                   : 'bg-rose-500/10 text-rose-600'
               }`}
             >
-              <Sparkles className="w-4 h-4" />
+              <TrendingUp className="w-4 h-4" />
             </div>
           </div>
           <div

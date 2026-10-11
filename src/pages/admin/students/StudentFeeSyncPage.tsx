@@ -21,7 +21,6 @@ import {
   CreditCard,
   QrCode,
   ShieldCheck,
-  Sparkles,
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { useAcademicPeriod } from '@/lib/academicPeriodTerminology';
@@ -1322,11 +1321,7 @@ export default function StudentFeeSyncPage() {
                   boxShadow: '0 4px 14px rgba(61,232,160,0.30)',
                 }}
               >
-                {syncing ? (
-                  <RefreshCw size={14} className="animate-spin" />
-                ) : (
-                  <Sparkles size={14} />
-                )}
+                {syncing && <RefreshCw size={14} className="animate-spin" />}
                 <span>
                   {syncMode === 'assign_fees' ? 'Assign Fees' :
                    syncMode === 'update_balances' && balanceUpdateMode === 'supplementary' ? 'Add Charges' :

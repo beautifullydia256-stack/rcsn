@@ -16,7 +16,6 @@ import {
   ChevronRight,
   ExternalLink,
   Award,
-  Sparkles,
   Download,
 } from 'lucide-react';
 
@@ -519,7 +518,7 @@ export default function StudentAssignmentsPage() {
             {selectedSubmission.submission?.feedback && (
               <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 space-y-2">
                 <div className="flex items-center gap-2 text-xs font-bold text-emerald-300">
-                  <Sparkles className="w-4 h-4 text-emerald-400" />
+                  <Award className="w-4 h-4 text-emerald-400" />
                   <span>Teacher&apos;s Evaluation &amp; Feedback</span>
                 </div>
                 <p className="text-xs text-white/90 leading-relaxed">
