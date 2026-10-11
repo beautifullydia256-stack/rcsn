@@ -443,6 +443,81 @@ export async function recordInterviewResults(
 }
 
 /**
+ * Batch schedule interviews for multiple candidates and dispatch invitation emails
+ */
+export async function batchScheduleInterviews(
+  applicationIds: string[],
+  params: {
+    interviewDate: string;
+    interviewTime: string;
+    interviewVenue: string;
+    interviewPanel?: string;
+  }
+): Promise<{ successCount: number; failureCount: number }> {
+  let successCount = 0;
+  let failureCount = 0;
+
+  for (const id of applicationIds) {
+    try {
+      const res = await scheduleInterview(id, params);
+      if (res.success) successCount++;
+      else failureCount++;
+    } catch {
+      failureCount++;
+    }
+  }
+
+  return { successCount, failureCount };
+}
+
+/**
+ * Evaluate and score a candidate with configurable pass threshold & automatic admission
+ */
+export async function evaluateInterviewCandidate(
+  app: AdmissionApplicationRecord,
+  params: {
+    score: number;
+    passThreshold: number;
+    notes?: string;
+    autoAdmitOnPass?: boolean;
+  }
+): Promise<{ success: boolean; verdict: 'passed' | 'failed'; updated?: AdmissionApplicationRecord }> {
+  const isPass = params.score >= params.passThreshold;
+
+  if (isPass) {
+    if (params.autoAdmitOnPass !== false) {
+      const program = app.admitted_program || app.programs[0] || 'Certificate in Nursing';
+      const res = await issueAdmissionOffer(app.id, {
+        admittedProgram: program,
+        residentialPreference: app.residential_preference || 'Resident',
+      });
+      await updateApplication(app.id, {
+        interview_score: params.score,
+        interview_notes: params.notes,
+      });
+      return { success: res.success, verdict: 'passed', updated: res.updated };
+    } else {
+      const res = await recordInterviewResults(app.id, {
+        score: params.score,
+        decision: 'passed',
+        notes: params.notes,
+      });
+      return { success: res.success, verdict: 'passed', updated: res.updated };
+    }
+  } else {
+    const reason =
+      params.notes ||
+      `Interview assessment score of ${params.score}% was below the required institutional passing threshold (${params.passThreshold}%).`;
+    const res = await rejectApplication(app.id, reason);
+    await updateApplication(app.id, {
+      interview_score: params.score,
+      interview_notes: params.notes,
+    });
+    return { success: res.success, verdict: 'failed', updated: res.updated };
+  }
+}
+
+/**
  * Issue Official Provisional Admission Offer
  */
 export async function issueAdmissionOffer(
@@ -586,6 +661,30 @@ export async function matriculateApplicantToStudent(
       enrolled_at: new Date().toISOString(),
       residential_preference: params.boardingType,
     });
+
+    // Automatically generate first term student tuition & requirements invoice in student_invoices ledger
+    try {
+      const isResident = params.boardingType === 'Resident';
+      const isDiploma = (application.admitted_program || '').toLowerCase().includes('diploma');
+      const baseFee = isDiploma ? (isResident ? 2985000 : 2385000) : (isResident ? 2785000 : 2185000);
+      const paid = params.initialTuitionPaid || 0;
+      const balance = Math.max(0, baseFee - paid);
+      const invNum = `INV-ADM-${new Date().getFullYear()}-${application.application_number.slice(-4)}`;
+
+      await supabase.from('student_invoices').insert({
+        school_id: schoolId,
+        student_id: studentId,
+        invoice_number: invNum,
+        invoice_label: `${application.admitted_program || 'Nursing'} – Semester 1 Tuition & Requirements`,
+        total_amount: baseFee,
+        amount_paid: paid,
+        balance: balance,
+        status: paid >= baseFee ? 'paid' : paid > 0 ? 'partial' : 'pending',
+        is_supplementary: false,
+      });
+    } catch (invErr) {
+      console.warn('[AdmissionsService] Student invoice creation note:', invErr);
+    }
 
     return { success: true, studentId };
   } catch (err: unknown) {

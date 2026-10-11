@@ -17,6 +17,7 @@ import {
   Check,
   HelpCircle,
   Loader2,
+  Receipt,
 } from 'lucide-react';
 import RcsnNavbar from '@/components/website/RcsnNavbar';
 import RcsnFooter from '@/components/website/RcsnFooter';
@@ -28,6 +29,7 @@ import {
 } from '@/services/admissionsService';
 import { generateInterviewSlipPdf } from '@/lib/generateInterviewSlipPdf';
 import { generateAdmissionLetterPdf } from '@/lib/generateAdmissionLetterPdf';
+import { generateAdmissionInvoicePdf } from '@/lib/generateAdmissionInvoicePdf';
 
 export default function TrackApplicationPage() {
   const [searchParams] = useSearchParams();
@@ -101,6 +103,18 @@ export default function TrackApplicationPage() {
       await generateAdmissionLetterPdf(application);
     } catch (err) {
       console.error('Failed to generate admission letter:', err);
+    } finally {
+      setDownloadingDoc(null);
+    }
+  };
+
+  const handleDownloadAdmissionInvoice = async () => {
+    if (!application) return;
+    setDownloadingDoc('invoice');
+    try {
+      await generateAdmissionInvoicePdf(application);
+    } catch (err) {
+      console.error('Failed to generate admission invoice:', err);
     } finally {
       setDownloadingDoc(null);
     }
@@ -408,7 +422,17 @@ export default function TrackApplicationPage() {
                       className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-white text-slate-950 hover:bg-slate-100 font-bold text-sm shadow transition-all"
                     >
                       <Download className="w-4 h-4 text-emerald-600" />
-                      <span>Download Admission Letter & Fees</span>
+                      <span>Download Admission Letter</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleDownloadAdmissionInvoice}
+                      disabled={downloadingDoc === 'invoice'}
+                      className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-sm shadow transition-all"
+                    >
+                      <Receipt className="w-4 h-4 text-slate-950" />
+                      <span>Download Fee Invoice (PDF)</span>
                     </button>
 
                     <button
