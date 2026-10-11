@@ -23,6 +23,8 @@ function getSiteOrigin(): string {
   return import.meta.env.VITE_APP_URL || DEFAULT_PORTAL_URL;
 }
 
+const RCSN_BADGE_URL = 'https://www.rcsn.ac.ug/images/rcsn/logo.png';
+
 /**
  * Base email layout wrapper with prestigious RCSN institutional styling.
  */
@@ -41,9 +43,9 @@ function wrapInstitutionalEmail(title: string, bodyContent: string): string {
     table { border-collapse: collapse; }
     .wrapper { width: 100%; table-layout: fixed; background-color: #f1f5f9; padding: 30px 10px; }
     .main { background-color: #ffffff; margin: 0 auto; width: 100%; max-width: 600px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0; }
-    .header { background: linear-gradient(135deg, #0f2b48 0%, #1e40af 100%); padding: 32px 24px; text-align: center; color: #ffffff; }
-    .header h1 { margin: 0 0 6px 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
-    .header p { margin: 0; font-size: 13px; color: #93c5fd; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; }
+    .header { background: linear-gradient(135deg, #0f2b48 0%, #1e40af 100%); padding: 34px 24px 26px 24px; text-align: center; color: #ffffff; }
+    .header h1 { margin: 0 0 6px 0; font-size: 21px; font-weight: 700; letter-spacing: -0.01em; }
+    .header p { margin: 0; font-size: 13px; color: #93c5fd; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
     .content { padding: 32px 28px; }
     .badge { display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 20px; }
     .badge-primary { background-color: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
@@ -71,10 +73,17 @@ function wrapInstitutionalEmail(title: string, bodyContent: string): string {
   <div class="wrapper">
     <table role="presentation" class="main" align="center" width="100%">
       <tr>
-        <td class="header">
-          <div style="font-size: 28px; margin-bottom: 8px;">🏥</div>
+        <td class="header" align="center">
+          <!-- Real School Badge / Crest Icon -->
+          <table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center" style="margin: 0 auto 16px auto;">
+            <tr>
+              <td align="center" style="background-color: #ffffff; width: 88px; height: 88px; border-radius: 50%; padding: 4px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25); text-align: center; vertical-align: middle;">
+                <img src="${RCSN_BADGE_URL}" alt="RCSN School Badge" width="80" height="88" style="display: block; margin: 0 auto; width: 80px; height: auto; max-height: 88px; border: 0; outline: none; text-decoration: none;" />
+              </td>
+            </tr>
+          </table>
           <h1>Rakai Community School of Nursing</h1>
-          <p>Office of the Academic Registrar & Admissions</p>
+          <p>Office of the Academic Registrar &amp; Admissions</p>
         </td>
       </tr>
       <tr>
@@ -83,7 +92,14 @@ function wrapInstitutionalEmail(title: string, bodyContent: string): string {
         </td>
       </tr>
       <tr>
-        <td class="footer">
+        <td class="footer" align="center">
+          <table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center" style="margin: 0 auto 12px auto;">
+            <tr>
+              <td align="center">
+                <img src="${RCSN_BADGE_URL}" alt="RCSN Crest" width="38" height="42" style="display: block; margin: 0 auto 4px auto; width: 38px; height: auto; border: 0; opacity: 0.95;" />
+              </td>
+            </tr>
+          </table>
           <p><strong>Rakai Community School of Nursing (RCSN)</strong></p>
           <p>P.O. Box 12, Rakai — Uganda | Rakai–Byakabanda Road</p>
           <p>Tel: +256 701 884 192 / +256 772 846 174 | Email: admissions@rcsn.ac.ug</p>
