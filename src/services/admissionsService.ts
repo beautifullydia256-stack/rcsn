@@ -78,8 +78,18 @@ export interface AdmissionApplicationRecord {
   updated_at: string;
 }
 
-const STORAGE_KEY = 'rcsn_admissions_db_v2';
+const STORAGE_KEY = 'rcsn_admissions_db_v3';
 const DEFAULT_SCHOOL_ID = 'e1b10000-0000-4000-a000-000000000001';
+
+// Purge legacy local storage cache containing demo applications
+try {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    window.localStorage.removeItem('rcsn_admissions_db_v2');
+    window.localStorage.removeItem('rcsn_admissions_db');
+  }
+} catch {
+  // ignore
+}
 
 /** Helper to read offline fallback cache */
 function getLocalApplications(): AdmissionApplicationRecord[] {
@@ -156,15 +166,9 @@ export async function fetchApplications(options?: {
       }
     } else {
       remoteAdmissionsTableAvailable = true;
-      // Merge with any local cache that may not have synced
-      const localApps = getLocalApplications();
-      const combined = [...(data || [])];
-      for (const localApp of localApps) {
-        if (!combined.some((a) => a.application_number === localApp.application_number)) {
-          combined.push(localApp);
-        }
-      }
-      return combined;
+      const remoteList = (data as AdmissionApplicationRecord[]) || [];
+      saveLocalApplications(remoteList);
+      return remoteList;
     }
   } catch {
     // Silent fallback to local cache
