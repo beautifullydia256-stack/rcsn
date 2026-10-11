@@ -39,6 +39,7 @@ import {
   fetchApplications,
   updateApplication,
   updateApplicationCredentials,
+  matriculateApplicantToStudent,
   scheduleInterview,
   batchScheduleInterviews,
   recordInterviewResults,
@@ -345,6 +346,49 @@ export default function AdmissionsManagementPage() {
     });
   };
 
+  // Admitted Candidates Selected in Multi-Selection
+  const admittedSelectedCandidates = useMemo(() => {
+    return filteredApplications.filter(
+      (app) => selectedAppIds.has(app.id) && ['admitted', 'offer_accepted'].includes(app.status)
+    );
+  }, [filteredApplications, selectedAppIds]);
+
+  const handleBatchEnrollAdmitted = async () => {
+    if (admittedSelectedCandidates.length === 0) return;
+
+    if (admittedSelectedCandidates.length === 1) {
+      setMatriculateApp(admittedSelectedCandidates[0]);
+      return;
+    }
+
+    const confirmMsg = `Enroll all ${admittedSelectedCandidates.length} selected admitted candidates into the active student directory?`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setActionLoading(true);
+    try {
+      let successCount = 0;
+      for (const app of admittedSelectedCandidates) {
+        const year = new Date().getFullYear();
+        const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+        const regNo = `RCSN/${year}/${randomSuffix}`;
+        const res = await matriculateApplicantToStudent(app, {
+          registrationNumber: regNo,
+          currentClass: app.admitted_program?.includes('Diploma') ? 'Year 1 Diploma' : 'Year 1 Certificate',
+          boardingType: app.residential_preference || 'Resident',
+        });
+        if (res.success) successCount++;
+      }
+      showNotification(`Enrolled ${successCount} candidates into active student registry.`);
+      setSelectedAppIds(new Set());
+      await loadData();
+    } catch (err) {
+      console.error('Batch enrollment error:', err);
+      showNotification('Batch enrollment encountered an error.', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleOpenBatchScheduleModal = () => {
     if (selectedAppIds.size === 0) {
       showNotification('Please select at least one candidate to schedule.', 'error');
@@ -538,9 +582,8 @@ export default function AdmissionsManagementPage() {
       case 'interview_passed':
         return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">Interview Passed</span>;
       case 'admitted':
-        return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-600 text-white">Admitted (Pending Enrolment)</span>;
       case 'offer_accepted':
-        return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-teal-600 text-white">Offer Accepted</span>;
+        return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-600 text-white whitespace-nowrap">Admitted</span>;
       case 'enrolled':
         return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-900 text-emerald-400 dark:bg-emerald-950 dark:text-emerald-300">Active Student</span>;
       case 'waitlisted':
@@ -745,7 +788,7 @@ export default function AdmissionsManagementPage() {
               }`}
             >
               <Award className="w-4 h-4 text-amber-300" />
-              <span>Oral & Practical Scoring Sheet</span>
+              <span>Interview Results</span>
               <span
                 className={`px-2 py-0.5 rounded-full text-[10px] ${
                   viewMode === 'scoring'
@@ -761,8 +804,8 @@ export default function AdmissionsManagementPage() {
           <div className="flex items-center gap-2 px-2">
             <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium hidden md:inline">
               {viewMode === 'pipeline'
-                ? 'Select multiple candidates for bulk interview invitation'
-                : `Automated Pass/Regret at ${passMarkThreshold}% threshold`}
+                ? 'Select multiple candidates for bulk interview invitation or enrollment'
+                : `Interview scoring & evaluation (Pass threshold: ${passMarkThreshold}%)`}
             </span>
             <button
               type="button"
@@ -857,15 +900,33 @@ export default function AdmissionsManagementPage() {
                   <div>
                     <div className="text-xs font-bold text-white flex items-center gap-1.5">
                       <span>{selectedAppIds.size} Candidate{selectedAppIds.size > 1 ? 's' : ''} Selected</span>
-                      <Sparkles className="w-3.5 h-3.5 text-amber-300" />
                     </div>
                     <div className="text-[11px] text-white/60">
-                      Apply bulk interview invitation or status updates across all selected
+                      Apply bulk interview invitation, enrollment, or status updates
                     </div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
+                  {/* Enroll Admitted Candidates (when selected candidates are admitted) */}
+                  {admittedSelectedCandidates.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (admittedSelectedCandidates.length === 1) {
+                          setMatriculateApp(admittedSelectedCandidates[0]);
+                        } else {
+                          handleBatchEnrollAdmitted();
+                        }
+                      }}
+                      disabled={actionLoading}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:brightness-110 text-emerald-950 font-bold text-xs shadow-md transition-all active:scale-95"
+                    >
+                      <GraduationCap className="w-3.5 h-3.5" />
+                      <span>Enroll Candidate{admittedSelectedCandidates.length > 1 ? `s (${admittedSelectedCandidates.length})` : ''}</span>
+                    </button>
+                  )}
+
                   <button
                     type="button"
                     onClick={handleOpenBatchScheduleModal}
@@ -997,8 +1058,8 @@ export default function AdmissionsManagementPage() {
                       <th className="py-3.5 px-4">Candidate Details</th>
                       <th className="py-3.5 px-4">Program & Intake</th>
                       <th className="py-3.5 px-4">UNEB Background</th>
-                      <th className="py-3.5 px-4">Status & Interview</th>
-                      <th className="py-3.5 px-4 text-right">Workflow Actions</th>
+                      <th className="py-3.5 px-4 whitespace-nowrap min-w-[190px]">Status & Interview</th>
+                      <th className="py-3.5 px-4 text-right whitespace-nowrap w-36">Workflow Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
@@ -1106,142 +1167,84 @@ export default function AdmissionsManagementPage() {
                           </td>
 
                           {/* Status & Interview Details */}
-                          <td className="py-3.5 px-4 space-y-1">
-                            <div>{getStatusBadge(app.status)}</div>
-                            {app.interview_date && (
-                              <div className="text-[11px] text-slate-600 dark:text-slate-400 flex items-center gap-1">
-                                <Calendar className="w-3 h-3 text-emerald-600" />
-                                <span>{app.interview_date} ({app.interview_time || '09:00 AM'})</span>
-                              </div>
-                            )}
-                            {app.interview_score !== null && app.interview_score !== undefined && (
-                              <div className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
-                                Score: {app.interview_score}/100
-                              </div>
-                            )}
+                          <td className="py-3.5 px-4 whitespace-nowrap min-w-[190px]">
+                            <div className="space-y-1">
+                              <div>{getStatusBadge(app.status)}</div>
+                              {app.interview_date && (
+                                <div className="text-[11px] text-slate-600 dark:text-slate-400 flex items-center gap-1 font-mono">
+                                  <Calendar className="w-3 h-3 text-emerald-600 shrink-0" />
+                                  <span>{app.interview_date} ({app.interview_time || '09:00 AM'})</span>
+                                </div>
+                              )}
+                              {app.interview_score !== null && app.interview_score !== undefined && (
+                                <div className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
+                                  Score: {app.interview_score}/100
+                                </div>
+                              )}
+                            </div>
                           </td>
 
-                          {/* Actions */}
-                          <td className="py-3.5 px-4 text-right space-x-1.5 whitespace-nowrap">
-                            {/* 1-Click Fast Enroll Button (When Admitted!) */}
-                            {['admitted', 'offer_accepted'].includes(app.status) && (
+                          {/* Workflow Actions - ICONS ONLY */}
+                          <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                            <div className="inline-flex items-center justify-end gap-1.5">
+                              {/* Quick Document Viewer Button */}
+                              {(app.attached_document_url || app.attached_document_data) && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenDocViewer(app)}
+                                  className="p-1.5 rounded-lg border border-teal-300 dark:border-teal-800 hover:bg-teal-50 dark:hover:bg-teal-950/40 text-teal-700 dark:text-teal-300 transition-all"
+                                  title="View Candidate Uploaded UNEB Result Slip"
+                                >
+                                  <FileText className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+
+                              {/* Download Interview Slip */}
+                              {app.interview_date && (
+                                <button
+                                  type="button"
+                                  onClick={() => generateInterviewSlipPdf(app)}
+                                  className="p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-all"
+                                  title="Download Interview Slip PDF"
+                                >
+                                  <Calendar className="w-3.5 h-3.5 text-indigo-500" />
+                                </button>
+                              )}
+
+                              {/* Download Admission Letter */}
+                              {['admitted', 'offer_accepted', 'enrolled'].includes(app.status) && (
+                                <button
+                                  type="button"
+                                  onClick={() => generateAdmissionLetterPdf(app)}
+                                  className="p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-all"
+                                  title="Download Official Admission Letter PDF"
+                                >
+                                  <Download className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+
+                              {/* Download Official Tuition & Fees Invoice */}
+                              {['admitted', 'offer_accepted', 'enrolled'].includes(app.status) && (
+                                <button
+                                  type="button"
+                                  onClick={() => generateAdmissionInvoicePdf(app)}
+                                  className="p-1.5 rounded-lg border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 transition-all"
+                                  title="Download Official Tuition & Requirements Fee Invoice (PDF)"
+                                >
+                                  <Receipt className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+
+                              {/* Detail Inspector */}
                               <button
                                 type="button"
-                                onClick={() => setMatriculateApp(app)}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#00873E] hover:bg-[#007033] text-white font-bold text-xs shadow-sm transition-all"
-                                title="1-Click Enroll Student into active system"
+                                onClick={() => setInspectApp(app)}
+                                className="p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-all"
+                                title="Inspect Candidate Dossier"
                               >
-                                <GraduationCap className="w-3.5 h-3.5" />
-                                <span>1-Click Enroll</span>
+                                <Eye className="w-3.5 h-3.5" />
                               </button>
-                            )}
-
-                            {/* Schedule Interview (When submitted or shortlisted) */}
-                            {['submitted', 'under_review', 'shortlisted'].includes(app.status) && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setScheduleApp(app);
-                                  setSchedDate(new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]);
-                                }}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold"
-                                title="Schedule Oral Interview"
-                              >
-                                <Calendar className="w-3.5 h-3.5 text-indigo-600" />
-                                <span>Schedule</span>
-                              </button>
-                            )}
-
-                            {/* Record Marks (When interview is scheduled) */}
-                            {app.status === 'interview_scheduled' && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setScoreApp(app);
-                                  setInterviewScore(78);
-                                  setInterviewDecision('passed');
-                                }}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-indigo-300 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-xs font-semibold"
-                                title="Record Interview Score & Outcome"
-                              >
-                                <UserCheck className="w-3.5 h-3.5" />
-                                <span>Score</span>
-                              </button>
-                            )}
-
-                            {/* Issue Admission Offer (When interview is passed) */}
-                            {app.status === 'interview_passed' && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setAdmitApp(app);
-                                  setAdmittedProgramChoice(app.admitted_program || app.programs[0]);
-                                }}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm"
-                                title="Issue Provisional Admission Letter"
-                              >
-                                <FileText className="w-3.5 h-3.5" />
-                                <span>Issue Offer</span>
-                              </button>
-                            )}
-
-                            {/* Download Interview Slip */}
-                            {app.interview_date && (
-                              <button
-                                type="button"
-                                onClick={() => generateInterviewSlipPdf(app)}
-                                className="p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300"
-                                title="Download Interview Slip PDF"
-                              >
-                                <Calendar className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-
-                            {/* Download Admission Letter */}
-                            {['admitted', 'offer_accepted', 'enrolled'].includes(app.status) && (
-                              <button
-                                type="button"
-                                onClick={() => generateAdmissionLetterPdf(app)}
-                                className="p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300"
-                                title="Download Official Admission Letter PDF"
-                              >
-                                <Download className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-
-                            {/* Download Official Tuition & Fees Invoice */}
-                            {['admitted', 'offer_accepted', 'enrolled'].includes(app.status) && (
-                              <button
-                                type="button"
-                                onClick={() => generateAdmissionInvoicePdf(app)}
-                                className="p-1.5 rounded-lg border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 transition-all"
-                                title="Download Official Tuition & Requirements Fee Invoice (PDF)"
-                              >
-                                <Receipt className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-
-                            {/* Quick Document Viewer Button */}
-                            {(app.attached_document_url || app.attached_document_data) && (
-                              <button
-                                type="button"
-                                onClick={() => handleOpenDocViewer(app)}
-                                className="p-1.5 rounded-lg border border-teal-300 dark:border-teal-800 hover:bg-teal-50 dark:hover:bg-teal-950/40 text-teal-700 dark:text-teal-300 transition-all"
-                                title="View Candidate Uploaded UNEB Result Slip"
-                              >
-                                <FileText className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-
-                            {/* Detail Inspector */}
-                            <button
-                              type="button"
-                              onClick={() => setInspectApp(app)}
-                              className="p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300"
-                              title="Inspect Candidate Record"
-                            >
-                              <Eye className="w-3.5 h-3.5" />
-                            </button>
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -1253,56 +1256,41 @@ export default function AdmissionsManagementPage() {
           </>
         )}
 
-        {/* VIEW 2: ORAL & PRACTICAL INTERVIEW SCORING SHEET */}
+        {/* VIEW 2: INTERVIEW RESULTS SHEET */}
         {viewMode === 'scoring' && (
           <div className="space-y-6">
-            {/* Scoring Desk Configuration Header Card */}
-            <div className={`${adminCardClass} bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-white border-indigo-500/20`}>
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 text-amber-300" />
-                      Live Automated Evaluation Engine
-                    </span>
-                    <span className="text-white/40 text-xs">•</span>
-                    <span className="text-white/70 text-xs font-semibold">
-                      Official Resend Dispatch Enabled
-                    </span>
-                  </div>
-                  <h3 className="text-xl font-black text-white flex items-center gap-2">
-                    <Award className="w-6 h-6 text-amber-400" />
-                    <span>Oral & Practical Scoring Ledger</span>
+            {/* Header Card */}
+            <div className={`${adminCardClass} bg-slate-900 text-white border border-slate-800`}>
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-black text-white flex items-center gap-2">
+                    <Award className="w-5 h-5 text-emerald-400" />
+                    <span>Interview Results</span>
                   </h3>
-                  <p className="text-xs text-white/70 max-w-2xl leading-relaxed">
-                    Score interviewed candidates on clinical communication, UNEB sciences, and nursing aptitude.
-                    Candidates achieving the configured pass threshold will automatically be awarded Provisional Admission,
-                    issued a student pro-forma tuition invoice, and sent official verification via email.
-                  </p>
                 </div>
 
                 {/* Configuration Controls */}
-                <div className="flex flex-wrap items-center gap-4 p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+                <div className="flex flex-wrap items-center gap-4">
                   {/* Pass Mark Threshold Input */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-white/60 uppercase tracking-wider block">
-                      Pass Threshold (0-100%)
+                  <div className="flex items-center gap-2 bg-slate-800/80 px-3.5 py-2 rounded-xl border border-slate-700">
+                    <label className="text-xs font-bold text-slate-300">
+                      Pass Threshold:
                     </label>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1">
                       <input
                         type="number"
-                        min="30"
+                        min="1"
                         max="100"
                         value={passMarkThreshold}
                         onChange={(e) => setPassMarkThreshold(Math.max(1, Math.min(100, Number(e.target.value))))}
-                        className="w-20 px-3 py-2 rounded-xl bg-black/40 border border-emerald-400/50 text-emerald-300 font-black text-base text-center outline-none focus:ring-2 focus:ring-emerald-400"
+                        className="w-14 px-2 py-1 rounded-lg bg-slate-900 border border-slate-600 text-emerald-400 font-bold text-sm text-center outline-none focus:border-emerald-500"
                       />
-                      <span className="text-xs font-bold text-white/70">%</span>
+                      <span className="text-xs text-slate-400 font-bold">%</span>
                     </div>
                   </div>
 
                   {/* Auto-Admit Toggle */}
-                  <div className="flex items-center gap-2.5 pt-4 sm:pt-0">
+                  <div className="flex items-center gap-2.5 bg-slate-800/80 px-3.5 py-2 rounded-xl border border-slate-700">
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
                         type="checkbox"
@@ -1310,12 +1298,9 @@ export default function AdmissionsManagementPage() {
                         onChange={(e) => setAutoAdmitOnPass(e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                      <div className="w-10 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
                     </label>
-                    <div className="text-left">
-                      <div className="text-xs font-bold text-white">Auto-Admit on Pass</div>
-                      <div className="text-[10px] text-white/50">Dispatches offer letter & fee invoice</div>
-                    </div>
+                    <span className="text-xs font-bold text-slate-200">Auto-Admit on Pass</span>
                   </div>
 
                   {/* Batch Process All Button */}
@@ -1323,14 +1308,14 @@ export default function AdmissionsManagementPage() {
                     type="button"
                     onClick={handleBatchProcessAllScored}
                     disabled={scoringBatchLoading}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:brightness-110 text-emerald-950 font-black text-xs shadow-lg transition-all active:scale-95 disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow transition-all active:scale-95 disabled:opacity-50"
                   >
                     {scoringBatchLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     ) : (
-                      <Send className="w-4 h-4" />
+                      <Send className="w-3.5 h-3.5" />
                     )}
-                    <span>Process All Scored Candidates</span>
+                    <span>Process All Scored</span>
                   </button>
                 </div>
               </div>
@@ -1497,7 +1482,7 @@ export default function AdmissionsManagementPage() {
                               ) : isPassed ? (
                                 <div className="space-y-0.5">
                                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 border border-emerald-500/30">
-                                    <Sparkles className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                                     <span>PASS (≥ {passMarkThreshold}%)</span>
                                   </span>
                                   <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold pl-1">

@@ -24,7 +24,6 @@ import RcsnFooter from '@/components/website/RcsnFooter';
 import SeoHead from '@/components/website/SeoHead';
 import {
   trackApplication,
-  acceptAdmissionOffer,
   type AdmissionApplicationRecord,
 } from '@/services/admissionsService';
 import { generateInterviewSlipPdf } from '@/lib/generateInterviewSlipPdf';
@@ -39,7 +38,6 @@ export default function TrackApplicationPage() {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [application, setApplication] = useState<AdmissionApplicationRecord | null>(null);
-  const [acceptingOffer, setAcceptingOffer] = useState(false);
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
@@ -65,22 +63,6 @@ export default function TrackApplicationPage() {
       setApplication(null);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleAcceptOffer = async () => {
-    if (!application) return;
-    setAcceptingOffer(true);
-    try {
-      const res = await acceptAdmissionOffer(application.id);
-      if (res.success && res.updated) {
-        setApplication(res.updated);
-        setFeedback('Offer accepted! Our admissions desk has noted your intention to report.');
-      }
-    } catch {
-      setFeedback('Could not record your acceptance. Please contact the admissions office.');
-    } finally {
-      setAcceptingOffer(false);
     }
   };
 
@@ -433,16 +415,6 @@ export default function TrackApplicationPage() {
                     >
                       <Receipt className="w-4 h-4 text-slate-950" />
                       <span>Download Fee Invoice (PDF)</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleAcceptOffer}
-                      disabled={acceptingOffer}
-                      className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-[#00873E] hover:bg-[#007033] text-white font-bold text-sm shadow transition-all"
-                    >
-                      {acceptingOffer ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                      <span>Accept Admission Offer</span>
                     </button>
                   </div>
                 </div>
