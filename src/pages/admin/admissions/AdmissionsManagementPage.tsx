@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
 import {
   Users,
@@ -30,10 +30,15 @@ import {
   Send,
   Sparkles,
   ClipboardList,
+  Camera,
+  UploadCloud,
+  FileCheck,
+  ExternalLink,
 } from 'lucide-react';
 import {
   fetchApplications,
   updateApplication,
+  updateApplicationCredentials,
   scheduleInterview,
   batchScheduleInterviews,
   recordInterviewResults,
@@ -84,6 +89,19 @@ export default function AdmissionsManagementPage() {
   const [scoreApp, setScoreApp] = useState<AdmissionApplicationRecord | null>(null);
   const [admitApp, setAdmitApp] = useState<AdmissionApplicationRecord | null>(null);
   const [matriculateApp, setMatriculateApp] = useState<AdmissionApplicationRecord | null>(null);
+
+  // Document Viewer & Dossier Upload States
+  const [previewDocModal, setPreviewDocModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    url: string;
+    fileName: string;
+    isImage: boolean;
+    size?: string;
+  } | null>(null);
+  const dossierPassportInputRef = useRef<HTMLInputElement | null>(null);
+  const dossierDocumentInputRef = useRef<HTMLInputElement | null>(null);
+  const [uploadingDossierCredential, setUploadingDossierCredential] = useState<'passport' | 'document' | null>(null);
 
   // Scheduling Form
   const [schedDate, setSchedDate] = useState('');
@@ -535,6 +553,137 @@ export default function AdmissionsManagementPage() {
     }
   };
 
+  // Dossier File Actions: Passport Photo & Verification Slip Uploads
+  const handleDossierPassportUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !inspectApp) return;
+
+    if (!file.type.startsWith('image/')) {
+      showNotification('Please select a valid image file (JPG, PNG, WebP) for the passport photo.', 'error');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      showNotification('Passport photo size exceeds 5MB limit.', 'error');
+      return;
+    }
+
+    setUploadingDossierCredential('passport');
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64Data = reader.result as string;
+        await updateApplicationCredentials(inspectApp.id, {
+          passport_photo_url: base64Data,
+        });
+
+        const updated = { ...inspectApp, passport_photo_url: base64Data };
+        setInspectApp(updated);
+        setApplications((prev) =>
+          prev.map((app) => (app.id === inspectApp.id ? updated : app))
+        );
+        showNotification('Candidate official passport photo updated and linked to profile.');
+        setUploadingDossierCredential(null);
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error(err);
+      showNotification('Failed to update passport photo.', 'error');
+      setUploadingDossierCredential(null);
+    }
+  };
+
+  const handleDossierDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !inspectApp) return;
+
+    if (file.size > 15 * 1024 * 1024) {
+      showNotification('Document file size exceeds 15MB limit.', 'error');
+      return;
+    }
+
+    setUploadingDossierCredential('document');
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64Data = reader.result as string;
+        const sizeFormatted =
+          file.size > 1024 * 1024
+            ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+            : `${Math.round(file.size / 1024)} KB`;
+
+        await updateApplicationCredentials(inspectApp.id, {
+          attached_document_name: file.name,
+          attached_document_url: base64Data,
+          attached_document_data: base64Data,
+          attached_document_size: sizeFormatted,
+        });
+
+        const updated: AdmissionApplicationRecord = {
+          ...inspectApp,
+          attached_document_name: file.name,
+          attached_document_url: base64Data,
+          attached_document_data: base64Data,
+          attached_document_size: sizeFormatted,
+        };
+        setInspectApp(updated);
+        setApplications((prev) =>
+          prev.map((app) => (app.id === inspectApp.id ? updated : app))
+        );
+        showNotification('Candidate verification document attached successfully.');
+        setUploadingDossierCredential(null);
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error(err);
+      showNotification('Failed to upload candidate document.', 'error');
+      setUploadingDossierCredential(null);
+    }
+  };
+
+  const handleDownloadDocument = (docUrl?: string | null, docName?: string | null) => {
+    if (!docUrl) {
+      showNotification('No document file is available for download.', 'error');
+      return;
+    }
+
+    try {
+      const link = document.createElement('a');
+      link.href = docUrl;
+      link.download = docName || `candidate_document_${Date.now()}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showNotification(`Downloading ${docName || 'document'}...`);
+    } catch (err) {
+      console.error('Download error:', err);
+      window.open(docUrl, '_blank');
+    }
+  };
+
+  const handleOpenDocViewer = (app: AdmissionApplicationRecord) => {
+    const docUrl = app.attached_document_data || app.attached_document_url;
+    if (!docUrl) {
+      showNotification('No document file attached for this candidate.', 'error');
+      return;
+    }
+
+    const docName = app.attached_document_name || 'Candidate Verification Document';
+    const isImage =
+      docUrl.startsWith('data:image/') ||
+      /\.(png|jpe?g|webp|gif|svg)(\?.*)?$/i.test(docName) ||
+      /\.(png|jpe?g|webp|gif|svg)(\?.*)?$/i.test(docUrl);
+
+    setPreviewDocModal({
+      isOpen: true,
+      title: `${app.full_name} — ${docName}`,
+      url: docUrl,
+      fileName: docName,
+      isImage,
+      size: app.attached_document_size || undefined,
+    });
+  };
+
   return (
     <AdminPageWrapper
       eyebrow="ADMISSIONS & INTAKE"
@@ -909,15 +1058,30 @@ export default function AdmissionsManagementPage() {
                             </div>
                           </td>
 
-                          {/* Candidate Name & Contact */}
+                          {/* Candidate Name & Contact with Passport Thumbnail */}
                           <td className="py-3.5 px-4">
-                            <div className="font-bold text-slate-900 dark:text-white text-[13px]">
-                              {app.full_name}
-                            </div>
-                            <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
-                              <span>{app.gender}</span>
-                              <span>•</span>
-                              <span>{app.phone}</span>
+                            <div className="flex items-center gap-3">
+                              {app.passport_photo_url ? (
+                                <img
+                                  src={app.passport_photo_url}
+                                  alt={app.full_name}
+                                  className="w-10 h-11 object-cover rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm shrink-0 bg-slate-100 dark:bg-slate-800"
+                                />
+                              ) : (
+                                <div className="w-10 h-11 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/60 flex items-center justify-center shrink-0 text-slate-400">
+                                  <Users className="w-4 h-4" />
+                                </div>
+                              )}
+                              <div>
+                                <div className="font-bold text-slate-900 dark:text-white text-[13px]">
+                                  {app.full_name}
+                                </div>
+                                <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
+                                  <span>{app.gender}</span>
+                                  <span>•</span>
+                                  <span>{app.phone}</span>
+                                </div>
+                              </div>
                             </div>
                           </td>
 
@@ -1054,6 +1218,18 @@ export default function AdmissionsManagementPage() {
                                 title="Download Official Tuition & Requirements Fee Invoice (PDF)"
                               >
                                 <Receipt className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+
+                            {/* Quick Document Viewer Button */}
+                            {(app.attached_document_url || app.attached_document_data) && (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenDocViewer(app)}
+                                className="p-1.5 rounded-lg border border-teal-300 dark:border-teal-800 hover:bg-teal-50 dark:hover:bg-teal-950/40 text-teal-700 dark:text-teal-300 transition-all"
+                                title="View Candidate Uploaded UNEB Result Slip"
+                              >
+                                <FileText className="w-3.5 h-3.5" />
                               </button>
                             )}
 
@@ -1232,16 +1408,31 @@ export default function AdmissionsManagementPage() {
                             key={app.id}
                             className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
                           >
-                            {/* Candidate Info */}
+                            {/* Candidate Info with Passport Thumbnail */}
                             <td className="py-3.5 px-4">
-                              <div className="font-bold text-slate-900 dark:text-white text-sm">
-                                {app.full_name}
-                              </div>
-                              <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                                {app.application_number} • {app.phone}
-                              </div>
-                              <div className="text-[10px] text-slate-400 font-sans mt-0.5">
-                                UNEB: {app.index_number || 'N/A'} ({app.gender})
+                              <div className="flex items-center gap-3">
+                                {app.passport_photo_url ? (
+                                  <img
+                                    src={app.passport_photo_url}
+                                    alt={app.full_name}
+                                    className="w-10 h-11 object-cover rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm shrink-0 bg-slate-100 dark:bg-slate-800"
+                                  />
+                                ) : (
+                                  <div className="w-10 h-11 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/60 flex items-center justify-center shrink-0 text-slate-400">
+                                    <Users className="w-4 h-4" />
+                                  </div>
+                                )}
+                                <div>
+                                  <div className="font-bold text-slate-900 dark:text-white text-sm">
+                                    {app.full_name}
+                                  </div>
+                                  <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                    {app.application_number} • {app.phone}
+                                  </div>
+                                  <div className="text-[10px] text-slate-400 font-sans mt-0.5">
+                                    UNEB: {app.index_number || 'N/A'} ({app.gender})
+                                  </div>
+                                </div>
                               </div>
                             </td>
 
@@ -1768,17 +1959,90 @@ export default function AdmissionsManagementPage() {
       >
         {inspectApp && (
           <div className="p-6 space-y-5 text-xs text-white flex flex-col max-h-[75vh] overflow-y-auto no-scrollbar">
-            {/* Header Card */}
-            <div className="p-4 rounded-2xl bg-white/5 border border-white/15 backdrop-blur-sm flex items-center justify-between">
-              <div>
-                <h4 className="text-base font-black text-white">
-                  {inspectApp.full_name}
-                </h4>
-                <p className="text-white/60 mt-0.5">
-                  {inspectApp.gender} • DOB: {inspectApp.date_of_birth} • Tel: {inspectApp.phone}
-                </p>
+            {/* Header Card with Passport Photo */}
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-white/[0.08] via-white/[0.04] to-white/[0.02] border border-white/15 backdrop-blur-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
+              <div className="flex items-center gap-4">
+                {/* Official Passport Photo Box with Hover & Upload Option */}
+                <div className="relative group shrink-0">
+                  <div className="w-20 h-24 rounded-xl overflow-hidden bg-slate-900 border-2 border-emerald-500/40 shadow-lg shadow-emerald-500/10 flex items-center justify-center">
+                    {inspectApp.passport_photo_url ? (
+                      <img
+                        src={inspectApp.passport_photo_url}
+                        alt={inspectApp.full_name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center p-2 text-center text-white/40">
+                        <Users className="w-6 h-6 mb-1 text-white/30" />
+                        <span className="text-[9px] font-bold">No Photo</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Quick Change / Upload Photo Overlay Button */}
+                  <button
+                    type="button"
+                    onClick={() => dossierPassportInputRef.current?.click()}
+                    disabled={uploadingDossierCredential === 'passport'}
+                    className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex flex-col items-center justify-center text-white text-[10px] font-bold gap-1 cursor-pointer"
+                    title="Change / Upload Official Passport Photo"
+                  >
+                    {uploadingDossierCredential === 'passport' ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+                    ) : (
+                      <>
+                        <Camera className="w-4 h-4 text-emerald-400" />
+                        <span>Update</span>
+                      </>
+                    )}
+                  </button>
+
+                  <input
+                    ref={dossierPassportInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleDossierPassportUpload}
+                  />
+
+                  {inspectApp.passport_photo_url && (
+                    <span className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-full bg-emerald-500 text-black text-[9px] font-black uppercase tracking-wider shadow">
+                      Verified
+                    </span>
+                  )}
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-lg font-black text-white tracking-tight">
+                      {inspectApp.full_name}
+                    </h4>
+                  </div>
+                  <p className="text-white/70 text-xs mt-0.5">
+                    {inspectApp.gender} • DOB: {inspectApp.date_of_birth} • Tel: {inspectApp.phone}
+                  </p>
+                  {inspectApp.email && (
+                    <p className="text-emerald-400/90 text-[11px] font-mono mt-0.5">
+                      {inspectApp.email}
+                    </p>
+                  )}
+                  <div className="mt-2 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => dossierPassportInputRef.current?.click()}
+                      className="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1 transition-colors"
+                    >
+                      <Camera className="w-3 h-3" />
+                      <span>{inspectApp.passport_photo_url ? 'Replace Passport Photo' : 'Upload Passport Photo'}</span>
+                    </button>
+                    {inspectApp.passport_photo_url && (
+                      <span className="text-[10px] text-white/40">• Inherited to Student Profile upon Matriculation</span>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div>{getStatusBadge(inspectApp.status)}</div>
+
+              <div className="shrink-0">{getStatusBadge(inspectApp.status)}</div>
             </div>
 
             {/* Quick Actions (PDF Downloads) */}
@@ -1889,19 +2153,105 @@ export default function AdmissionsManagementPage() {
               </div>
             </div>
 
-            {/* Attached UNEB Slips */}
-            {inspectApp.attached_document_name && (
-              <div className="p-3.5 rounded-xl bg-white/5 border border-white/15 backdrop-blur-sm flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-emerald-400" />
-                  <span className="font-semibold text-white/90">
-                    {inspectApp.attached_document_name}
+            {/* Attached UNEB Slips & Verification Documents */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-white/70 uppercase tracking-wider block text-[11px] flex items-center gap-1.5">
+                  <FileCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  UNEB Science Slip & Attached Verification Documents
+                </span>
+                <button
+                  type="button"
+                  onClick={() => dossierDocumentInputRef.current?.click()}
+                  disabled={uploadingDossierCredential === 'document'}
+                  className="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1 transition-colors"
+                >
+                  {uploadingDossierCredential === 'document' ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <UploadCloud className="w-3 h-3" />
+                  )}
+                  <span>
+                    {inspectApp.attached_document_name || inspectApp.attached_document_url
+                      ? 'Upload / Replace Slip'
+                      : 'Upload UNEB Slip'}
                   </span>
-                  <span className="text-[10px] text-white/50">({inspectApp.attached_document_size || 'Attached'})</span>
-                </div>
-                <span className="text-[11px] font-bold text-emerald-400">Document Uploaded</span>
+                </button>
+                <input
+                  ref={dossierDocumentInputRef}
+                  type="file"
+                  accept="image/*,application/pdf"
+                  className="hidden"
+                  onChange={handleDossierDocumentUpload}
+                />
               </div>
-            )}
+
+              {(inspectApp.attached_document_name ||
+                inspectApp.attached_document_url ||
+                inspectApp.attached_document_data) ? (
+                <div className="p-4 rounded-xl bg-white/5 border border-emerald-500/30 backdrop-blur-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center shrink-0 text-emerald-400">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-bold text-white text-xs truncate max-w-xs">
+                        {inspectApp.attached_document_name || 'Official UNEB Pass Slip / Academic Transcript'}
+                      </div>
+                      <div className="text-[10px] text-white/50 flex items-center gap-2 mt-0.5">
+                        <span>{inspectApp.attached_document_size || 'Official Verification Document'}</span>
+                        <span>•</span>
+                        <span className="text-emerald-400 font-semibold flex items-center gap-0.5">
+                          <CheckCircle2 className="w-2.5 h-2.5" /> Verified Candidate Document
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {/* View Document Button */}
+                    <button
+                      type="button"
+                      onClick={() => handleOpenDocViewer(inspectApp)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-bold text-xs transition-all shadow-sm"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>View Document</span>
+                    </button>
+
+                    {/* Download Document Button */}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleDownloadDocument(
+                          inspectApp.attached_document_data || inspectApp.attached_document_url,
+                          inspectApp.attached_document_name ||
+                            `${inspectApp.full_name.replace(/\s+/g, '_')}_UNEB_Slip`
+                        )
+                      }
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs transition-all"
+                    >
+                      <Download className="w-3.5 h-3.5 text-teal-300" />
+                      <span>Download</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 rounded-xl bg-white/[0.03] border border-dashed border-white/15 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5 text-white/50 text-xs">
+                    <AlertCircle className="w-4 h-4 text-amber-400/80" />
+                    <span>No digital UNEB result slip attached yet for this candidate.</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => dossierDocumentInputRef.current?.click()}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-bold text-xs transition-all"
+                  >
+                    Upload Now
+                  </button>
+                </div>
+              )}
+            </div>
 
             {/* Vetting Decisions */}
             {['submitted', 'under_review'].includes(inspectApp.status) && (
@@ -1924,6 +2274,90 @@ export default function AdmissionsManagementPage() {
                 </button>
               </div>
             )}
+          </div>
+        )}
+      </NativeModal>
+
+      {/* High-Resolution In-App Document Preview Modal */}
+      <NativeModal
+        isOpen={!!previewDocModal?.isOpen}
+        onClose={() => setPreviewDocModal(null)}
+        title={previewDocModal?.fileName || 'Candidate Verification Document'}
+        subtitle={previewDocModal?.title}
+        icon={FileCheck}
+        size="2xl"
+      >
+        {previewDocModal && (
+          <div className="p-6 space-y-4 text-white">
+            {/* Top Toolbar */}
+            <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/15">
+              <div className="flex items-center gap-2 text-xs">
+                <span className="font-bold text-emerald-400">Official Candidate Attachment</span>
+                {previewDocModal.size && (
+                  <span className="text-white/40">({previewDocModal.size})</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleDownloadDocument(previewDocModal.url, previewDocModal.fileName)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-bold text-xs transition-all"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download File</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.open(previewDocModal.url, '_blank')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs transition-all"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Open in Tab</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Document Content View Area */}
+            <div className="w-full min-h-[460px] max-h-[70vh] bg-slate-950/80 rounded-2xl border border-white/10 overflow-auto flex items-center justify-center p-3">
+              {previewDocModal.isImage ? (
+                <img
+                  src={previewDocModal.url}
+                  alt={previewDocModal.fileName}
+                  className="max-w-full max-h-[65vh] object-contain rounded-lg shadow-2xl"
+                />
+              ) : previewDocModal.url.startsWith('data:application/pdf') || previewDocModal.url.endsWith('.pdf') ? (
+                <iframe
+                  src={previewDocModal.url}
+                  title={previewDocModal.fileName}
+                  className="w-full h-[65vh] rounded-lg border-0"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center p-12 text-center text-white/70 space-y-4">
+                  <FileText className="w-16 h-16 text-emerald-400" />
+                  <div>
+                    <h5 className="font-bold text-base text-white">{previewDocModal.fileName}</h5>
+                    <p className="text-xs text-white/50 mt-1">Preview not directly embeddable. Click below to view or download.</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadDocument(previewDocModal.url, previewDocModal.fileName)}
+                      className="px-4 py-2 rounded-xl bg-emerald-500 text-emerald-950 font-black text-xs hover:bg-emerald-400 transition-all shadow"
+                    >
+                      Download Document
+                    </button>
+                    <a
+                      href={previewDocModal.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs transition-all"
+                    >
+                      Open in New Tab
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </NativeModal>

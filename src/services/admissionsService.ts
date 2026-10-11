@@ -284,6 +284,7 @@ export async function createApplication(
           attached_document_url: newRecord.attached_document_url,
           attached_document_name: newRecord.attached_document_name,
           attached_document_size: newRecord.attached_document_size,
+          passport_photo_url: newRecord.passport_photo_url || null,
           guardian_name: newRecord.guardian_name,
           guardian_phone: newRecord.guardian_phone,
           guardian_relationship: newRecord.guardian_relationship,
@@ -637,6 +638,8 @@ export async function matriculateApplicantToStudent(
       nationality: application.nationality || 'Ugandan',
       district: application.district || null,
       city: application.city || null,
+      photo_url: application.passport_photo_url || null,
+      profile_photo_url: application.passport_photo_url || null,
       enrollment_status: 'Enrolled',
       payment_status: params.initialTuitionPaid && params.initialTuitionPaid > 0 ? 'Partially Paid' : 'Pending',
     };
@@ -693,3 +696,20 @@ export async function matriculateApplicantToStudent(
     return { success: false, error: msg };
   }
 }
+
+/**
+ * Update candidate credentials (passport photo or attached UNEB documents)
+ */
+export async function updateApplicationCredentials(
+  id: string,
+  credentials: {
+    passport_photo_url?: string | null;
+    attached_document_url?: string | null;
+    attached_document_name?: string | null;
+    attached_document_size?: string | null;
+    attached_document_data?: string | null;
+  }
+) {
+  return updateApplication(id, credentials);
+}
+

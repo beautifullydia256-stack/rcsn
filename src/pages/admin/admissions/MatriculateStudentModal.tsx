@@ -128,32 +128,48 @@ export default function MatriculateStudentModal({
               Interview: {application.interview_score ?? 'N/A'}/100
             </span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <div>
-              <span className="text-white/50 block text-[10px] uppercase font-bold tracking-wider">Candidate</span>
-              <span className="font-bold text-white text-sm">
-                {application.full_name}
-              </span>
-            </div>
-            <div>
-              <span className="text-white/50 block text-[10px] uppercase font-bold tracking-wider">Admitted Program</span>
-              <span className="font-bold text-emerald-400 text-sm">
-                {admittedCourse}
-              </span>
-            </div>
-            <div>
-              <span className="text-white/50 block text-[10px] uppercase font-bold tracking-wider">Bio Details</span>
-              <span className="font-medium text-white/80">
-                {application.gender} • {application.date_of_birth}
-              </span>
-            </div>
-            <div>
-              <span className="text-white/50 block text-[10px] uppercase font-bold tracking-wider">Phone Contact</span>
-              <span className="font-medium text-white/80">
-                {application.phone}
-              </span>
+
+          <div className="flex items-center gap-4">
+            {application.passport_photo_url ? (
+              <img
+                src={application.passport_photo_url}
+                alt={application.full_name}
+                className="w-16 h-20 rounded-xl object-cover border-2 border-emerald-400/60 shadow-lg shrink-0"
+              />
+            ) : (
+              <div className="w-16 h-20 rounded-xl bg-white/10 border border-white/20 flex flex-col items-center justify-center text-white/60 shrink-0">
+                <User className="w-6 h-6" />
+                <span className="text-[9px] mt-1 font-bold">No Photo</span>
+              </div>
+            )}
+            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              <div>
+                <span className="text-white/50 block text-[10px] uppercase font-bold tracking-wider">Candidate</span>
+                <span className="font-bold text-white text-sm">
+                  {application.full_name}
+                </span>
+                <span className="text-[11px] text-white/70 block mt-0.5">
+                  {application.gender} • {application.phone}
+                </span>
+              </div>
+              <div>
+                <span className="text-white/50 block text-[10px] uppercase font-bold tracking-wider">Admitted Program</span>
+                <span className="font-bold text-emerald-400 text-sm">
+                  {admittedCourse}
+                </span>
+                <span className="text-[11px] text-white/60 block mt-0.5">
+                  {application.intake}
+                </span>
+              </div>
             </div>
           </div>
+
+          {application.passport_photo_url && (
+            <div className="text-[11px] text-emerald-400/90 font-medium flex items-center gap-1.5 pt-1 border-t border-white/10">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Applicant passport photograph will be automatically assigned to their active student profile.</span>
+            </div>
+          )}
         </div>
 
         {/* Residential Status */}

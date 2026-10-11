@@ -30,6 +30,9 @@ export interface AdmissionApplication {
   attachedDocumentName?: string;
   attachedDocumentSize?: string;
   attachedDocumentData?: string;
+  passportPhotoUrl?: string;
+  passportPhotoData?: string;
+  passportPhotoName?: string;
   applicationFee?: number;
   paymentMethod?: string;
   paymentReference?: string;
@@ -107,8 +110,11 @@ export async function submitAdmissionApplication(
       index_number: data.indexNumber,
       qualifications_summary: data.qualificationsSummary,
       subject_grades: data.subjectGrades || [],
-      attached_document_name: data.attachedDocumentName,
-      attached_document_size: data.attachedDocumentSize,
+      attached_document_url: data.attachedDocumentData || null,
+      attached_document_name: data.attachedDocumentName || null,
+      attached_document_size: data.attachedDocumentSize || null,
+      attached_document_data: data.attachedDocumentData || null,
+      passport_photo_url: data.passportPhotoData || data.passportPhotoUrl || null,
       guardian_name: data.guardianName,
       guardian_phone: data.guardianPhone,
       guardian_relationship: 'Parent / Guardian',

@@ -27,6 +27,7 @@ import {
   Loader2,
   Check,
   Search,
+  Camera,
 } from 'lucide-react';
 import { submitAdmissionApplication, type AdmissionApplication, type SubjectGrade } from '@/services/schoolPublicService';
 import { generateAdmissionApplicationPdf } from '@/lib/generateAdmissionApplicationPdf';
@@ -128,6 +129,46 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
   const [attachedFileSize, setAttachedFileSize] = useState('');
   const [attachedFileData, setAttachedFileData] = useState('');
   const [attachmentError, setAttachmentError] = useState('');
+
+  // Passport Photo Attachment
+  const passportInputRef = useRef<HTMLInputElement>(null);
+  const [passportPhotoData, setPassportPhotoData] = useState('');
+  const [passportPhotoName, setPassportPhotoName] = useState('');
+  const [passportPhotoSize, setPassportPhotoSize] = useState('');
+  const [passportPhotoError, setPassportPhotoError] = useState('');
+
+  const handlePassportPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setPassportPhotoError('Please upload a valid image file (JPG, JPEG, or PNG).');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setPassportPhotoError('Passport photo is too large. Maximum size is 5MB.');
+      return;
+    }
+
+    setPassportPhotoError('');
+    setPassportPhotoName(file.name);
+    setPassportPhotoSize(`${(file.size / 1024).toFixed(0)} KB`);
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPassportPhotoData(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemovePassportPhoto = () => {
+    setPassportPhotoData('');
+    setPassportPhotoName('');
+    setPassportPhotoSize('');
+    setPassportPhotoError('');
+    if (passportInputRef.current) passportInputRef.current.value = '';
+  };
 
   // Step 4: Mobile Money Payment Gateway (UGX 50,000)
   const APPLICATION_FEE_UGX = 50000;
@@ -252,6 +293,8 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
         attachedDocumentName: attachedFileName,
         attachedDocumentSize: attachedFileSize,
         attachedDocumentData: attachedFileData || undefined,
+        passportPhotoData: passportPhotoData || undefined,
+        passportPhotoName: passportPhotoName || undefined,
         applicationFee: APPLICATION_FEE_UGX,
         paymentMethod: paymentProvider,
         paymentReference: txnReference || `RCSN-MM-${Date.now().toString().slice(-7)}`,
@@ -301,6 +344,10 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
     setAttachedFileName('');
     setAttachedFileSize('');
     setAttachedFileData('');
+    setPassportPhotoData('');
+    setPassportPhotoName('');
+    setPassportPhotoSize('');
+    setPassportPhotoError('');
     setGuardianName('');
     setGuardianPhone('');
     setPayingPhone('');
@@ -502,6 +549,85 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
             {/* STEP 2: Personal Details & Guardian Information */}
             {step === 2 && (
               <div className="space-y-5">
+                {/* Official Passport Photograph Upload */}
+                <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                        <Camera className="w-4 h-4 text-emerald-600" />
+                        <span>Applicant Passport Photograph *</span>
+                      </label>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        Upload a clear, front-facing official passport-sized color photo (Max 5MB). This photo is attached to your application and student profile.
+                      </p>
+                    </div>
+                  </div>
+
+                  <input
+                    ref={passportInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg"
+                    onChange={handlePassportPhotoChange}
+                    className="hidden"
+                  />
+
+                  {passportPhotoError && (
+                    <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-medium flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      <span>{passportPhotoError}</span>
+                    </div>
+                  )}
+
+                  {passportPhotoData ? (
+                    <div className="flex items-center gap-4 p-3 rounded-xl bg-white dark:bg-slate-900 border border-emerald-500/40 shadow-sm">
+                      <img
+                        src={passportPhotoData}
+                        alt="Applicant Passport Preview"
+                        className="w-20 h-24 rounded-xl object-cover border-2 border-emerald-500 shadow-md shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold text-xs">
+                          <CheckCircle2 className="w-4 h-4 shrink-0" />
+                          <span className="truncate">{passportPhotoName || 'passport-photo.jpg'}</span>
+                        </div>
+                        <div className="text-[11px] text-slate-400 mt-0.5">{passportPhotoSize} • Standard Passport Format</div>
+                        <div className="flex items-center gap-3 mt-2.5">
+                          <button
+                            type="button"
+                            onClick={() => passportInputRef.current?.click()}
+                            className="text-xs font-bold text-emerald-600 hover:underline"
+                          >
+                            Change Photo
+                          </button>
+                          <span className="text-slate-300 dark:text-slate-600">•</span>
+                          <button
+                            type="button"
+                            onClick={handleRemovePassportPhoto}
+                            className="text-xs font-semibold text-rose-500 hover:underline"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => passportInputRef.current?.click()}
+                      className="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-emerald-500 rounded-2xl p-4 text-center cursor-pointer bg-white dark:bg-slate-900 transition-colors flex flex-col items-center justify-center gap-1.5"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center">
+                        <Camera className="w-5 h-5" />
+                      </div>
+                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                        Click to select & upload Passport Photo
+                      </span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                        Supports JPG, JPEG, PNG (Front-facing with white / plain background)
+                      </span>
+                    </div>
+                  )}
+                </div>
+
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                     Full Name (As on Academic Documents) *
