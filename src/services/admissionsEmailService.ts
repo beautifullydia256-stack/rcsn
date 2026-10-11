@@ -74,14 +74,10 @@ function wrapInstitutionalEmail(title: string, bodyContent: string): string {
     <table role="presentation" class="main" align="center" width="100%">
       <tr>
         <td class="header" align="center">
-          <!-- Real School Badge / Crest Icon -->
-          <table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center" style="margin: 0 auto 16px auto;">
-            <tr>
-              <td align="center" style="background-color: #ffffff; width: 88px; height: 88px; border-radius: 50%; padding: 4px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25); text-align: center; vertical-align: middle;">
-                <img src="${RCSN_BADGE_URL}" alt="RCSN School Badge" width="80" height="88" style="display: block; margin: 0 auto; width: 80px; height: auto; max-height: 88px; border: 0; outline: none; text-decoration: none;" />
-              </td>
-            </tr>
-          </table>
+          <!-- Real School Badge / Crest Icon (Direct, unaltered display) -->
+          <div style="margin: 0 auto 14px auto; text-align: center;">
+            <img src="${RCSN_BADGE_URL}" alt="RCSN School Badge" width="105" style="display: block; margin: 0 auto; width: 105px; max-width: 105px; height: auto; border: 0; outline: none; text-decoration: none;" />
+          </div>
           <h1>Rakai Community School of Nursing</h1>
           <p>Office of the Academic Registrar &amp; Admissions</p>
         </td>
@@ -93,13 +89,9 @@ function wrapInstitutionalEmail(title: string, bodyContent: string): string {
       </tr>
       <tr>
         <td class="footer" align="center">
-          <table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center" style="margin: 0 auto 12px auto;">
-            <tr>
-              <td align="center">
-                <img src="${RCSN_BADGE_URL}" alt="RCSN Crest" width="38" height="42" style="display: block; margin: 0 auto 4px auto; width: 38px; height: auto; border: 0; opacity: 0.95;" />
-              </td>
-            </tr>
-          </table>
+          <div style="margin: 0 auto 10px auto; text-align: center;">
+            <img src="${RCSN_BADGE_URL}" alt="RCSN Crest" width="44" style="display: block; margin: 0 auto 4px auto; width: 44px; max-width: 44px; height: auto; border: 0; outline: none;" />
+          </div>
           <p><strong>Rakai Community School of Nursing (RCSN)</strong></p>
           <p>P.O. Box 12, Rakai — Uganda | Rakai–Byakabanda Road</p>
           <p>Tel: +256 701 884 192 / +256 772 846 174 | Email: admissions@rcsn.ac.ug</p>
