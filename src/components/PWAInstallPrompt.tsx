@@ -40,7 +40,7 @@ function wasDismissedRecently(): boolean {
 
 export default function PWAInstallPrompt() {
   const [show, setShow] = useState(false);
-  const [mode, setMode] = useState<'android' | 'ios' | null>(null);
+  const [mode, setMode] = useState<'android' | 'ios' | 'manual' | null>(null);
 
   useEffect(() => {
     if (isInStandaloneMode() || wasDismissedRecently()) return;
@@ -75,6 +75,24 @@ export default function PWAInstallPrompt() {
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
+  // Listen for custom manual open event from navbar or other buttons
+  useEffect(() => {
+    const handleManualShow = () => {
+      localStorage.removeItem(DISMISSED_KEY);
+      if (isIOS()) {
+        setMode('ios');
+      } else if (window.__pwaInstallPrompt) {
+        setMode('android');
+      } else {
+        setMode('manual');
+      }
+      setShow(true);
+    };
+
+    window.addEventListener('rcsn:show-install-prompt', handleManualShow);
+    return () => window.removeEventListener('rcsn:show-install-prompt', handleManualShow);
+  }, []);
+
   // Listen for appinstalled to hide the banner
   useEffect(() => {
     const onInstalled = () => setShow(false);
@@ -84,7 +102,10 @@ export default function PWAInstallPrompt() {
 
   const handleInstall = () => {
     const p = window.__pwaInstallPrompt;
-    if (!p) return;
+    if (!p) {
+      setMode('manual');
+      return;
+    }
     // Clear immediately so the DownloadApps button also knows it's consumed
     window.__pwaInstallPrompt = null;
     setShow(false);
@@ -94,6 +115,10 @@ export default function PWAInstallPrompt() {
         if (outcome === 'dismissed') {
           localStorage.setItem(DISMISSED_KEY, String(Date.now()));
         }
+      })
+      .catch(() => {
+        setMode('manual');
+        setShow(true);
       });
   };
 
@@ -179,6 +204,32 @@ export default function PWAInstallPrompt() {
                           className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium transition-colors"
                         >
                           Maybe Later
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {mode === 'manual' && (
+                    <div className="mt-3 space-y-2 text-xs text-gray-600 dark:text-gray-300">
+                      <p className="font-medium text-gray-800 dark:text-gray-100">To install on Android / Browser:</p>
+                      <div className="flex items-center gap-2">
+                        <span className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-600 dark:text-emerald-300 font-bold text-[10px]">1</span>
+                        <span>Tap the <strong>three dots (⋮)</strong> or browser menu icon</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-600 dark:text-emerald-300 font-bold text-[10px]">2</span>
+                        <span>Select <strong>"Install app"</strong> or <strong>"Add to Home screen"</strong></span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-600 dark:text-emerald-300 font-bold text-[10px]">3</span>
+                        <span>Tap <strong>"Install"</strong> to confirm</span>
+                      </div>
+                      <div className="pt-2 flex justify-end">
+                        <button
+                          onClick={handleDismiss}
+                          className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium transition-colors"
+                        >
+                          Close
                         </button>
                       </div>
                     </div>

@@ -28,6 +28,7 @@ import {
   MessageCircle,
   Search,
   Briefcase,
+  Smartphone,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 
@@ -99,6 +100,25 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
           el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
       }, 60);
+    }
+  };
+
+  const handleInstallAppClick = () => {
+    setMobileMenuOpen(false);
+    const p = window.__pwaInstallPrompt;
+    if (p) {
+      p.prompt()
+        .then(() => p.userChoice)
+        .then(({ outcome }) => {
+          if (outcome === 'accepted') {
+            window.__pwaInstallPrompt = null;
+          }
+        })
+        .catch(() => {
+          window.dispatchEvent(new CustomEvent('rcsn:show-install-prompt'));
+        });
+    } else {
+      window.dispatchEvent(new CustomEvent('rcsn:show-install-prompt'));
     }
   };
 
@@ -973,10 +993,7 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
                       : 'text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
-                  <span className="flex items-center gap-2">
-                    {link.path === '/careers' && <Briefcase className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
-                    <span>{link.name}</span>
-                  </span>
+                  <span>{link.name}</span>
                 </Link>
               );
             })}
@@ -1013,6 +1030,15 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
                 <Search className="w-4 h-4 text-emerald-600" />
                 <span>Application Status</span>
               </Link>
+
+              <button
+                type="button"
+                onClick={handleInstallAppClick}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-emerald-500/40 bg-emerald-50/70 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-bold text-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors shadow-sm"
+              >
+                <Smartphone className="w-4 h-4 text-[#00873E] dark:text-emerald-400" />
+                <span>Install RCSN App on Phone</span>
+              </button>
 
               <Link
                 to="/login"

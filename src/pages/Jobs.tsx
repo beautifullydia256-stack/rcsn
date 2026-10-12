@@ -78,7 +78,7 @@ export default function Jobs() {
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-200">
       <SeoHead
         title="Careers | Rakai Community School of Nursing"
-        description="Explore career opportunities at Rakai Community School of Nursing. Apply online for clinical instructor, nurse tutor, medical lecturer, and staff positions."
+        description="Explore career opportunities and open vacancies at Rakai Community School of Nursing. Apply online for academic, administrative, and support staff positions."
       />
 
       <RcsnNavbar />
@@ -91,7 +91,7 @@ export default function Jobs() {
               Careers
             </h1>
             <p className="text-xs sm:text-sm text-emerald-100/90 max-w-lg mx-auto">
-              Current employment and clinical teaching opportunities at Rakai Community School of Nursing.
+              Current job openings and career opportunities at RCSN.
             </p>
           </div>
         </section>
