@@ -24,14 +24,14 @@ const mono = Roboto_Mono({
 });
 
 export const metadata: Metadata = {
-  title: { default: "PwezaCore", template: "%s | PwezaCore" },
-  description: "PwezaCore – Multi-tenant school management SaaS platform.",
+  title: { default: "Rakai Community School of Nursing (RCSN)", template: "%s | RCSN" },
+  description: "Official portal of Rakai Community School of Nursing (RCSN) — Health Care Training in Uganda.",
   manifest: "/manifest.json",
-  themeColor: "#0f0f16",
+  themeColor: "#ffffff",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "PwezaCore",
+    title: "RCSN",
   },
   viewport: {
     width: "device-width",

@@ -360,32 +360,28 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto bg-transparent">
-        {/* Backdrop - Zero blur, completely crisp background */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+        {/* Backdrop - Solid high-contrast dimming */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="fixed inset-0 bg-transparent"
+          className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-40"
         />
 
-        {/* Modal Dialog */}
+        {/* Modal Dialog - Solid crisp card */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          className="relative w-full max-w-3xl bg-slate-950/45 dark:bg-black/55 backdrop-blur-md backdrop-saturate-[150%] rounded-[28px] shadow-2xl overflow-hidden z-10 border border-white/30 flex flex-col max-h-[92vh] text-white"
+          className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-[28px] shadow-2xl overflow-hidden z-50 border border-slate-200 dark:border-slate-800 flex flex-col max-h-[92vh] text-slate-900 dark:text-white"
         >
-          {/* Specular highlights & ambient glow */}
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none z-20" />
-          <div className="absolute -top-16 -right-16 w-36 h-36 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none z-20" />
-
-          {/* Header */}
-          <div className="bg-black/25 text-white p-5 sm:p-6 border-b border-white/10 shrink-0 relative z-10">
+          {/* Header - Solid rich school forest green */}
+          <div className="bg-[#006028] dark:bg-slate-950 text-white p-5 sm:p-6 border-b border-emerald-800/40 dark:border-slate-800 shrink-0 relative z-10">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center p-1 shrink-0">
+                <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center p-1 shrink-0 shadow-sm">
                   <img
                     src="/images/rcsn/logo.png"
                     alt="RCSN Crest"
@@ -396,7 +392,7 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
                   <h3 className="text-base sm:text-lg font-black text-white leading-tight">
                     Rakai Community School of Nursing
                   </h3>
-                  <p className="text-xs text-emerald-400 font-semibold">
+                  <p className="text-xs text-emerald-200 font-bold">
                     Official Online Application Portal • 2026/2027 Academic Year
                   </p>
                 </div>
@@ -405,7 +401,8 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
               <button
                 type="button"
                 onClick={onClose}
-                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                className="p-2 rounded-xl text-emerald-100 hover:text-white hover:bg-emerald-800 dark:hover:bg-slate-800 transition-colors"
+                aria-label="Close application modal"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -416,40 +413,48 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
               <div className="grid grid-cols-4 gap-2 mt-5 text-xs font-bold text-center">
                 <div
                   className={`flex items-center justify-center gap-1.5 pb-2 border-b-2 transition-colors ${
-                    step >= 1 ? 'border-emerald-400 text-emerald-300' : 'border-slate-700 text-slate-400'
+                    step >= 1 ? 'border-amber-300 text-amber-200' : 'border-emerald-700/60 text-emerald-200/70'
                   }`}
                 >
-                  <span className="w-5 h-5 rounded-full bg-emerald-600 flex items-center justify-center text-[10px] text-white shrink-0">
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
+                    step >= 1 ? 'bg-amber-400 text-slate-950' : 'bg-emerald-900/80 text-emerald-200'
+                  }`}>
                     1
                   </span>
                   <span className="truncate">Programs</span>
                 </div>
                 <div
                   className={`flex items-center justify-center gap-1.5 pb-2 border-b-2 transition-colors ${
-                    step >= 2 ? 'border-emerald-400 text-emerald-300' : 'border-slate-700 text-slate-400'
+                    step >= 2 ? 'border-amber-300 text-amber-200' : 'border-emerald-700/60 text-emerald-200/70'
                   }`}
                 >
-                  <span className="w-5 h-5 rounded-full bg-emerald-600 flex items-center justify-center text-[10px] text-white shrink-0">
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
+                    step >= 2 ? 'bg-amber-400 text-slate-950' : 'bg-emerald-900/80 text-emerald-200'
+                  }`}>
                     2
                   </span>
                   <span className="truncate">Personal</span>
                 </div>
                 <div
                   className={`flex items-center justify-center gap-1.5 pb-2 border-b-2 transition-colors ${
-                    step >= 3 ? 'border-emerald-400 text-emerald-300' : 'border-slate-700 text-slate-400'
+                    step >= 3 ? 'border-amber-300 text-amber-200' : 'border-emerald-700/60 text-emerald-200/70'
                   }`}
                 >
-                  <span className="w-5 h-5 rounded-full bg-emerald-600 flex items-center justify-center text-[10px] text-white shrink-0">
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
+                    step >= 3 ? 'bg-amber-400 text-slate-950' : 'bg-emerald-900/80 text-emerald-200'
+                  }`}>
                     3
                   </span>
                   <span className="truncate">Grades & Files</span>
                 </div>
                 <div
                   className={`flex items-center justify-center gap-1.5 pb-2 border-b-2 transition-colors ${
-                    step >= 4 ? 'border-emerald-400 text-emerald-300' : 'border-slate-700 text-slate-400'
+                    step >= 4 ? 'border-amber-300 text-amber-200' : 'border-emerald-700/60 text-emerald-200/70'
                   }`}
                 >
-                  <span className="w-5 h-5 rounded-full bg-emerald-600 flex items-center justify-center text-[10px] text-white shrink-0">
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
+                    step >= 4 ? 'bg-amber-400 text-slate-950' : 'bg-emerald-900/80 text-emerald-200'
+                  }`}>
                     4
                   </span>
                   <span className="truncate">Payment</span>
@@ -458,8 +463,8 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
             )}
           </div>
 
-          {/* Form Body */}
-          <div className="p-5 sm:p-7 overflow-y-auto flex-1 no-scrollbar">
+          {/* Form Body - Solid Opaque Background with High Contrast Text */}
+          <div className="p-5 sm:p-7 overflow-y-auto flex-1 no-scrollbar bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
             {/* STEP 1: Program Selection */}
             {step === 1 && (
               <div className="space-y-6">
@@ -475,11 +480,11 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
                         onClick={() => setIntake(i)}
                         className={`p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all ${
                           intake === i
-                            ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-200 font-bold shadow-sm'
-                            : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-700 dark:text-slate-300'
+                            ? 'border-[#00873E] bg-emerald-50 dark:bg-emerald-950/50 text-emerald-950 dark:text-emerald-100 font-bold shadow-sm ring-2 ring-[#00873E]'
+                            : 'border-slate-300 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/60 hover:border-slate-400 dark:hover:border-slate-600 text-slate-800 dark:text-slate-200 font-semibold'
                         }`}
                       >
-                        <span className="text-sm">{i}</span>
+                        <span className="text-sm font-bold">{i}</span>
                         {intake === i && <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />}
                       </button>
                     ))}
@@ -491,7 +496,7 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
                     <label className="block text-sm font-bold text-slate-900 dark:text-white">
                       Select Academic Program(s) *
                     </label>
-                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    <span className="text-xs text-slate-600 dark:text-slate-300 font-semibold">
                       Select 1, 2, or more courses in order of priority
                     </span>
                   </div>
@@ -506,12 +511,12 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
                           onClick={() => toggleProgram(p.name)}
                           className={`p-4 rounded-2xl border text-left flex flex-col justify-between transition-all ${
                             isSelected
-                              ? 'border-[#00873E] bg-[#00873E]/10 text-slate-900 dark:text-white shadow-sm ring-1 ring-[#00873E]'
-                              : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-700 dark:text-slate-300'
+                              ? 'border-[#00873E] bg-emerald-50 dark:bg-emerald-950/60 text-slate-900 dark:text-white shadow-sm ring-2 ring-[#00873E]'
+                              : 'border-slate-300 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/60 hover:border-slate-400 dark:hover:border-slate-600 text-slate-900 dark:text-slate-100'
                           }`}
                         >
                           <div className="flex justify-between items-start gap-2">
-                            <span className="text-sm font-bold">{p.name}</span>
+                            <span className="text-sm font-black text-slate-900 dark:text-white leading-snug">{p.name}</span>
                             <div className="flex items-center gap-1.5 shrink-0">
                               {isSelected ? (
                                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#00873E] text-white text-[11px] font-bold">
@@ -519,13 +524,13 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
                                   <span>Choice {choiceIndex + 1}</span>
                                 </span>
                               ) : (
-                                <span className="w-5 h-5 rounded-md border border-slate-300 dark:border-slate-700 block" />
+                                <span className="w-5 h-5 rounded-md border-2 border-slate-400 dark:border-slate-500 bg-white dark:bg-slate-800 block" />
                               )}
                             </div>
                           </div>
-                          <div className="mt-2.5 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                            <span>Duration: {p.duration}</span>
-                            <span className="font-semibold text-[#00873E] dark:text-emerald-400">{p.entry}</span>
+                          <div className="mt-2.5 flex items-center justify-between text-xs">
+                            <span className="font-semibold text-slate-600 dark:text-slate-300">Duration: {p.duration}</span>
+                            <span className="font-bold text-[#00873E] dark:text-emerald-400">{p.entry}</span>
                           </div>
                         </button>
                       );

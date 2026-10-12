@@ -141,13 +141,21 @@ export default function PWAInstallPrompt() {
                   </div>
 
                   {mode === 'android' && (
-                    <button
-                      onClick={handleInstall}
-                      className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm"
-                    >
-                      <Download className="w-4 h-4" />
-                      Add to Home Screen
-                    </button>
+                    <div className="mt-3 flex items-center gap-2">
+                      <button
+                        onClick={handleInstall}
+                        className="flex-1 flex items-center justify-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-semibold transition-colors shadow-sm"
+                      >
+                        <Download className="w-4 h-4" />
+                        <span>Add to Home Screen</span>
+                      </button>
+                      <button
+                        onClick={handleDismiss}
+                        className="px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs sm:text-sm font-medium transition-colors"
+                      >
+                        Maybe Later
+                      </button>
+                    </div>
                   )}
 
                   {mode === 'ios' && (
@@ -164,6 +172,14 @@ export default function PWAInstallPrompt() {
                       <div className="flex items-center gap-2">
                         <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-300 font-bold text-[10px]">3</span>
                         <span>Tap <strong>"Add"</strong> to confirm</span>
+                      </div>
+                      <div className="pt-2 flex justify-end">
+                        <button
+                          onClick={handleDismiss}
+                          className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium transition-colors"
+                        >
+                          Maybe Later
+                        </button>
                       </div>
                     </div>
                   )}

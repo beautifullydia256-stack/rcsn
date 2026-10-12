@@ -487,43 +487,19 @@ export default function CoursesPage() {
                     </div>
 
                     {/* Body Content */}
-                    <div className="pt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-                      {/* Left: Requirements */}
-                      <div className="lg:col-span-2 space-y-4">
-                        <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-                          <h4 className="text-xs sm:text-sm font-bold text-emerald-800 dark:text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-2">
-                            <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                            <span>Entry Requirements</span>
-                          </h4>
-                          <p className="text-sm sm:text-base font-medium text-slate-800 dark:text-slate-200 leading-relaxed">
-                            {c.entry}
-                          </p>
-                        </div>
-
-                        <div className="flex items-center gap-2 text-xs text-slate-500 italic">
-                          <span>* Admissions and programme details should be confirmed with the school.</span>
-                        </div>
+                    <div className="pt-6">
+                      <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                        <h4 className="text-xs sm:text-sm font-bold text-emerald-800 dark:text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                          <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                          <span>Entry Requirements</span>
+                        </h4>
+                        <p className="text-sm sm:text-base font-medium text-slate-800 dark:text-slate-200 leading-relaxed">
+                          {c.entry}
+                        </p>
                       </div>
 
-                      {/* Right: Intakes & Assessment Board */}
-                      <div className="space-y-4 lg:border-l lg:border-slate-100 lg:dark:border-slate-800 lg:pl-6">
-                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
-                          <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                            Intakes &amp; Interviews
-                          </h4>
-                          <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-semibold">
-                            {c.intakes}
-                          </p>
-                        </div>
-
-                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
-                          <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                            Assessment &amp; Examining Board
-                          </h4>
-                          <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-semibold">
-                            {c.examBody}
-                          </p>
-                        </div>
+                      <div className="mt-3 flex items-center gap-2 text-xs text-slate-500 italic">
+                        <span>* Admissions and programme details should be confirmed with the school.</span>
                       </div>
                     </div>
                   </div>
