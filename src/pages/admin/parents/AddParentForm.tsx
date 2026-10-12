@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/authStore';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
 import { ArrowLeft, Search, X } from 'lucide-react';
 import LiquidGlassSelect from '@/components/ui/LiquidGlassSelect';
+import { useSchoolType } from '@/hooks/useSchoolType';
 import {
   addParentSchoolQueryKey,
   addParentSchoolStaleOptions,
@@ -34,6 +35,7 @@ function normalize(s: string) {
 
 export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProps) {
   const navigate = useNavigate();
+  const { isTertiary } = useSchoolType();
   const user = useAuthStore((s) => s.user);
   const [studentId, setStudentId] = useState('');
   const [studentQuery, setStudentQuery] = useState('');
@@ -248,9 +250,6 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
       {/* Link existing user */}
       <div className="rounded-2xl border border-white/20 bg-white/5 p-4 relative z-40 backdrop-blur-md space-y-2">
         <p className="text-sm font-semibold text-white">Is this person already in the system?</p>
-        <p className="text-xs text-white/60">
-          Search by name or email to find an existing staff account and auto-fill their details.
-        </p>
         {linkedFromUser ? (
           <div className="flex items-center gap-3 rounded-xl bg-emerald-500/15 border border-emerald-400/30 px-3.5 py-2.5">
             <span className="text-emerald-300 text-sm font-bold">OK</span>
@@ -308,11 +307,8 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
 
         <div ref={pickerRef} className="relative z-30">
           <label className={labelClass} id="add-par-student-label">
-            Student <span className="text-amber-400">*</span>
+            {isTertiary ? 'Trainee' : 'Student'} <span className="text-amber-400">*</span>
           </label>
-          <p className="mb-2 text-xs text-white/50">
-            Search by name, class, or admission number. Students can have more than one parent; anyone already linked still appears here.
-          </p>
           <div className="relative">
             <Search
               className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40"
@@ -321,7 +317,7 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
             <input
               type="text"
               className={`${inputClass} pl-10 pr-10`}
-              placeholder="Type to search students..."
+              placeholder={isTertiary ? 'Type to search trainees...' : 'Type to search students...'}
               value={studentQuery}
               onChange={(e) => {
                 const v = e.target.value;
@@ -383,7 +379,7 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
 
         <div className="relative z-20">
           <label className={labelClass}>
-            Relationship to student <span className="text-amber-400">*</span>
+            Relationship to {isTertiary ? 'trainee' : 'student'} <span className="text-amber-400">*</span>
           </label>
           <LiquidGlassSelect
             value={relationship}
@@ -391,21 +387,18 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
             options={RELATIONSHIP_OPTIONS}
             placeholder="Select relationship"
           />
-          <p className="mt-1 text-xs text-white/50">
-            You can add more detail later on the parent&apos;s profile.
-          </p>
         </div>
 
         <div>
           <label className={labelClass}>
-            Parent / Guardian name <span className="text-amber-400">*</span>
+            {isTertiary ? 'Sponsor / Guardian name' : 'Parent / Guardian name'} <span className="text-amber-400">*</span>
           </label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             className={inputClass}
-            placeholder="Parent or guardian name"
+            placeholder={isTertiary ? 'Sponsor or guardian name' : 'Parent or guardian name'}
             required
           />
         </div>
@@ -417,7 +410,7 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className={inputClass}
-            placeholder="Optional — add later, then use Invite to portal"
+            placeholder="Email address (optional)"
           />
         </div>
 
@@ -432,12 +425,6 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
           />
         </div>
 
-        <p className="text-xs text-white/50">
-          If you include an email, we create or link their portal login immediately. If you leave email
-          empty, we only save the guardian on the student — add an email on their profile later, then use{' '}
-          <span className="font-medium text-white/70">Invite to portal</span> to send the welcome message and one-time password.
-        </p>
-
         <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-white/15">
           <button
             type="button"
@@ -451,7 +438,7 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
             disabled={submitting || (isFetching && !data)}
             className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-semibold shadow-lg shadow-emerald-950/40 border border-emerald-400/30 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
           >
-            {submitting ? 'Adding...' : 'Add parent'}
+            {submitting ? 'Adding...' : isTertiary ? 'Add sponsor' : 'Add parent'}
           </button>
         </div>
       </form>
@@ -459,7 +446,7 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
   );
 
   if (mode === 'page') {
-    return <AdminPageWrapper title="Add Parent">{formBody}</AdminPageWrapper>;
+    return <AdminPageWrapper title={isTertiary ? 'Add Sponsor' : 'Add Parent'}>{formBody}</AdminPageWrapper>;
   }
   return formBody;
 }

@@ -1294,6 +1294,9 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
       if (addParentBtn) addParentBtn.textContent = 'Add Sponsor';
     }
 
+    const addStaffBtn = el.querySelector('.pa-qa-btn[data-nav="/dashboard/admin/staff/new"] span:last-child, .pa-qa-btn[data-nav="/dashboard/admin/user-management"] span:last-child');
+    if (addStaffBtn) addStaffBtn.textContent = 'Add School Staff';
+
     // Navigation via data-nav attributes
     const handleClick = (e: MouseEvent) => {
       // Wire the inline Add Student button (no data-nav)
@@ -1305,11 +1308,11 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
       const path = target.getAttribute('data-nav');
       if (!path) return;
 
-      // Intercept Add Student / Teacher / Parent → open modal instead of navigating
+      // Intercept Add Student / Teacher / Parent / Staff → open modal instead of navigating
       if (path === '/dashboard/admin/students/new') { e.preventDefault(); e.stopPropagation(); setAdminModal('student'); return; }
       if (path === '/dashboard/admin/teachers/new') { e.preventDefault(); e.stopPropagation(); setAdminModal('teacher'); return; }
       if (path === '/dashboard/admin/parents/new')  { e.preventDefault(); e.stopPropagation(); setAdminModal('parent');  return; }
-      if (path === '/dashboard/admin/staff/new')    { e.preventDefault(); e.stopPropagation(); setAdminModal('staff');   return; }
+      if (path === '/dashboard/admin/staff/new' || path === '/dashboard/admin/user-management') { e.preventDefault(); e.stopPropagation(); setAdminModal('staff'); return; }
       if (path === '/dashboard/admin/payment/new') { e.preventDefault(); e.stopPropagation(); setAdminModal('payment'); return; }
       if (path === '/dashboard/admin/appoint-head-teacher') { e.preventDefault(); e.stopPropagation(); setAdminModal('appoint-head-teacher'); return; }
 
@@ -1605,8 +1608,8 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
       <NativeModal isOpen={adminModal === 'parent'} onClose={() => setAdminModal(null)} title={isTertiary ? 'Add Parent / Sponsor' : 'Add Parent'} size="lg">
         <AddParentForm mode="modal" onCompleted={() => { setAdminModal(null); refreshAdminDashboard(); }} onCancel={() => setAdminModal(null)} />
       </NativeModal>
-      <NativeModal isOpen={adminModal === 'staff'} onClose={() => setAdminModal(null)} title={isTertiary ? 'Add Institutional Staff' : 'Add School Staff'} size="lg">
-        <AddSchoolStaffForm schoolId={schoolId} onCompleted={() => { setAdminModal(null); refreshAdminDashboard(); }} onCancel={() => setAdminModal(null)} />
+      <NativeModal isOpen={adminModal === 'staff'} onClose={() => setAdminModal(null)} title="Add School Staff" size="lg">
+        <AddSchoolStaffForm schoolId={schoolId || 'e1b10000-0000-4000-a000-000000000001'} onCompleted={() => { setAdminModal(null); refreshAdminDashboard(); }} onCancel={() => setAdminModal(null)} />
       </NativeModal>
       <RecordPaymentModal open={adminModal === 'payment'} onClose={() => { setAdminModal(null); refreshAdminDashboard(); }} />
       <ExpenseApprovalModal

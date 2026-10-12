@@ -18,13 +18,16 @@ import NativeModal from '@/components/NativeModal';
 import { AddStudentForm } from '@/pages/admin/students/AddStudentForm';
 import { AddTeacherForm } from '@/pages/admin/teachers/AddTeacherForm';
 import { AddParentForm } from '@/pages/admin/parents/AddParentForm';
+import { AddSchoolStaffForm } from '@/pages/admin/staff/AddSchoolStaffForm';
 import { useSchoolType } from '@/hooks/useSchoolType';
+import { useAuthStore } from '@/store/authStore';
 
-type ModalType = 'student' | 'teacher' | 'parent' | null;
+type ModalType = 'student' | 'teacher' | 'parent' | 'staff' | null;
 
 export default function AdminQuickActions() {
   const navigate = useNavigate();
   const { isTertiary } = useSchoolType();
+  const schoolId = useAuthStore((s) => s.schoolId) || 'e1b10000-0000-4000-a000-000000000001';
   const [modal, setModal] = useState<ModalType>(null);
   const closeModal = () => setModal(null);
 
@@ -32,7 +35,7 @@ export default function AdminQuickActions() {
     { icon: UserPlus,      label: isTertiary ? 'Add Trainee' : 'Add Student',          color: '#16a34a', modal: 'student' as ModalType },
     { icon: GraduationCap, label: isTertiary ? 'Add Tutor' : 'Add Teacher',          color: '#16a34a', modal: 'teacher' as ModalType },
     { icon: Users,         label: isTertiary ? 'Add Parent / Sponsor' : 'Add Parent',  color: '#16a34a', modal: 'parent'  as ModalType },
-    { icon: Briefcase,     label: isTertiary ? 'Add Bursar' : 'Add Accounts Manager', color: '#6b7280', path: '/dashboard/admin/accounts' },
+    { icon: Briefcase,     label: 'Add School Staff',                                  color: '#16a34a', modal: 'staff'   as ModalType },
     { icon: FileText,      label: 'Generate Reports',     color: '#6b7280', path: '/dashboard/admin/reports' },
     { icon: Receipt,       label: 'Generate Receipts',    color: '#6b7280', path: '/dashboard/admin/outstanding' },
     { icon: BriefcaseIcon, label: 'Post Job Vacancy',     color: '#6b7280', path: '/dashboard/admin/jobs' },
@@ -86,6 +89,10 @@ export default function AdminQuickActions() {
 
       <NativeModal isOpen={modal === 'parent'} onClose={closeModal} title={isTertiary ? 'Add Parent / Sponsor' : 'Add Parent'} size="lg">
         <AddParentForm mode="modal" onCompleted={closeModal} onCancel={closeModal} />
+      </NativeModal>
+
+      <NativeModal isOpen={modal === 'staff'} onClose={closeModal} title="Add School Staff" size="lg">
+        <AddSchoolStaffForm schoolId={schoolId} onCompleted={closeModal} onCancel={closeModal} />
       </NativeModal>
     </>
   );
