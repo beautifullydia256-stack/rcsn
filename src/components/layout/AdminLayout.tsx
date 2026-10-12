@@ -525,7 +525,7 @@ export default function AdminLayout() {
                 )}
               </NavGroup>
             )}
-            <NavItem to="/dashboard/admin/jobs" icon={<Briefcase className="w-4 h-4" />} label="Job Vacancies" badge={jobCount ?? undefined} badgeColor="rose" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/admin/jobs" icon={<Briefcase className="w-4 h-4" />} label="Careers" badge={jobCount ?? undefined} badgeColor="rose" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
 
           {/* 6. Governance & System */}

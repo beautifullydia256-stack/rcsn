@@ -41,7 +41,7 @@ export default function JobVacanciesCard() {
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-white/5 border border-white/10"><Briefcase className="w-5 h-5 text-white/80" /></div>
           <div>
-            <h3 className="text-lg font-semibold ac-text-primary">Job Vacancies</h3>
+            <h3 className="text-lg font-semibold ac-text-primary">Careers</h3>
             <div className="text-xs ac-text-muted">Placeholder list · connect later</div>
           </div>
         </div>
@@ -77,9 +77,9 @@ export default function JobVacanciesCard() {
         type="button"
         onClick={() => navigate('/dashboard/admin/jobs')}
         className="mt-4 w-full py-2.5 rounded-lg text-sm font-semibold text-[#05080f] bg-[#10d9a8] hover:bg-[#14f0bb] transition-colors"
-        aria-label="Manage all job vacancies"
+        aria-label="Manage all careers"
       >
-        Manage All Vacancies
+        Manage Careers
       </button>
     </div>
   );

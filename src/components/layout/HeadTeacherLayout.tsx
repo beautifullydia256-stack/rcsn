@@ -527,7 +527,7 @@ export default function HeadTeacherLayout() {
                 )}
               </NavGroup>
             )}
-            <NavItem to="/dashboard/academic-registrar/jobs" icon={<Briefcase className="w-4 h-4" />} label="Job Vacancies" badge={jobCount ?? undefined} badgeColor="rose" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/academic-registrar/jobs" icon={<Briefcase className="w-4 h-4" />} label="Careers" badge={jobCount ?? undefined} badgeColor="rose" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
 
           {/* 6. Governance & System */}

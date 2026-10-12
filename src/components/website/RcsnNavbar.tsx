@@ -443,7 +443,7 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
                       <div>
                         <div className="flex items-center gap-1.5">
                           <h4 className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-[#00873E] dark:group-hover:text-emerald-400 transition-colors">
-                            Careers & Job Vacancies
+                            Careers
                           </h4>
                           <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-emerald-600 text-white">
                             Hiring

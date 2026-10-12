@@ -77,7 +77,7 @@ export default function WorkforceHomePage() {
       visible: canHr,
     },
     {
-      title: 'Job Vacancies',
+      title: 'Careers',
       subtitle: 'Publish academic & clinical vacancies with public candidate links.',
       to: '/dashboard/admin/jobs',
       icon: Briefcase,

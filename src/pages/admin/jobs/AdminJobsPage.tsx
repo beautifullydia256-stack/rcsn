@@ -399,8 +399,8 @@ export default function AdminJobsPage() {
 
   return (
     <AdminPageWrapper
-      title="Job Vacancies & Recruitment"
-      subtitle="Publish openings, configure custom application channels, and review candidate dossiers."
+      title="Careers"
+      subtitle="Publish institutional openings, configure application requirements, and review candidate dossiers."
     >
       <div className="w-full space-y-4 sm:space-y-6">
         {/* Toast / Notifications */}
