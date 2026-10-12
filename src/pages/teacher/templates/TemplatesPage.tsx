@@ -20,8 +20,8 @@ interface TertiaryTemplateInfo {
 const templates: TertiaryTemplateInfo[] = [
   {
     key: 'unmeb-result-slip',
-    name: 'UNMEB Semester Result Slip',
-    description: 'Official single-trainee semester examination and continuous assessment slip with course units, grades, GPA, and UNMEB seal.',
+    name: 'UHPAB Semester Result Slip',
+    description: 'Official single-trainee semester examination and continuous assessment slip with course units, grades, GPA, and UHPAB seal.',
     category: 'Examinations',
     badgeColor: '#3b82f6',
     icon: Award,
@@ -84,7 +84,7 @@ export default function TemplatesPage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight" style={{ color: t.textPrimary }}>
-                Tertiary & UNMEB Document Templates
+                Tertiary & UHPAB Document Templates
               </h1>
               <p className="text-sm font-medium mt-0.5" style={{ color: t.textMuted }}>
                 Curriculum document standards, semester result slips, broadsheets, and transcripts for Rakai Community School of Nursing.
@@ -165,7 +165,7 @@ export default function TemplatesPage() {
             <div className="rounded-2xl p-4 bg-white/[0.04] border border-white/10 text-xs space-y-2.5">
               <div className="flex justify-between items-center">
                 <span className="text-white/50">Issuing Authority:</span>
-                <span className="font-semibold text-white/90">RCSN / UNMEB Center U028</span>
+                <span className="font-semibold text-white/90">RCSN / UHPAB Center U151</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-white/50">Security:</span>

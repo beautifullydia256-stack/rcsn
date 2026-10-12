@@ -112,37 +112,44 @@ export default function Home() {
     {
       title: 'Certificate in Nursing',
       duration: '2.5 Years',
-      entry: 'UCE passes in Biology, Chemistry, Physics, Math, and English.',
+      entry: 'UCE minimum pass in Biology, Chemistry, Physics, Mathematics and English (or equivalent), obtained in the same sitting.',
       level: 'Certificate Level',
       career: 'Enrolled Nurse (Hospitals & Health Centers)',
     },
     {
       title: 'Certificate in Midwifery',
       duration: '2.5 Years',
-      entry: 'UCE passes in Biology, Chemistry, Physics, Math, and English.',
+      entry: 'UCE minimum pass in Biology, Chemistry, Physics, Mathematics and English (or equivalent), obtained in the same sitting.',
       level: 'Certificate Level',
       career: 'Enrolled Midwife (Maternal & Infant Care)',
     },
     {
-      title: 'Diploma in Nursing (Direct Entry)',
-      duration: '3.0 Years',
-      entry: 'UACE Principal in Biology & Subsidiary in Chemistry/Physics.',
+      title: 'Diploma in Nursing • Direct',
+      duration: '3 Years',
+      entry: 'UCE, UACE level; Principal Pass in Biology and a subsidiary in Chemistry.',
       level: 'Diploma Level',
       career: 'Registered Nurse (RN) / Ward Supervisor',
     },
     {
-      title: 'Diploma in Midwifery (Direct Entry)',
-      duration: '3.0 Years',
-      entry: 'UACE Principal in Biology & Subsidiary in Chemistry/Physics.',
+      title: 'Diploma in Midwifery • Direct',
+      duration: '3 Years',
+      entry: 'UCE, UACE level; Principal Pass in Biology and a subsidiary in Chemistry.',
       level: 'Diploma Level',
       career: 'Registered Midwife (RM) / Maternity In-Charge',
     },
     {
-      title: 'Diploma in Nursing / Midwifery (Extension)',
+      title: 'Diploma in Nursing • Extension',
       duration: '1.5 Years',
-      entry: 'Valid Certificate in Nursing or Midwifery with active UNMC license.',
+      entry: 'Possess Certificate in Nursing, Comprehensive Nursing, Psychiatry.',
       level: 'Extension Diploma',
-      career: 'Senior Nursing Officer / Clinical Practitioner',
+      career: 'Senior Nursing Officer / Clinical Ward In-Charge',
+    },
+    {
+      title: 'Diploma in Midwifery • Extension',
+      duration: '1.5 Years',
+      entry: 'Possess Certificate in Midwifery.',
+      level: 'Extension Diploma',
+      career: 'Registered Midwife (Upgrade) / Reproductive Health Officer',
     },
   ];
 
@@ -245,7 +252,7 @@ export default function Home() {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-[#00873E] selection:text-white">
       <SeoHead
         title="Rakai Community School of Nursing (RCSN) — Health Care Training in Uganda"
-        description="Official website of Rakai Community School of Nursing. Accredited Certificate and Diploma programs in Nursing and Midwifery examined by UNMEB (Center U028). Hands-on clinical skills training in Rakai Town, Uganda."
+        description="Official website of Rakai Community School of Nursing. Accredited Certificate and Diploma programs in Nursing and Midwifery examined by UHPAB (Center U151). Hands-on clinical skills training in Rakai Town, Uganda."
         canonicalPath="/"
         image="https://www.rcsn.ac.ug/images/rcsn/compound.webp"
         imageAlt="Rakai Community School of Nursing Campus Compound and Walkways"
@@ -302,7 +309,7 @@ export default function Home() {
                   </span>
                   <span className="flex items-center gap-2">
                     <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
-                    <span>UNMEB Center U028</span>
+                    <span>UHPAB Center U151</span>
                   </span>
                   <span className="flex items-center gap-2">
                     <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
@@ -911,7 +918,7 @@ export default function Home() {
                       Faculty & Administration
                     </h3>
                     <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                      Experienced academic coordinators and tutors guiding lecture teaching, hospital clinical rotations, and UNMEB national examinations.
+                      Experienced academic coordinators and tutors guiding lecture teaching, hospital clinical rotations, and UHPAB national assessments.
                     </p>
                   </div>
                   <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700 text-xs font-semibold text-slate-500">

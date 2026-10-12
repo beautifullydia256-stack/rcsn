@@ -244,7 +244,7 @@ export default function MatronLayout() {
             </button>
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                <Activity className="w-3.5 h-3.5" /> RCSN UNMEB U028
+                <Activity className="w-3.5 h-3.5" /> RCSN UHPAB U151
               </span>
               <span className="hidden sm:inline-block text-xs font-medium text-slate-400">
                 Hostel Resident Management System

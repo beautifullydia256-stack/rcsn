@@ -132,8 +132,7 @@ export default function ContactPage() {
                         Physical Campus Location
                       </h4>
                       <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
-                        Off Rakai – Byakabanda Rd, Rakai Town Council, Rakai District Headquarters, Southwestern Uganda.
-                        (Near Rakai General Hospital).
+                        190 km from Kampala, 21 km off Kyotera-Mutukula Road, in Rakai Town Council near Rakai District Headquarters. It is 1.5 km from Rakai Town Council to the school.
                       </p>
                     </div>
                   </div>
@@ -454,7 +453,7 @@ export default function ContactPage() {
                 <div className="space-y-2.5 text-xs">
                   <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
                     <span className="font-bold text-slate-900 dark:text-white block">1. Main Administration Block</span>
-                    <span className="text-slate-500 dark:text-slate-400">Principal's office, Academic Registrar, and UNMEB Exam Registry.</span>
+                    <span className="text-slate-500 dark:text-slate-400">Principal's office, Academic Registrar, and UHPAB Assessment Registry.</span>
                   </div>
 
                   <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">

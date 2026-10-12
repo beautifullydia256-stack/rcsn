@@ -424,7 +424,7 @@ export default function TeacherLayout() {
             className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
           >
             <span className="pw-nav-ic"><Percent className="w-4 h-4" /></span>
-            <span className="pw-nav-text">{isTertiary ? "UNMEB Grading Scale & Regulations" : "Grading System"}</span>
+            <span className="pw-nav-text">{isTertiary ? "UHPAB Grading Scale & Regulations" : "Grading System"}</span>
           </NavLink>
           <NavLink
             to="/dashboard/teacher/assignments"

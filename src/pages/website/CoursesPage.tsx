@@ -86,61 +86,73 @@ export default function CoursesPage() {
       id: 'cert-nursing',
       title: 'Certificate in Nursing',
       category: 'Certificate',
-      duration: '2.5 Years (5 Semesters)',
-      intakes: 'August/September & January/February',
-      examBody: 'Uganda Nurses and Midwives Examinations Board (UNMEB)',
-      accreditation: 'MoES & Uganda Nurses and Midwives Council (UNMC)',
-      entry: 'Uganda Certificate of Education (UCE) with passes in Biology, Chemistry, Physics, Mathematics, and English in one sitting.',
-      overview: 'Foundational clinical nursing practice, vital signs assessment, and compassionate bedside patient care.',
-      career: 'Enrolled Nurse (Hospitals, Health Center IIIs/IVs, and Community Clinics)',
+      duration: '2.5 Years',
+      intakes: 'January (Interviews: Nov–Dec) & July (Interviews: Mar–Apr)',
+      examBody: 'Uganda Health Professions Assessment Board (UHPAB) U151',
+      accreditation: 'MoES, BTVET (ME/VOC/071) & UNMC',
+      entry: 'UCE minimum pass in Biology, Chemistry, Physics, Mathematics and English (or equivalent), obtained in the same sitting.',
+      overview: 'Programmes and requirements as provided by the school.',
+      career: 'Enrolled Nurse (Hospitals, Health Centers, and Community Clinics)',
     },
     {
       id: 'cert-midwifery',
       title: 'Certificate in Midwifery',
       category: 'Certificate',
-      duration: '2.5 Years (5 Semesters)',
-      intakes: 'August/September & January/February',
-      examBody: 'Uganda Nurses and Midwives Examinations Board (UNMEB)',
-      accreditation: 'MoES & Uganda Nurses and Midwives Council (UNMC)',
-      entry: 'Uganda Certificate of Education (UCE) with passes in Biology, Chemistry, Physics, Mathematics, and English in one sitting.',
-      overview: 'Maternal health, safe antenatal care, labor management, and newborn infant welfare.',
+      duration: '2.5 Years',
+      intakes: 'January (Interviews: Nov–Dec) & July (Interviews: Mar–Apr)',
+      examBody: 'Uganda Health Professions Assessment Board (UHPAB) U151',
+      accreditation: 'MoES, BTVET (ME/VOC/071) & UNMC',
+      entry: 'UCE minimum pass in Biology, Chemistry, Physics, Mathematics and English (or equivalent), obtained in the same sitting.',
+      overview: 'Programmes and requirements as provided by the school.',
       career: 'Enrolled Midwife (Maternity Wards, Antenatal Suites, and Child Health Posts)',
     },
     {
       id: 'dip-nursing-direct',
-      title: 'Diploma in Nursing (Direct Entry)',
+      title: 'Diploma in Nursing • Direct',
       category: 'Diploma',
-      duration: '3.0 Years (6 Semesters)',
-      intakes: 'August/September Intake',
-      examBody: 'Uganda Nurses and Midwives Examinations Board (UNMEB)',
-      accreditation: 'MoES & UNMC',
-      entry: 'UACE Level with a Principal Pass in Biology and two subsidiaries in Chemistry, Physics, or Math, plus UCE science credentials.',
-      overview: 'Comprehensive clinical care, advanced diagnosis, patient management, and ward supervision.',
+      duration: '3 Years',
+      intakes: 'January & July Intakes (Interviews: Nov–Dec & Mar–Apr)',
+      examBody: 'Uganda Health Professions Assessment Board (UHPAB) U151',
+      accreditation: 'MoES, BTVET (ME/VOC/071) & UNMC',
+      entry: 'UCE, UACE level; Principal Pass in Biology and a subsidiary in Chemistry.',
+      overview: 'Programmes and requirements as provided by the school.',
       career: 'Registered Nurse (RN), Clinical Ward Supervisor, and Nursing Officer',
     },
     {
       id: 'dip-midwifery-direct',
-      title: 'Diploma in Midwifery (Direct Entry)',
+      title: 'Diploma in Midwifery • Direct',
       category: 'Diploma',
-      duration: '3.0 Years (6 Semesters)',
-      intakes: 'August/September Intake',
-      examBody: 'Uganda Nurses and Midwives Examinations Board (UNMEB)',
-      accreditation: 'MoES & UNMC',
-      entry: 'UACE Level with a Principal Pass in Biology and two subsidiaries in Chemistry, Physics, or Math, plus UCE science credentials.',
-      overview: 'Senior obstetric practice, high-risk maternity care, and clinical maternal health leadership.',
+      duration: '3 Years',
+      intakes: 'January & July Intakes (Interviews: Nov–Dec & Mar–Apr)',
+      examBody: 'Uganda Health Professions Assessment Board (UHPAB) U151',
+      accreditation: 'MoES, BTVET (ME/VOC/071) & UNMC',
+      entry: 'UCE, UACE level; Principal Pass in Biology and a subsidiary in Chemistry.',
+      overview: 'Programmes and requirements as provided by the school.',
       career: 'Registered Midwife (RM), Maternity Ward In-Charge, and Reproductive Health Officer',
     },
     {
-      id: 'dip-extension',
-      title: 'Diploma in Nursing / Midwifery (Extension)',
+      id: 'dip-nursing-extension',
+      title: 'Diploma in Nursing • Extension',
       category: 'Extension',
-      duration: '1.5 Years (3 Semesters)',
-      intakes: 'August/September & January/February',
-      examBody: 'Uganda Nurses and Midwives Examinations Board (UNMEB)',
-      accreditation: 'MoES & UNMC',
-      entry: 'Valid Certificate in Nursing or Midwifery with active UNMC registration and minimum 2 years clinical practice.',
-      overview: 'Modular career advancement elevating Enrolled Nurses and Midwives to Registered status.',
-      career: 'Registered Nurse or Midwife, Higher Civil Service Scale (U5/U4), and Departmental Head',
+      duration: '1.5 Years',
+      intakes: 'January & July Intakes (Interviews: Nov–Dec & Mar–Apr)',
+      examBody: 'Uganda Health Professions Assessment Board (UHPAB) U151',
+      accreditation: 'MoES, BTVET (ME/VOC/071) & UNMC',
+      entry: 'Possess Certificate in Nursing, Comprehensive Nursing, Psychiatry.',
+      overview: 'Programmes and requirements as provided by the school.',
+      career: 'Upgraded Registered Nurse, Ward In-Charge, and Senior Nursing Officer',
+    },
+    {
+      id: 'dip-midwifery-extension',
+      title: 'Diploma in Midwifery • Extension',
+      category: 'Extension',
+      duration: '1.5 Years',
+      intakes: 'January & July Intakes (Interviews: Nov–Dec & Mar–Apr)',
+      examBody: 'Uganda Health Professions Assessment Board (UHPAB) U151',
+      accreditation: 'MoES, BTVET (ME/VOC/071) & UNMC',
+      entry: 'Possess Certificate in Midwifery.',
+      overview: 'Programmes and requirements as provided by the school.',
+      career: 'Upgraded Registered Midwife, Maternity Department Head, and Maternal Health Specialist',
     },
   ];
 
@@ -229,7 +241,7 @@ export default function CoursesPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-emerald-600 selection:text-white">
       <SeoHead
-        title="Nursing & Midwifery Diploma & Certificate Courses | UNMEB Center U028 — RCSN"
+        title="Nursing & Midwifery Diploma & Certificate Courses | UHPAB Center U151 — RCSN"
         description="Explore accredited Certificate & Diploma programs in Nursing and Midwifery at RCSN. Check entry requirements, durations, and career pathways."
         canonicalPath="/courses"
         image="https://www.rcsn.ac.ug/images/rcsn/lecture-hall.webp"
@@ -238,25 +250,47 @@ export default function CoursesPage() {
       <RcsnNavbar onOpenAdmissions={() => openAdmissionsFor('Certificate in Nursing')} />
 
       <main className="flex-1">
-        {/* Header */}
-        <section className="bg-slate-950 text-white py-16 lg:py-24 relative overflow-hidden">
+        {/* Header with Brochure Values & Intake Schedule */}
+        <section className="bg-slate-950 text-white py-12 lg:py-16 relative overflow-hidden">
           <div className="absolute inset-0 z-0">
             <img
               src="/images/rcsn/lecture-hall.webp"
               alt="Spacious Lecture Halls at Rakai Community School of Nursing"
               className="w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-slate-950/80 via-slate-950/65 to-slate-950/45" />
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-950/85 via-slate-950/75 to-slate-950/60" />
           </div>
 
-          <div className="relative z-10 w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
-            <div className="max-w-4xl space-y-4">
-              <h1 className="text-4xl sm:text-6xl font-black text-white tracking-tight leading-tight drop-shadow-md">
-                Programs & Courses of Study
+          <div className="relative z-10 w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16 space-y-5">
+            <div>
+              <span className="inline-block text-xs sm:text-sm font-black tracking-widest text-emerald-400 uppercase mb-2">
+                ETHICS • PROFESSIONALISM • ACCOUNTABILITY
+              </span>
+              <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight drop-shadow-md">
+                Programmes &amp; Requirements
               </h1>
-              <p className="text-lg sm:text-xl text-slate-200 leading-relaxed font-normal drop-shadow">
-                Explore recognized Certificate and Diploma courses certified by the Uganda Nurses and Midwives
-                Examinations Board (UNMEB) and the Ministry of Education and Sports.
+              <p className="text-sm sm:text-base text-slate-200 mt-2 max-w-2xl font-medium drop-shadow">
+                Programmes and requirements as provided by the school.
+              </p>
+            </div>
+
+            {/* Official Intakes & Interview Schedules Banner from School Brochure */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 max-w-3xl space-y-2">
+              <span className="text-xs font-black uppercase tracking-wider text-amber-300 block">
+                Academic Calendar &amp; Intakes
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm">
+                <div className="bg-black/30 p-3 rounded-xl border border-white/10">
+                  <span className="font-bold text-white block">January Intake</span>
+                  <span className="text-emerald-300 font-semibold">Interviews: November – December</span>
+                </div>
+                <div className="bg-black/30 p-3 rounded-xl border border-white/10">
+                  <span className="font-bold text-white block">July Intake</span>
+                  <span className="text-emerald-300 font-semibold">Interviews: March – April</span>
+                </div>
+              </div>
+              <p className="text-[11px] sm:text-xs text-slate-300 italic pt-1">
+                * Academic year for Certificate courses begins in January and July.
               </p>
             </div>
           </div>
@@ -428,7 +462,7 @@ export default function CoursesPage() {
                             Duration: {c.duration}
                           </span>
                           <span className="px-3 py-1 rounded-md text-xs sm:text-sm font-bold bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300">
-                            UNMEB Certified
+                            UHPAB Certified
                           </span>
                           {highlightedCourseId === c.id && (
                             <span className="px-3 py-1 rounded-md text-xs sm:text-sm font-bold bg-emerald-600 text-white animate-pulse">
@@ -453,48 +487,41 @@ export default function CoursesPage() {
                     </div>
 
                     {/* Body Content */}
-                    <div className="pt-8 grid grid-cols-1 lg:grid-cols-3 gap-10">
-                      {/* Left: Overview & Requirements */}
-                      <div className="lg:col-span-2 space-y-6">
-                        <div>
-                          <h4 className="text-xs sm:text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">
-                            Program Overview
+                    <div className="pt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      {/* Left: Requirements */}
+                      <div className="lg:col-span-2 space-y-4">
+                        <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                          <h4 className="text-xs sm:text-sm font-bold text-emerald-800 dark:text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                            <span>Entry Requirements</span>
                           </h4>
-                          <p className="text-base sm:text-lg text-slate-700 dark:text-slate-300 leading-relaxed">
-                            {c.overview}
-                          </p>
-                        </div>
-
-                        <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-                          <h4 className="text-sm font-bold text-emerald-800 dark:text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-2">
-                            <ShieldCheck className="w-5 h-5" />
-                            <span>Admission &amp; Entry Requirements</span>
-                          </h4>
-                          <p className="text-sm sm:text-base text-slate-700 dark:text-slate-300 leading-relaxed">
+                          <p className="text-sm sm:text-base font-medium text-slate-800 dark:text-slate-200 leading-relaxed">
                             {c.entry}
                           </p>
                         </div>
 
-
+                        <div className="flex items-center gap-2 text-xs text-slate-500 italic">
+                          <span>* Admissions and programme details should be confirmed with the school.</span>
+                        </div>
                       </div>
 
-                      {/* Right: Career & Examination Info */}
-                      <div className="space-y-5 lg:border-l lg:border-slate-100 lg:dark:border-slate-800 lg:pl-10">
-                        <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
-                          <h4 className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                            Career Prospects
+                      {/* Right: Intakes & Assessment Board */}
+                      <div className="space-y-4 lg:border-l lg:border-slate-100 lg:dark:border-slate-800 lg:pl-6">
+                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
+                          <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                            Intakes &amp; Interviews
                           </h4>
-                          <p className="text-sm sm:text-base text-slate-800 dark:text-slate-200 font-semibold leading-relaxed">
-                            {c.career}
+                          <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-semibold">
+                            {c.intakes}
                           </p>
                         </div>
 
-                        <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
-                          <h4 className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                            Available Intakes
+                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
+                          <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                            Assessment &amp; Examining Board
                           </h4>
-                          <p className="text-sm sm:text-base text-slate-800 dark:text-slate-200 font-semibold">
-                            {c.intakes}
+                          <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-semibold">
+                            {c.examBody}
                           </p>
                         </div>
                       </div>
@@ -572,7 +599,7 @@ export default function CoursesPage() {
                     <div className="pt-2 grid grid-cols-2 gap-2 text-xs font-medium text-slate-700 dark:text-slate-300">
                       <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-lg p-2">
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span>2.5-Year UNMEB Program</span>
+                        <span>2.5-Year UHPAB Program</span>
                       </div>
                       <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-lg p-2">
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />

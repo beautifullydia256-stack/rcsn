@@ -154,7 +154,7 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
             </a>
             <span className="inline-block h-3 w-px bg-emerald-600" />
             <span className="text-[11px] font-bold tracking-wider text-amber-300 uppercase">
-              UNMEB Center: U028
+              UHPAB Center: U151
             </span>
           </div>
         </div>
@@ -321,7 +321,7 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
                       About Rakai Community School of Nursing
                     </h3>
                     <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                      Established to bridge the healthcare human resource gap in Southwestern Uganda. Fully accredited by MoES, MoH, and UNMEB (Center Code: U028).
+                      Established to bridge the healthcare human resource gap in Southwestern Uganda. Fully accredited by MoES, MoH, and UHPAB (Center Code: U151).
                     </p>
                     <div className="p-3 rounded-xl bg-emerald-50/70 dark:bg-slate-800/80 border border-emerald-200 dark:border-emerald-800/40">
                       <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest block">
@@ -464,7 +464,7 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
                   <div className="flex flex-wrap items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 gap-2">
                     <div>
                       <span className="text-[11px] font-bold text-[#00873E] uppercase tracking-wider block">
-                        Government Accredited Medical Courses • UNMEB Center: U028
+                        Government Accredited Medical Courses • UHPAB Center: U151
                       </span>
                       <h3 className="text-base font-black text-slate-900 dark:text-white">
                         Academic Programs & Specializations

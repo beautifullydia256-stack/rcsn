@@ -63,7 +63,7 @@ export default function RcsnFooter() {
               </span>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-900 border border-slate-800 text-[11px] font-medium text-amber-400">
                 <Award className="w-3.5 h-3.5" />
-                <span>UNMEB Center: U028</span>
+                <span>UHPAB Center: U151</span>
               </span>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-900 border border-slate-800 text-[11px] font-medium text-blue-400">
                 <HeartPulse className="w-3.5 h-3.5" />

@@ -515,7 +515,7 @@ Yours faithfully,
                           required
                           value={coverLetter}
                           onChange={(e) => setCoverLetter(e.target.value)}
-                          placeholder="Outline your background, certifications, UNMC/UNMEB registration status, and why you are interested in joining Rakai Community School of Nursing…"
+                          placeholder="Outline your background, certifications, UNMC/UHPAB registration status, and why you are interested in joining Rakai Community School of Nursing…"
                           className="w-full px-4 py-3.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00873E]"
                         />
                       </div>

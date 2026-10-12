@@ -10,10 +10,7 @@ import {
   CheckCircle2,
   Share2,
   Check,
-  Building2,
   Mail,
-  ShieldCheck,
-  Award,
   Users,
   Clock,
   Image as ImageIcon,
@@ -101,45 +98,21 @@ export default function Jobs() {
       <RcsnNavbar />
 
       <main className="flex-1">
-        {/* Hero Section */}
-        <section className="relative overflow-hidden bg-gradient-to-b from-[#004720] via-[#005C29] to-[#007033] text-white py-16 sm:py-20 lg:py-24">
-          <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px]" />
-          
-          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-5">
-            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 text-xs sm:text-sm font-bold uppercase tracking-wider">
-              <Briefcase className="w-4 h-4 text-emerald-300" />
-              <span>Institutional Careers & Vacancies</span>
-            </span>
-
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight max-w-4xl mx-auto">
-              Work With Rakai Community School of Nursing
+        {/* Compact Careers Header */}
+        <section className="bg-gradient-to-r from-[#004720] via-[#005C29] to-[#007033] text-white py-6 sm:py-8 border-b border-emerald-800/40">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-1">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+              Careers & Vacancies
             </h1>
-
-            <p className="text-base sm:text-lg lg:text-xl text-emerald-100/90 max-w-3xl mx-auto leading-relaxed">
-              Join our dedicated team of healthcare educators, clinical preceptors, tutors, and administrative leaders. Shape the future of compassionate patient care in Uganda.
+            <p className="text-xs sm:text-sm text-emerald-100/90 max-w-lg mx-auto">
+              Current job openings and clinical teaching positions at Rakai Community School of Nursing.
             </p>
-
-            {/* Quick Stats Pills */}
-            <div className="pt-4 flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs sm:text-sm text-emerald-200 font-medium">
-              <span className="flex items-center gap-1.5 bg-black/20 backdrop-blur-sm px-3.5 py-1.5 rounded-full border border-white/10">
-                <Building2 className="w-4 h-4 text-emerald-300" />
-                <span>Rakai Town Campus</span>
-              </span>
-              <span className="flex items-center gap-1.5 bg-black/20 backdrop-blur-sm px-3.5 py-1.5 rounded-full border border-white/10">
-                <ShieldCheck className="w-4 h-4 text-emerald-300" />
-                <span>MoES & UNMEB Center: U028</span>
-              </span>
-              <span className="flex items-center gap-1.5 bg-black/20 backdrop-blur-sm px-3.5 py-1.5 rounded-full border border-white/10">
-                <Award className="w-4 h-4 text-amber-300" />
-                <span>20+ Years Excellence</span>
-              </span>
-            </div>
           </div>
         </section>
 
         {/* Content & Job Listings Area */}
-        <section className="py-12 sm:py-16">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        <section className="py-6 sm:py-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
             {/* Search & Filter Toolbar */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
               <div className="relative w-full sm:max-w-md">
@@ -162,9 +135,9 @@ export default function Jobs() {
 
             {/* List / Grid of Jobs */}
             {loading ? (
-              <div className="py-20 flex flex-col items-center justify-center space-y-4">
-                <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-                <p className="text-sm font-medium text-slate-500">Loading current vacancies from RCSN Registry…</p>
+              <div className="py-16 flex flex-col items-center justify-center space-y-3">
+                <div className="w-8 h-8 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                <p className="text-sm font-medium text-slate-500">Loading vacancies…</p>
               </div>
             ) : filteredJobs.length === 0 ? (
               <motion.div
@@ -182,8 +155,8 @@ export default function Jobs() {
                 
                 <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed">
                   {searchQuery
-                    ? `No vacancies found matching "${searchQuery}". Please try another keyword or clear your search.`
-                    : 'Our team is fully staffed at this time. All new positions for nurse tutors, laboratory instructors, clinical mentors, and support personnel are posted live directly from our administrative panel.'}
+                    ? `No vacancies found matching "${searchQuery}".`
+                    : 'There are currently no open vacancies. Please check back regularly for new postings.'}
                 </p>
 
                 <div className="pt-2 flex flex-wrap justify-center gap-3">

@@ -12,39 +12,39 @@
 ## Official Accreditations & Examination Center
 - Ministry of Education and Sports (MoES): Reg No. ME/VOC/071
 - Uganda Nurses and Midwives Council (UNMC): Officially Accredited Nursing Training Institution
-- Uganda Nurses and Midwives Examinations Board (UNMEB): Authorized National Examination Center Code **U028**
+- Uganda Health Professions Assessment Board (UHPAB): Authorized Assessment Center Code **U151**
 - Over 10,000 healthcare professionals graduated since 2003
 
 ## Academic Programs Offered
-1. **Diploma in Nursing (Direct Entry)**
-   - Duration: 3 Years (6 Semesters)
-   - Entry: UACE with at least one Principal Pass in Biology and subsidiaries in Chemistry, Physics, or Mathematics, plus UCE science passes.
-   - Examining Body: UNMEB (Center U028)
+1. **Certificate in Nursing**
+   - Duration: 2.5 Years
+   - Entry: UCE minimum pass in Biology, Chemistry, Physics, Mathematics and English (or equivalent), obtained in the same sitting.
+   - Examining Body: UHPAB (Center U151)
 
-2. **Diploma in Midwifery (Direct Entry)**
-   - Duration: 3 Years (6 Semesters)
-   - Entry: UACE with Principal Pass in Biology and subsidiaries in Chemistry, Physics, or Mathematics, plus UCE science passes.
-   - Examining Body: UNMEB (Center U028)
+2. **Certificate in Midwifery**
+   - Duration: 2.5 Years
+   - Entry: UCE minimum pass in Biology, Chemistry, Physics, Mathematics and English (or equivalent), obtained in the same sitting.
+   - Examining Body: UHPAB (Center U151)
 
-3. **Diploma in Nursing (Extension / Upgrading)**
-   - Duration: 1.5 Years (3 Semesters)
-   - Entry: Enrolled Nurse Certificate, valid UNMC registration and practicing license with minimum 2 years clinical experience.
-   - Examining Body: UNMEB (Center U028)
+3. **Diploma in Nursing • Direct**
+   - Duration: 3 Years
+   - Entry: UCE, UACE level; Principal Pass in Biology and a subsidiary in Chemistry.
+   - Examining Body: UHPAB (Center U151)
 
-4. **Certificate in Nursing**
-   - Duration: 2.5 Years (5 Semesters)
-   - Entry: UCE with passes in Biology, Chemistry, Physics, Mathematics, and English in one sitting.
-   - Examining Body: UNMEB (Center U028)
+4. **Diploma in Midwifery • Direct**
+   - Duration: 3 Years
+   - Entry: UCE, UACE level; Principal Pass in Biology and a subsidiary in Chemistry.
+   - Examining Body: UHPAB (Center U151)
 
-5. **Certificate in Midwifery**
-   - Duration: 2.5 Years (5 Semesters)
-   - Entry: UCE with passes in Biology, Chemistry, Physics, Mathematics, and English in one sitting.
-   - Examining Body: UNMEB (Center U028)
+5. **Diploma in Nursing • Extension**
+   - Duration: 1.5 Years
+   - Entry: Possess Certificate in Nursing, Comprehensive Nursing, Psychiatry.
+   - Examining Body: UHPAB (Center U151)
 
-6. **Certificate in Comprehensive Nursing**
-   - Duration: 2.5 Years (5 Semesters)
-   - Entry: UCE with passes in Biology, Chemistry, Physics, Mathematics, English, and related sciences.
-   - Examining Body: UNMEB (Center U028)
+6. **Diploma in Midwifery • Extension**
+   - Duration: 1.5 Years
+   - Entry: Possess Certificate in Midwifery.
+   - Examining Body: UHPAB (Center U151)
 
 ## Clinical Partner Hospitals & Practical Rotation Sites
 Students undergo bedside clinical rotations across 7 partner hospitals:

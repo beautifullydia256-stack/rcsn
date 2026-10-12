@@ -464,7 +464,7 @@ export async function sendApplicationRejectedEmail(
     
     ${reason ? `<div class="card"><div class="card-title">Admissions Panel Note</div><p style="margin:0; font-size:14px; color:#334155;">${reason}</p></div>` : ''}
 
-    <p>Admission to our health training programs is highly competitive due to laboratory and clinical ward capacity limits set by the Uganda Nurses and Midwives Examination Board (UNMEB).</p>
+    <p>Admission to our health training programs is highly competitive due to laboratory and clinical ward capacity limits set by the Uganda Health Professions Assessment Board (UHPAB).</p>
     
     <p>We encourage you to strengthen your academic profile and consider reapplying in our subsequent admission window. We wish you every success in your academic and professional endeavors.</p>
   `;

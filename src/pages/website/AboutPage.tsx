@@ -38,11 +38,9 @@ export default function AboutPage() {
   }, [location.hash]);
 
   const coreValues = [
-    { title: 'God Fearing', desc: 'Grounding healthcare practice in moral reverence, spiritual humility, and compassionate Christian values.' },
-    { title: 'Honesty & Reliability', desc: 'Uncompromising truthfulness in clinical reporting, medication dispensing, and patient management.' },
-    { title: 'Respectfulness', desc: 'Treating every patient, guardian, colleague, and community member with utmost dignity and empathy.' },
-    { title: 'Accountability', desc: 'Taking full ownership of professional actions, clinical decisions, and institutional stewardship.' },
-    { title: 'Ethics & Professionalism', desc: 'Adhering strictly to the Uganda Nurses and Midwives Code of Conduct and international medical ethics.' },
+    { title: 'Ethics', desc: 'Upholding uncompromising moral principles and the professional Code of Conduct in every healthcare interaction.' },
+    { title: 'Professionalism', desc: 'Demonstrating competence, clinical discipline, and compassionate bedside care for all patients.' },
+    { title: 'Accountability', desc: 'Taking full ownership of professional actions, clinical decisions, and community stewardship.' },
   ];
 
 
@@ -97,7 +95,7 @@ export default function AboutPage() {
                 </div>
 
                 <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
-                  Established in 2003 through community and SDA leadership, RCSN is a premier health training institution accredited by the Ministry of Education and Sports (ME\VOC\071), UNMC, and UNMEB (Center U028), having trained over 10,000 certified healthcare professionals across Uganda.
+                  RCSN is a health training institution that was started by the SDA church community of Rakai, Rakai District Council and community leaders in 2003. Over the years it has evolved into a reputable fountain of health education in the region.
                 </p>
 
                 {/* 4 Fast-Facts Badges */}
@@ -111,8 +109,8 @@ export default function AboutPage() {
                     <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Graduated Nurses & Midwives</span>
                   </div>
                   <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700">
-                    <span className="text-2xl font-black text-[#00873E] dark:text-emerald-400 block">Center U028</span>
-                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">UNMEB Examination Center</span>
+                    <span className="text-2xl font-black text-[#00873E] dark:text-emerald-400 block">Center U151</span>
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">UHPAB Assessment Center</span>
                   </div>
                   <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700">
                     <span className="text-2xl font-black text-[#00873E] dark:text-emerald-400 block">7 Hospitals</span>
@@ -154,7 +152,78 @@ export default function AboutPage() {
                     </span>
                     <h3 className="text-lg sm:text-xl font-bold">Nursing & Midwifery Trainees at Rakai Campus</h3>
                     <p className="text-xs sm:text-sm text-slate-200 mt-1">
-                      Nationally accredited Certificate and Diploma nursing trainees under UNMEB standards.
+                      Nationally accredited Certificate and Diploma nursing trainees under UHPAB standards.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Academic Calendar, Intakes, Location & Registration (Direct from School Brochure) */}
+        <section className="py-14 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800">
+          <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Card 1: Academic Calendar & Intakes */}
+              <div className="p-7 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                <span className="inline-block text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                  Academic Calendar &amp; Intakes
+                </span>
+                <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
+                  Intake Schedules &amp; Interview Windows
+                </h3>
+                
+                <div className="space-y-3 pt-1">
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+                      January Intake
+                    </span>
+                    <span className="text-base font-bold text-slate-900 dark:text-white">
+                      Interviews: November – December
+                    </span>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+                      July Intake
+                    </span>
+                    <span className="text-base font-bold text-slate-900 dark:text-white">
+                      Interviews: March – April
+                    </span>
+                  </div>
+                </div>
+
+                <p className="text-xs text-slate-500 dark:text-slate-400 italic">
+                  Academic year for Certificate courses begins in January and July.
+                </p>
+              </div>
+
+              {/* Card 2: Location & Registration */}
+              <div className="p-7 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                <span className="inline-block text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                  Location &amp; Registration
+                </span>
+                <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
+                  Campus Location &amp; Regulatory Standing
+                </h3>
+
+                <div className="space-y-3 pt-1 text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1">
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+                      Main Campus Location
+                    </span>
+                    <p className="font-medium text-slate-900 dark:text-white">
+                      190 km from Kampala, 21 km off Kyotera-Mutukula Road, in Rakai Town Council near Rakai District Headquarters. It is 1.5 km from Rakai Town Council to the school.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1">
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+                      Official Accreditations &amp; Examining Boards
+                    </span>
+                    <p className="font-medium text-slate-900 dark:text-white">
+                      Registered with MoES, BTVET (ME/VOC/071), Uganda Nurses and Midwives Council and Uganda Health Professions Assessment Board (UHPAB) U151.
                     </p>
                   </div>
                 </div>
@@ -228,7 +297,7 @@ export default function AboutPage() {
                       Academic Registrar's Office
                     </h3>
                     <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
-                      Coordinating admissions, student records, enrollment, and UNMEB examination certification.
+                      Coordinating admissions, student records, enrollment, and UHPAB assessment certification.
                     </p>
                   </div>
                   <div className="pt-3 mt-4 border-t border-slate-100 dark:border-slate-800 text-xs font-semibold text-slate-500">
@@ -381,8 +450,7 @@ export default function AboutPage() {
                   Our Institutional Mission
                 </h3>
                 <p className="text-base sm:text-lg text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
-                  "To impart cognitive, clinical, and professional competencies to health trainees so as to offer
-                  comprehensive healthcare to the communities they serve."
+                  "To impart cognitive, clinical and professional competencies to health trainees so as to offer comprehensive health care to communities they serve."
                 </p>
               </div>
             </div>
