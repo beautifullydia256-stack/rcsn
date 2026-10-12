@@ -15,6 +15,8 @@ import {
   ShieldCheck,
   Award,
   Users,
+  Clock,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import RcsnNavbar from '@/components/website/RcsnNavbar';
@@ -23,13 +25,18 @@ import SeoHead from '@/components/website/SeoHead';
 
 interface Job {
   job_id: string;
-  school_id: string;
+  school_id?: string;
   title: string;
   location: string | null;
   description: string | null;
   posted_by: string | null;
   status: string;
   created_at: string;
+  application_deadline?: string | null;
+  contact_email?: string | null;
+  contact_phone?: string | null;
+  submission_address?: string | null;
+  poster_url?: string | null;
 }
 
 export default function Jobs() {
@@ -223,6 +230,22 @@ export default function Jobs() {
                           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                           <span>Actively Recruiting</span>
                         </span>
+
+                        {job.application_deadline && (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 text-xs font-bold border border-amber-500/20">
+                            <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                            <span>
+                              Deadline: {new Date(job.application_deadline).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </span>
+                          </span>
+                        )}
+
+                        {job.poster_url && (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300 text-xs font-bold border border-blue-500/20">
+                            <ImageIcon className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                            <span>Flyer Attached</span>
+                          </span>
+                        )}
                         
                         <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
                           <Calendar className="w-3.5 h-3.5 text-slate-400" />
