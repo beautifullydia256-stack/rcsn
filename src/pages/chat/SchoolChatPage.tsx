@@ -100,14 +100,17 @@ function roleLabel(role: string): string {
   return map[role] || role;
 }
 
-type ContactFilter = 'all' | 'teacher' | 'parent' | 'student';
+type ContactFilter = 'all' | 'staff' | 'teacher' | 'parent' | 'student';
 
 function matchesContactFilter(userRole: string, f: ContactFilter): boolean {
   const r = (userRole || '').toLowerCase().trim();
   if (f === 'all') return true;
-  if (f === 'teacher') return r === 'teacher' || r === 'head_teacher';
-  if (f === 'parent') return r === 'parent';
-  if (f === 'student') return r === 'student';
+  if (f === 'staff') {
+    return ['admin', 'owner', 'principal', 'head_teacher', 'dos', 'accountant', 'bursar', 'librarian', 'lab_technician', 'clinician', 'staff', 'secretary'].includes(r);
+  }
+  if (f === 'teacher') return ['teacher', 'tutor', 'instructor', 'clinical_instructor', 'head_teacher'].includes(r);
+  if (f === 'parent') return ['parent', 'guardian'].includes(r);
+  if (f === 'student') return ['student', 'trainee', 'candidate'].includes(r);
   return true;
 }
 
@@ -408,7 +411,7 @@ export default function SchoolChatPage() {
   const queryClient = useQueryClient();
   const location = useLocation();
   const role = useAuthStore((s) => s.role);
-  const schoolId = useAuthStore((s) => s.schoolId);
+  const schoolId = useAuthStore((s) => s.schoolId) || 'e1b10000-0000-4000-a000-000000000001';
   const user = useAuthStore((s) => s.user);
   const myId = user?.id ?? null;
   const myVoiceInitial = useMemo(() => {
@@ -1401,9 +1404,10 @@ export default function SchoolChatPage() {
                   {(
                     [
                       { id: 'all' as const, label: 'All Contacts' },
+                      { id: 'staff' as const, label: 'Staff & Admins' },
                       { id: 'teacher' as const, label: 'Tutors & Faculty' },
-                      { id: 'parent' as const, label: 'Guardians' },
                       { id: 'student' as const, label: 'Trainees' },
+                      { id: 'parent' as const, label: 'Guardians' },
                     ] as const
                   ).map(({ id, label }) => (
                     <button
@@ -1471,9 +1475,25 @@ export default function SchoolChatPage() {
                     );
                   })}
                 {!loadingElig && filteredEligible.length === 0 && (
-                  <p className="p-6 text-xs text-white/50 text-center">
-                    No contacts match filters or search query.
-                  </p>
+                  <div className="p-6 text-center space-y-2">
+                    <p className="text-xs text-white/50">
+                      {eligible.length === 0
+                        ? 'No institutional contacts found in the directory.'
+                        : 'No contacts match the selected filter or search query.'}
+                    </p>
+                    {(contactFilter !== 'all' || pickQ.trim()) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setContactFilter('all');
+                          setPickQ('');
+                        }}
+                        className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
+                      >
+                        Reset filters and view all contacts
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

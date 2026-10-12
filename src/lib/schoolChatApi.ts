@@ -160,9 +160,47 @@ function mapConversationRow(raw: Record<string, unknown>): ChatConversationRow {
 }
 
 export async function fetchEligibleChatUsers(): Promise<EligibleChatUser[]> {
-  const { data, error } = await supabase.rpc('school_chat_list_eligible_users');
-  if (error) throw error;
-  return (data || []).map((row: unknown) => mapEligibleRow(row as Record<string, unknown>));
+  try {
+    const { data, error } = await supabase.rpc('school_chat_list_eligible_users');
+    if (!error && Array.isArray(data) && data.length > 0) {
+      return data.map((row: unknown) => mapEligibleRow(row as Record<string, unknown>));
+    }
+    if (error && import.meta.env.DEV) {
+      console.warn('[schoolChatApi] RPC error fetching eligible chat users:', error.message);
+    }
+  } catch (err) {
+    if (import.meta.env.DEV) {
+      console.warn('[schoolChatApi] fetchEligibleChatUsers RPC failed:', err);
+    }
+  }
+
+  // Resilient fallback: direct query to public.users for peer institutional members
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user?.id) return [];
+
+    const { data: users, error: usersErr } = await supabase
+      .from('users')
+      .select('user_id, name, role, email, last_sign_in_at')
+      .neq('user_id', user.id)
+      .limit(100);
+
+    if (usersErr || !users) return [];
+
+    return users.map((u) => ({
+      user_id: String(u.user_id),
+      name: String(u.name ?? ''),
+      role: String(u.role ?? ''),
+      email: String(u.email ?? ''),
+      last_seen_at: (u.last_sign_in_at as string | null | undefined) ?? null,
+      session_active: false,
+    }));
+  } catch (err) {
+    console.error('[schoolChatApi] Fallback fetchEligibleChatUsers failed:', err);
+    return [];
+  }
 }
 
 export async function fetchMyConversations(): Promise<ChatConversationRow[]> {
