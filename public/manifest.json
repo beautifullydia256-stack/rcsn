@@ -40,29 +40,6 @@
     }
   ],
   "categories": ["education", "productivity"],
-  "shortcuts": [
-    {
-      "name": "Teacher Dashboard",
-      "short_name": "Dashboard",
-      "description": "Access teacher dashboard",
-      "url": "/dashboard/teacher",
-      "icons": [{ "src": "/rcsn-badge-192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "Take Attendance",
-      "short_name": "Attendance",
-      "description": "Record student attendance",
-      "url": "/dashboard/teacher/attendance",
-      "icons": [{ "src": "/rcsn-badge-192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "AI Lesson Planner",
-      "short_name": "AI Planner",
-      "description": "Generate lesson plans with AI",
-      "url": "/dashboard/teacher/ai-planner",
-      "icons": [{ "src": "/rcsn-badge-192.png", "sizes": "192x192" }]
-    }
-  ],
   "share_target": {
     "action": "/share",
     "method": "POST",

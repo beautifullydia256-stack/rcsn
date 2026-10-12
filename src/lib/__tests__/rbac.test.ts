@@ -24,8 +24,8 @@ describe('RBAC Module', () => {
       expect(hasRole('admin', ROLE_GROUPS.OWNER_DASHBOARD)).toBe(false);
     });
 
-    it('should allow admin to access teacher dashboard', () => {
-      expect(hasRole('admin', ROLE_GROUPS.TEACHER_DASHBOARD)).toBe(true);
+    it('should deny admin from teacher dashboard', () => {
+      expect(hasRole('admin', ROLE_GROUPS.TEACHER_DASHBOARD)).toBe(false);
     });
 
     it('should allow admin to access accountant dashboard', () => {
@@ -45,7 +45,7 @@ describe('RBAC Module', () => {
     });
 
     it('should handle case-insensitive roles', () => {
-      expect(hasRole('ADMIN', ROLE_GROUPS.TEACHER_DASHBOARD)).toBe(true);
+      expect(hasRole('TEACHER', ROLE_GROUPS.TEACHER_DASHBOARD)).toBe(true);
       expect(hasRole('  Admin  ', ROLE_GROUPS.ACCOUNTANT_DASHBOARD)).toBe(true);
     });
   });
@@ -80,9 +80,10 @@ describe('RBAC Module', () => {
       { role: 'admin', dashboard: ROLE_GROUPS.OWNER_DASHBOARD, expected: false },
       { role: 'teacher', dashboard: ROLE_GROUPS.OWNER_DASHBOARD, expected: false },
       
-      // Teacher dashboard - teacher and admin
+      // Teacher dashboard - teachers, tutors, clinical instructors
       { role: 'teacher', dashboard: ROLE_GROUPS.TEACHER_DASHBOARD, expected: true },
-      { role: 'admin', dashboard: ROLE_GROUPS.TEACHER_DASHBOARD, expected: true },
+      { role: 'tutor', dashboard: ROLE_GROUPS.TEACHER_DASHBOARD, expected: true },
+      { role: 'admin', dashboard: ROLE_GROUPS.TEACHER_DASHBOARD, expected: false },
       { role: 'owner', dashboard: ROLE_GROUPS.TEACHER_DASHBOARD, expected: false },
       
       // Accountant dashboard - accountant and admin

@@ -23,7 +23,7 @@ export function normalizeRole(role: string | null | undefined): string {
 export const ROLE_GROUPS = {
   OWNER_DASHBOARD: ['owner'],
   ADMIN_DASHBOARD: ['owner', 'admin'],
-  TEACHER_DASHBOARD: ['teacher', 'admin'],
+  TEACHER_DASHBOARD: ['teacher', 'tutor', 'clinical_instructor', 'lecturer'],
   ACCOUNTANT_DASHBOARD: ['accountant', 'admin'],
   HEADTEACHER_DASHBOARD: ['head_teacher', 'deputy_head_teacher', 'admin'],
   SECRETARY_DASHBOARD: ['secretary', 'admin'],
@@ -63,6 +63,9 @@ export function roleToDashboard(role: string | null | undefined): string {
     case 'admin':
       return '/dashboard/admin';
     case 'teacher':
+    case 'tutor':
+    case 'clinical_instructor':
+    case 'lecturer':
       return '/dashboard/teacher';
     case 'student':
       return '/dashboard/student';

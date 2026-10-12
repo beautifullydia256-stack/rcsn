@@ -44,9 +44,7 @@ import { useTeacherContext } from "./useTeacherContext";
 import { ACCOUNTANT_PW_SHELL_CSS } from "../../lib/pwShellCss";
 import AdminContentSkeleton from "../../components/layout/AdminContentSkeleton";
 import TeacherMobileBottomNav from "../../components/layout/TeacherMobileBottomNav";
-import { hasRole, ROLE_GROUPS, normalizeRole, logRbacDecision } from "../../lib/rbac";
-import { useTeacherPersonaStore } from "../../store/teacherPersonaStore";
-import TeacherPersonaModal from "../../components/teacher/TeacherPersonaModal";
+import { hasRole, ROLE_GROUPS, normalizeRole, logRbacDecision, roleToDashboard } from "../../lib/rbac";
 const prefetchChunk = (importFn: () => Promise<unknown>) => {
   importFn().catch(() => {});
 };
@@ -95,10 +93,6 @@ export default function TeacherLayout() {
   const { teacherId, classesWithSubjects } = useTeacherContext();
   const { isTertiary } = useSchoolType();
 
-  const { simulatedTeacher, isSimulating, clearSimulatedTeacher } = useTeacherPersonaStore();
-  const [personaModalOpen, setPersonaModalOpen] = useState(false);
-  const isManagementRole = role === 'admin' || role === 'super_admin' || role === 'owner' || role === 'director_of_studies';
-
   const [examResultsOpen, setExamResultsOpen] = useState(false);
   const [openClass, setOpenClass] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -114,7 +108,7 @@ export default function TeacherLayout() {
   const chatUnread = useSchoolChatUnreadTotal(user?.id);
   const chatUnreadBadge = chatUnread > 0 ? (chatUnread > 99 ? "99+" : chatUnread) : null;
 
-  const displayLabel = simulatedTeacher?.name ?? user?.user_metadata?.name ?? user?.email ?? "Teacher";
+  const displayLabel = user?.user_metadata?.name ?? user?.email ?? "Teacher";
   const userInitials =
     displayLabel
       .split(/\s+/)
@@ -179,7 +173,7 @@ export default function TeacherLayout() {
 
   if (role && !allowed) {
     console.log(`[RBAC] Redirecting unauthorized role (${role}) from teacher dashboard`);
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={roleToDashboard(role) || "/dashboard"} replace />;
   }
 
   useEffect(() => {
@@ -654,9 +648,9 @@ export default function TeacherLayout() {
       </aside>
 
       <main className={`pw-main ${isTeacherMessages ? "pw-main--chat" : ""}`}>
-        {/* Top Utility Bar with Theme Toggle & Teacher Persona Controls */}
+        {/* Clean Top Status Bar */}
         <div
-          className="flex items-center justify-between flex-wrap gap-2 px-4 sm:px-6 lg:px-8 py-2.5 border-b"
+          className="flex items-center justify-between gap-2 px-3 sm:px-6 lg:px-8 py-2.5 border-b"
           style={{
             background: theme === "light" ? "#ffffff" : "#0D1512",
             borderColor: theme === "light" ? "rgba(10,40,28,0.08)" : "rgba(255,255,255,0.07)",
@@ -667,81 +661,7 @@ export default function TeacherLayout() {
               {isTertiary ? "Tutor Portal" : "Teacher Portal"}
             </span>
             <span>·</span>
-            <span>{displayLabel}</span>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            {isSimulating && simulatedTeacher && (
-              <div
-                className="flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium border"
-                style={{
-                  background: theme === 'light' ? 'rgba(18, 180, 118, 0.1)' : 'rgba(61, 232, 160, 0.1)',
-                  borderColor: theme === 'light' ? 'rgba(18, 180, 118, 0.3)' : 'rgba(61, 232, 160, 0.3)',
-                  color: theme === 'light' ? '#065F46' : '#3DE8A0',
-                }}
-              >
-                <UserCheck className="w-3.5 h-3.5 text-emerald-500" />
-                <span>Presenting as: <strong>{simulatedTeacher.name}</strong></span>
-                <button
-                  type="button"
-                  onClick={() => setPersonaModalOpen(true)}
-                  className="underline font-bold hover:opacity-80 ml-1 cursor-pointer"
-                >
-                  Switch
-                </button>
-                <span>·</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    clearSimulatedTeacher();
-                    navigate('/dashboard/admin');
-                  }}
-                  className="font-bold text-rose-500 hover:underline cursor-pointer"
-                >
-                  Exit to Admin
-                </button>
-              </div>
-            )}
-
-            {(isManagementRole || !teacherId) && !isSimulating && (
-              <button
-                type="button"
-                onClick={() => setPersonaModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all hover:scale-[1.02] cursor-pointer"
-                style={{
-                  background: 'rgba(234, 179, 8, 0.12)',
-                  borderColor: 'rgba(234, 179, 8, 0.35)',
-                  color: '#eab308',
-                }}
-              >
-                <Users className="w-3.5 h-3.5" />
-                <span>Select Teacher to Present</span>
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={handleToggleTheme}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-bold transition-all active:scale-95 shadow-sm cursor-pointer"
-              style={{
-                background: theme === "light" ? "#F7F9F7" : "#141F1A",
-                borderColor: theme === "light" ? "rgba(10,40,28,0.12)" : "rgba(255,255,255,0.12)",
-                color: theme === "light" ? "#0C1F17" : "#F2F7F4",
-              }}
-              title={theme === "light" ? "Switch to Dark Mode" : "Switch to White Mode"}
-            >
-              {theme === "light" ? (
-                <>
-                  <Moon className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Switch to Dark Mode</span>
-                </>
-              ) : (
-                <>
-                  <Sun className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Switch to White Mode</span>
-                </>
-              )}
-            </button>
+            <span className="truncate max-w-[200px] sm:max-w-none">{displayLabel}</span>
           </div>
         </div>
 
@@ -750,7 +670,7 @@ export default function TeacherLayout() {
             <Outlet />
           </Suspense>
         ) : (
-          <div className="px-4 py-6 sm:px-6 lg:px-8 pb-10 min-h-0">
+          <div className="px-2 sm:px-6 lg:px-8 py-3 sm:py-6 pb-16 min-h-0">
             <Suspense fallback={<AdminContentSkeleton />}>
               <Outlet />
             </Suspense>
@@ -758,10 +678,6 @@ export default function TeacherLayout() {
         )}
       </main>
       <TeacherMobileBottomNav chatUnread={chatUnread} />
-      <TeacherPersonaModal
-        isOpen={personaModalOpen}
-        onClose={() => setPersonaModalOpen(false)}
-      />
     </div>
   );
 }

@@ -629,9 +629,136 @@ export default function DesignTeacherDashboard() {
         </div>
       </NativeModal>
 
-      <div style={{ width: '100%', maxWidth: 'none', padding: '24px 28px', boxSizing: 'border-box' }}>
+      <style>{`
+        .td-dash-root {
+          width: 100%;
+          max-width: none;
+          padding: 20px 24px;
+          box-sizing: border-box;
+        }
+        .td-kpi-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 16px;
+          margin-bottom: 24px;
+        }
+        .td-quick-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+          gap: 12px;
+        }
+        .td-split-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+          gap: 20px;
+        }
+        @media (max-width: 1024px) {
+          .td-kpi-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 12px !important;
+          }
+        }
+        @media (max-width: 768px) {
+          .td-dash-root {
+            padding: 8px 2px !important;
+          }
+          .td-hero {
+            margin-bottom: 14px !important;
+            gap: 12px !important;
+          }
+          .td-hero h1 {
+            font-size: 20px !important;
+          }
+          .td-hero-actions {
+            width: 100% !important;
+            display: flex !important;
+            gap: 8px !important;
+          }
+          .td-hero-actions button {
+            flex: 1 1 0 !important;
+            justify-content: center !important;
+            padding: 9px 8px !important;
+            font-size: 11.5px !important;
+          }
+          .td-clockin-bar {
+            padding: 12px 14px !important;
+            gap: 10px !important;
+            margin-bottom: 16px !important;
+          }
+          .td-clockin-actions {
+            width: 100% !important;
+            display: flex !important;
+            gap: 8px !important;
+          }
+          .td-clockin-actions button {
+            flex: 1 1 auto !important;
+            justify-content: center !important;
+          }
+          .td-kpi-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 8px !important;
+            margin-bottom: 16px !important;
+          }
+          .td-kpi-card {
+            padding: 12px 10px !important;
+            border-radius: 14px !important;
+          }
+          .td-kpi-title {
+            font-size: 11px !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+          }
+          .td-kpi-head-icon {
+            width: 26px !important;
+            height: 26px !important;
+            border-radius: 7px !important;
+          }
+          .td-kpi-body {
+            flex-direction: column !important;
+            align-items: center !important;
+            gap: 8px !important;
+          }
+          .td-kpi-stats {
+            width: 100% !important;
+            font-size: 11px !important;
+          }
+          .td-kpi-foot {
+            margin-top: 10px !important;
+            padding-top: 8px !important;
+            font-size: 10.5px !important;
+          }
+          .td-quick-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 8px !important;
+          }
+          .td-quick-btn {
+            padding: 10px 10px !important;
+            gap: 8px !important;
+            border-radius: 10px !important;
+          }
+          .td-quick-btn-icon {
+            width: 30px !important;
+            height: 30px !important;
+            border-radius: 8px !important;
+          }
+          .td-quick-btn-title {
+            font-size: 12px !important;
+          }
+          .td-quick-btn-sub {
+            font-size: 10px !important;
+          }
+          .td-split-grid {
+            grid-template-columns: 1fr !important;
+            gap: 14px !important;
+          }
+        }
+      `}</style>
+
+      <div className="td-dash-root">
         {/* Top Greeting & Status Strip */}
         <div
+          className="td-hero"
           style={{
             display: 'flex',
             flexWrap: 'wrap',
@@ -673,7 +800,7 @@ export default function DesignTeacherDashboard() {
           </div>
 
           {/* Top Quick Actions */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div className="td-hero-actions" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <button
               type="button"
               onClick={() => refetch()}
@@ -722,6 +849,7 @@ export default function DesignTeacherDashboard() {
 
         {/* Clock-In / Daily Attendance Verification Bar */}
         <div
+          className="td-clockin-bar"
           style={{
             background: t.panel,
             border: `1px solid ${t.stroke}`,
@@ -785,7 +913,7 @@ export default function DesignTeacherDashboard() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="td-clockin-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {!punchState?.punch_in_time && (
               <button
                 type="button"
@@ -868,6 +996,7 @@ export default function DesignTeacherDashboard() {
 
         {/* Four Signature POS KPI Cards with Semi-Circle Progress Gauges */}
         <div
+          className="td-kpi-grid"
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
@@ -877,6 +1006,7 @@ export default function DesignTeacherDashboard() {
         >
           {/* Card 1: Attendance Today (Teal/Mint) */}
           <div
+            className="td-kpi-card"
             style={{
               background: cardGrad(t, 'mint'),
               border: `1px solid ${t.stroke}`,
@@ -890,8 +1020,9 @@ export default function DesignTeacherDashboard() {
           >
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <span style={{ fontSize: '13px', fontWeight: 600, color: t.textMid }}>Class Attendance</span>
+                <span className="td-kpi-title" style={{ fontSize: '13px', fontWeight: 600, color: t.textMid }}>Class Attendance</span>
                 <div
+                  className="td-kpi-head-icon"
                   style={{
                     width: '32px',
                     height: '32px',
@@ -907,7 +1038,7 @@ export default function DesignTeacherDashboard() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+              <div className="td-kpi-body" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
                 <SemiCircleGauge
                   percent={dashData?.attendPct ?? 0}
                   color={t.mint}
@@ -915,7 +1046,7 @@ export default function DesignTeacherDashboard() {
                   centerLabel={`${dashData?.attendPct ?? 0}%`}
                 />
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, fontSize: '12px' }}>
+                <div className="td-kpi-stats" style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, fontSize: '12px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: t.textMid }}>
                       <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: t.mint }} />
@@ -941,7 +1072,7 @@ export default function DesignTeacherDashboard() {
               </div>
             </div>
 
-            <div style={{ marginTop: '14px', paddingTop: '10px', borderTop: `1px solid ${t.divider}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px' }}>
+            <div className="td-kpi-foot" style={{ marginTop: '14px', paddingTop: '10px', borderTop: `1px solid ${t.divider}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px' }}>
               <span style={{ color: t.textLow }}>
                 {dashData?.attendRows?.length ? `${dashData.attendRows.length} marked today` : 'No records yet'}
               </span>
@@ -958,6 +1089,7 @@ export default function DesignTeacherDashboard() {
 
           {/* Card 2: Schemes & Syllabus (Sky/Blue) */}
           <div
+            className="td-kpi-card"
             style={{
               background: cardGrad(t, 'blue'),
               border: `1px solid ${t.stroke}`,
@@ -971,8 +1103,9 @@ export default function DesignTeacherDashboard() {
           >
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <span style={{ fontSize: '13px', fontWeight: 600, color: t.textMid }}>Scheme & Syllabus</span>
+                <span className="td-kpi-title" style={{ fontSize: '13px', fontWeight: 600, color: t.textMid }}>Scheme & Syllabus</span>
                 <div
+                  className="td-kpi-head-icon"
                   style={{
                     width: '32px',
                     height: '32px',
@@ -988,7 +1121,7 @@ export default function DesignTeacherDashboard() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+              <div className="td-kpi-body" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
                 <SemiCircleGauge
                   percent={dashData?.schemeProgressPct ?? 65}
                   color={t.blue}
@@ -996,7 +1129,7 @@ export default function DesignTeacherDashboard() {
                   centerLabel={`${dashData?.schemeProgressPct ?? 65}%`}
                 />
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, fontSize: '12px' }}>
+                <div className="td-kpi-stats" style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, fontSize: '12px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: t.textMid }}>
                       <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: t.blue }} />
@@ -1022,7 +1155,7 @@ export default function DesignTeacherDashboard() {
               </div>
             </div>
 
-            <div style={{ marginTop: '14px', paddingTop: '10px', borderTop: `1px solid ${t.divider}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px' }}>
+            <div className="td-kpi-foot" style={{ marginTop: '14px', paddingTop: '10px', borderTop: `1px solid ${t.divider}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px' }}>
               <span style={{ color: t.textLow }}>Term milestones</span>
               <button
                 type="button"
@@ -1037,6 +1170,7 @@ export default function DesignTeacherDashboard() {
 
           {/* Card 3: Assignments & Tasks (Amber/Gold) */}
           <div
+            className="td-kpi-card"
             style={{
               background: cardGrad(t, 'gold'),
               border: `1px solid ${t.stroke}`,
@@ -1050,8 +1184,9 @@ export default function DesignTeacherDashboard() {
           >
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <span style={{ fontSize: '13px', fontWeight: 600, color: t.textMid }}>Assignments & Grading</span>
+                <span className="td-kpi-title" style={{ fontSize: '13px', fontWeight: 600, color: t.textMid }}>Assignments & Grading</span>
                 <div
+                  className="td-kpi-head-icon"
                   style={{
                     width: '32px',
                     height: '32px',
@@ -1067,7 +1202,7 @@ export default function DesignTeacherDashboard() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+              <div className="td-kpi-body" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
                 <SemiCircleGauge
                   percent={dashData?.pendingSubmissionCount ? Math.min(100, dashData.pendingSubmissionCount * 15) : 0}
                   color={t.gold}
@@ -1075,7 +1210,7 @@ export default function DesignTeacherDashboard() {
                   centerLabel={`${dashData?.openAssignments ?? 0} active`}
                 />
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, fontSize: '12px' }}>
+                <div className="td-kpi-stats" style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, fontSize: '12px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: t.textMid }}>
                       <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: t.gold }} />
@@ -1101,7 +1236,7 @@ export default function DesignTeacherDashboard() {
               </div>
             </div>
 
-            <div style={{ marginTop: '14px', paddingTop: '10px', borderTop: `1px solid ${t.divider}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px' }}>
+            <div className="td-kpi-foot" style={{ marginTop: '14px', paddingTop: '10px', borderTop: `1px solid ${t.divider}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px' }}>
               <span style={{ color: t.textLow }}>
                 {dashData?.dueTodayCount ? `${dashData.dueTodayCount} due today` : 'No overdue tasks'}
               </span>
@@ -1118,6 +1253,7 @@ export default function DesignTeacherDashboard() {
 
           {/* Card 4: Daily Lesson Logs (Purple/Violet) */}
           <div
+            className="td-kpi-card"
             style={{
               background: cardGrad(t, 'purple'),
               border: `1px solid ${t.stroke}`,
@@ -1131,10 +1267,11 @@ export default function DesignTeacherDashboard() {
           >
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <span style={{ fontSize: '13px', fontWeight: 600, color: t.textMid }}>
+                <span className="td-kpi-title" style={{ fontSize: '13px', fontWeight: 600, color: t.textMid }}>
                   {isTertiary ? 'Practicum & Lecture Log' : 'Daily Lesson Log'}
                 </span>
                 <div
+                  className="td-kpi-head-icon"
                   style={{
                     width: '32px',
                     height: '32px',
@@ -1150,7 +1287,7 @@ export default function DesignTeacherDashboard() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+              <div className="td-kpi-body" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
                 <SemiCircleGauge
                   percent={dashData?.timetableToday?.length ? 100 : 0}
                   color="#A855F7"
@@ -1158,7 +1295,7 @@ export default function DesignTeacherDashboard() {
                   centerLabel={`${dashData?.timetableToday?.length ?? 0} periods`}
                 />
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, fontSize: '12px' }}>
+                <div className="td-kpi-stats" style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, fontSize: '12px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: t.textMid }}>
                       <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#A855F7' }} />
@@ -1182,7 +1319,7 @@ export default function DesignTeacherDashboard() {
               </div>
             </div>
 
-            <div style={{ marginTop: '14px', paddingTop: '10px', borderTop: `1px solid ${t.divider}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px' }}>
+            <div className="td-kpi-foot" style={{ marginTop: '14px', paddingTop: '10px', borderTop: `1px solid ${t.divider}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px' }}>
               <span style={{ color: t.textLow }}>Instruction evidence</span>
               <button
                 type="button"
@@ -1205,6 +1342,7 @@ export default function DesignTeacherDashboard() {
           </div>
 
           <div
+            className="td-quick-grid"
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
@@ -1213,6 +1351,7 @@ export default function DesignTeacherDashboard() {
           >
             <button
               type="button"
+              className="td-quick-btn"
               onClick={() => navigate('/dashboard/teacher/attendance')}
               style={{
                 display: 'flex',
@@ -1238,17 +1377,18 @@ export default function DesignTeacherDashboard() {
                 e.currentTarget.style.borderColor = t.stroke;
               }}
             >
-              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: `${t.mint}18`, color: t.mint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div className="td-quick-btn-icon" style={{ width: '36px', height: '36px', borderRadius: '10px', background: `${t.mint}18`, color: t.mint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <ClipboardCheck className="w-4 h-4" />
               </div>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: '13px' }}>Take Attendance</div>
-                <div style={{ fontSize: '11px', color: t.textMid }}>Mark class register</div>
+                <div className="td-quick-btn-title" style={{ fontWeight: 700, fontSize: '13px' }}>Take Attendance</div>
+                <div className="td-quick-btn-sub" style={{ fontSize: '11px', color: t.textMid }}>Mark class register</div>
               </div>
             </button>
 
             <button
               type="button"
+              className="td-quick-btn"
               onClick={() => navigate('/dashboard/teacher/assignments/create')}
               style={{
                 display: 'flex',
@@ -1274,17 +1414,18 @@ export default function DesignTeacherDashboard() {
                 e.currentTarget.style.borderColor = t.stroke;
               }}
             >
-              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: `${t.blue}18`, color: t.blue, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div className="td-quick-btn-icon" style={{ width: '36px', height: '36px', borderRadius: '10px', background: `${t.blue}18`, color: t.blue, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <PenTool className="w-4 h-4" />
               </div>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: '13px' }}>New Assignment</div>
-                <div style={{ fontSize: '11px', color: t.textMid }}>Homework & tasks</div>
+                <div className="td-quick-btn-title" style={{ fontWeight: 700, fontSize: '13px' }}>New Assignment</div>
+                <div className="td-quick-btn-sub" style={{ fontSize: '11px', color: t.textMid }}>Homework & tasks</div>
               </div>
             </button>
 
             <button
               type="button"
+              className="td-quick-btn"
               onClick={() => navigate('/dashboard/teacher/exam-results')}
               style={{
                 display: 'flex',
@@ -1310,17 +1451,18 @@ export default function DesignTeacherDashboard() {
                 e.currentTarget.style.borderColor = t.stroke;
               }}
             >
-              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: `${t.gold}18`, color: t.gold, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div className="td-quick-btn-icon" style={{ width: '36px', height: '36px', borderRadius: '10px', background: `${t.gold}18`, color: t.gold, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Trophy className="w-4 h-4" />
               </div>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: '13px' }}>Record Marks</div>
-                <div style={{ fontSize: '11px', color: t.textMid }}>Assessment marks</div>
+                <div className="td-quick-btn-title" style={{ fontWeight: 700, fontSize: '13px' }}>Record Marks</div>
+                <div className="td-quick-btn-sub" style={{ fontSize: '11px', color: t.textMid }}>Assessment marks</div>
               </div>
             </button>
 
             <button
               type="button"
+              className="td-quick-btn"
               onClick={() => navigate('/dashboard/teacher/lesson-log')}
               style={{
                 display: 'flex',
@@ -1346,18 +1488,19 @@ export default function DesignTeacherDashboard() {
                 e.currentTarget.style.borderColor = t.stroke;
               }}
             >
-              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(168,85,247,0.18)', color: '#A855F7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div className="td-quick-btn-icon" style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(168,85,247,0.18)', color: '#A855F7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Video className="w-4 h-4" />
               </div>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: '13px' }}>Daily Lesson Log</div>
-                <div style={{ fontSize: '11px', color: t.textMid }}>Photo verification</div>
+                <div className="td-quick-btn-title" style={{ fontWeight: 700, fontSize: '13px' }}>Daily Lesson Log</div>
+                <div className="td-quick-btn-sub" style={{ fontSize: '11px', color: t.textMid }}>Photo verification</div>
               </div>
             </button>
 
             {isTertiary && (
               <button
                 type="button"
+                className="td-quick-btn"
                 onClick={() => navigate('/dashboard/teacher/ward-postings')}
                 style={{
                   display: 'flex',
@@ -1383,12 +1526,12 @@ export default function DesignTeacherDashboard() {
                   e.currentTarget.style.borderColor = t.stroke;
                 }}
               >
-                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(99,102,241,0.18)', color: '#6366F1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div className="td-quick-btn-icon" style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(99,102,241,0.18)', color: '#6366F1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Stethoscope className="w-4 h-4" />
                 </div>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: '13px' }}>Ward Postings</div>
-                  <div style={{ fontSize: '11px', color: t.textMid }}>Clinical sign-offs</div>
+                  <div className="td-quick-btn-title" style={{ fontWeight: 700, fontSize: '13px' }}>Ward Postings</div>
+                  <div className="td-quick-btn-sub" style={{ fontSize: '11px', color: t.textMid }}>Clinical sign-offs</div>
                 </div>
               </button>
             )}
@@ -1397,6 +1540,7 @@ export default function DesignTeacherDashboard() {
 
         {/* Main Operational Split Grid */}
         <div
+          className="td-split-grid"
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
