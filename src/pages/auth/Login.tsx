@@ -562,10 +562,10 @@ export default function LoginPage() {
                 type="button"
                 onClick={handleInstallApp}
                 className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 text-white/90 hover:text-white border border-white/20 text-[11px] font-semibold backdrop-blur-sm transition-all shadow-sm active:scale-95 cursor-pointer"
-                title="Install RCSN School Portal on your phone or computer"
+                title="Install RCSN School Portal"
               >
                 <Smartphone className="w-3 h-3 text-emerald-300" />
-                <span>Install App on Phone</span>
+                <span>Install RCSN App</span>
               </button>
             </div>
           )}

@@ -1037,7 +1037,7 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-emerald-500/40 bg-emerald-50/70 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-bold text-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors shadow-sm"
               >
                 <Smartphone className="w-4 h-4 text-[#00873E] dark:text-emerald-400" />
-                <span>Install RCSN App on Phone</span>
+                <span>Install RCSN App</span>
               </button>
 
               <Link
