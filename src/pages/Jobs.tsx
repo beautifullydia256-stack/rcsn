@@ -1,115 +1,294 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import {
+  Briefcase,
+  MapPin,
+  Calendar,
+  Search,
+  ArrowRight,
+  CheckCircle2,
+  Share2,
+  Check,
+  Building2,
+  Mail,
+  ShieldCheck,
+  Award,
+  Users,
+} from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import RcsnNavbar from '@/components/website/RcsnNavbar';
+import RcsnFooter from '@/components/website/RcsnFooter';
+import SeoHead from '@/components/website/SeoHead';
 
 interface Job {
   job_id: string;
   school_id: string;
   title: string;
-  location: string;
-  description: string;
-  posted_by: string;
+  location: string | null;
+  description: string | null;
+  posted_by: string | null;
+  status: string;
   created_at: string;
 }
 
 export default function Jobs() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
     const fetchJobs = async () => {
       try {
-        const { data, error } = await supabase.from('jobs').select('*').order('created_at', { ascending: false });
+        const { data, error } = await supabase
+          .from('jobs')
+          .select('*')
+          .in('status', ['Open', 'open', 'Active', 'active'])
+          .order('created_at', { ascending: false });
+
         if (error) throw error;
-        setJobs(data || []);
+        if (isMounted) {
+          setJobs(data || []);
+        }
       } catch (e) {
         console.error('Error fetching jobs:', e);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
-    fetchJobs();
+
+    void fetchJobs();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
+  const filteredJobs = useMemo(() => {
+    if (!searchQuery.trim()) return jobs;
+    const q = searchQuery.toLowerCase();
+    return jobs.filter(
+      (j) =>
+        j.title.toLowerCase().includes(q) ||
+        (j.location && j.location.toLowerCase().includes(q)) ||
+        (j.description && j.description.toLowerCase().includes(q))
+    );
+  }, [jobs, searchQuery]);
+
+  const handleShare = (jobId: string) => {
+    const origin = window.location.origin;
+    const url = `${origin}/jobs/${jobId}/apply`;
+    navigator.clipboard.writeText(url);
+    setCopiedId(jobId);
+    setTimeout(() => setCopiedId(null), 2500);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
-      <nav className="bg-white dark:bg-slate-800 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Link to="/" className="flex items-center">
-              <h1 className="text-2xl font-bold text-blue-600">PwezaCore</h1>
-            </Link>
-            <div className="flex space-x-4">
-              <Link to="/" className="text-gray-600 dark:text-gray-300 hover:text-blue-600 transition-colors">Home</Link>
-              <Link to="/library" className="text-gray-600 dark:text-gray-300 hover:text-blue-600 transition-colors">Library</Link>
-              <Link to="/login" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">Sign In</Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-200">
+      <SeoHead
+        title="Careers & Job Vacancies | Rakai Community School of Nursing"
+        description="Explore career opportunities at Rakai Community School of Nursing. Apply online for clinical instructor, nurse tutor, medical lecturer, and staff positions."
+      />
 
-      <div className="bg-white dark:bg-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center">
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">Job Opportunities</h1>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-              Discover exciting career opportunities in education. Find your next role in schools across the region.
+      <RcsnNavbar />
+
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className="relative overflow-hidden bg-gradient-to-b from-[#004720] via-[#005C29] to-[#007033] text-white py-16 sm:py-20 lg:py-24">
+          <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px]" />
+          
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-5">
+            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 text-xs sm:text-sm font-bold uppercase tracking-wider">
+              <Briefcase className="w-4 h-4 text-emerald-300" />
+              <span>Institutional Careers & Vacancies</span>
+            </span>
+
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight max-w-4xl mx-auto">
+              Work With Rakai Community School of Nursing
+            </h1>
+
+            <p className="text-base sm:text-lg lg:text-xl text-emerald-100/90 max-w-3xl mx-auto leading-relaxed">
+              Join our dedicated team of healthcare educators, clinical preceptors, tutors, and administrative leaders. Shape the future of compassionate patient care in Uganda.
             </p>
-          </motion.div>
-        </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {loading ? (
-          <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-          </div>
-        ) : jobs.length === 0 ? (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12">
-            <div className="w-24 h-24 bg-gray-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6a2 2 0 01-2 2H8a2 2 0 01-2-2V8a2 2 0 012-2V6" />
-              </svg>
+            {/* Quick Stats Pills */}
+            <div className="pt-4 flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs sm:text-sm text-emerald-200 font-medium">
+              <span className="flex items-center gap-1.5 bg-black/20 backdrop-blur-sm px-3.5 py-1.5 rounded-full border border-white/10">
+                <Building2 className="w-4 h-4 text-emerald-300" />
+                <span>Rakai Town Campus</span>
+              </span>
+              <span className="flex items-center gap-1.5 bg-black/20 backdrop-blur-sm px-3.5 py-1.5 rounded-full border border-white/10">
+                <ShieldCheck className="w-4 h-4 text-emerald-300" />
+                <span>MoES & UNMEB Center: U028</span>
+              </span>
+              <span className="flex items-center gap-1.5 bg-black/20 backdrop-blur-sm px-3.5 py-1.5 rounded-full border border-white/10">
+                <Award className="w-4 h-4 text-amber-300" />
+                <span>20+ Years Excellence</span>
+              </span>
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Jobs Available</h3>
-            <p className="text-gray-600 dark:text-gray-300">There are currently no job openings. Check back later for new opportunities.</p>
-          </motion.div>
-        ) : (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-            {jobs.map((job, index) => (
+          </div>
+        </section>
+
+        {/* Content & Job Listings Area */}
+        <section className="py-12 sm:py-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+            {/* Search & Filter Toolbar */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+              <div className="relative w-full sm:max-w-md">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search by job title, department, or keyword…"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00873E]"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 self-start sm:self-auto text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-400">
+                <span>
+                  Showing <strong className="text-slate-900 dark:text-white">{filteredJobs.length}</strong> {filteredJobs.length === 1 ? 'vacancy' : 'vacancies'}
+                </span>
+              </div>
+            </div>
+
+            {/* List / Grid of Jobs */}
+            {loading ? (
+              <div className="py-20 flex flex-col items-center justify-center space-y-4">
+                <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                <p className="text-sm font-medium text-slate-500">Loading current vacancies from RCSN Registry…</p>
+              </div>
+            ) : filteredJobs.length === 0 ? (
               <motion.div
-                key={job.job_id}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                whileHover={{ y: -2 }}
-                className="bg-white dark:bg-slate-800 rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow border border-slate-100 dark:border-slate-700"
+                className="p-10 sm:p-16 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm text-center max-w-2xl mx-auto space-y-5"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-                  <div>
-                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">{job.title}</h3>
-                    <div className="flex items-center text-gray-600 dark:text-gray-300 mb-2">
-                      <span>{job.location || 'Location not specified'}</span>
-                    </div>
-                  </div>
-                  <div className="text-sm text-gray-500 mt-2 sm:mt-0">Posted {new Date(job.created_at).toLocaleDateString()}</div>
+                <div className="w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-[#00873E] dark:text-emerald-400 mx-auto flex items-center justify-center">
+                  <Briefcase className="w-8 h-8" />
                 </div>
-                <p className="text-gray-700 dark:text-gray-300 mb-4 line-clamp-3">{job.description || 'No description available.'}</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Posted by {job.posted_by}</span>
-                  <Link
-                    to={`/jobs/${job.job_id}/apply`}
-                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Apply
-                  </Link>
+                
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white">
+                  {searchQuery ? 'No Openings Match Your Search' : 'No Open Vacancies Currently Advertised'}
+                </h3>
+                
+                <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed">
+                  {searchQuery
+                    ? `No vacancies found matching "${searchQuery}". Please try another keyword or clear your search.`
+                    : 'Our team is fully staffed at this time. All new positions for nurse tutors, laboratory instructors, clinical mentors, and support personnel are posted live directly from our administrative panel.'}
+                </p>
+
+                <div className="pt-2 flex flex-wrap justify-center gap-3">
+                  {searchQuery ? (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="px-5 py-2.5 rounded-xl bg-slate-900 text-white text-xs sm:text-sm font-bold shadow hover:bg-black transition-colors"
+                    >
+                      Clear Search
+                    </button>
+                  ) : (
+                    <>
+                      <Link
+                        to="/contact"
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#00873E] text-white text-xs sm:text-sm font-bold shadow hover:bg-[#007033] transition-colors"
+                      >
+                        <Mail className="w-4 h-4" />
+                        <span>Inquire with HR Office</span>
+                      </Link>
+                      <Link
+                        to="/"
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs sm:text-sm font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                      >
+                        <span>Return to Home</span>
+                      </Link>
+                    </>
+                  )}
                 </div>
               </motion.div>
-            ))}
-          </motion.div>
-        )}
-      </div>
+            ) : (
+              <div className="space-y-5">
+                {filteredJobs.map((job, index) => (
+                  <motion.div
+                    key={job.job_id}
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-lg hover:border-emerald-500/40 transition-all flex flex-col md:flex-row md:items-center justify-between gap-6"
+                  >
+                    <div className="space-y-3.5 max-w-3xl">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 text-xs font-bold uppercase tracking-wider border border-emerald-500/20">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Actively Recruiting</span>
+                        </span>
+                        
+                        <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+                          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                          <span>Posted {new Date(job.created_at).toLocaleDateString()}</span>
+                        </span>
+                      </div>
+
+                      <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white leading-snug">
+                        {job.title}
+                      </h2>
+
+                      <div className="flex flex-wrap items-center gap-4 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+                        <span className="flex items-center gap-1.5">
+                          <MapPin className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span>{job.location || 'RCSN Main Campus, Rakai Town'}</span>
+                        </span>
+                        {job.posted_by && (
+                          <span className="flex items-center gap-1.5">
+                            <Users className="w-4 h-4 text-slate-400 shrink-0" />
+                            <span>HR Recruitment Desk</span>
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed line-clamp-3">
+                        {job.description || 'Join our clinical instructors and educators shaping healthcare practice in Uganda.'}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-3 shrink-0 pt-4 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-slate-800">
+                      <Link
+                        to={`/jobs/${job.job_id}/apply`}
+                        className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#00873E] hover:bg-[#007033] text-white text-sm font-bold shadow-md transition-all active:scale-[0.98] w-full sm:w-auto"
+                      >
+                        <span>Apply Online</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </Link>
+
+                      <button
+                        type="button"
+                        onClick={() => handleShare(job.job_id)}
+                        className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        title="Copy Application Link"
+                      >
+                        {copiedId === job.job_id ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            <span className="text-emerald-600 font-bold">Link Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Share2 className="w-3.5 h-3.5 text-slate-500" />
+                            <span>Share Link</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      </main>
+
+      <RcsnFooter />
     </div>
   );
 }

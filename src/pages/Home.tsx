@@ -18,7 +18,9 @@ import {
   ChevronRight,
   MessageCircle,
   Search,
+  Briefcase,
 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 import RcsnNavbar from '@/components/website/RcsnNavbar';
 import RcsnFooter from '@/components/website/RcsnFooter';
 import AdmissionsModal from '@/components/website/AdmissionsModal';
@@ -39,6 +41,42 @@ export default function Home() {
   const [contactMessage, setContactMessage] = useState('');
   const [contactSubmitted, setContactSubmitted] = useState(false);
   const [contactSubmitting, setContactSubmitting] = useState(false);
+
+  // Live public job vacancies posted from Admin panel
+  const [openJobs, setOpenJobs] = useState<Array<{
+    job_id: string;
+    title: string;
+    location: string | null;
+    description: string | null;
+    created_at: string;
+    status: string;
+  }>>([]);
+  const [jobsLoading, setJobsLoading] = useState(true);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    const fetchOpenJobs = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('jobs')
+          .select('job_id, title, location, description, created_at, status')
+          .in('status', ['Open', 'open', 'Active', 'active'])
+          .order('created_at', { ascending: false })
+          .limit(6);
+        if (!error && data && isMounted) {
+          setOpenJobs(data);
+        }
+      } catch (err) {
+        console.error('Error fetching open jobs:', err);
+      } finally {
+        if (isMounted) setJobsLoading(false);
+      }
+    };
+    void fetchOpenJobs();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const openAdmissionsWith = (programName?: string) => {
     setSelectedProgram(programName);
@@ -919,6 +957,122 @@ export default function Home() {
                 </div>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* ========================================================================= */}
+        {/* CAREERS & CURRENT JOB VACANCIES SECTION */}
+        {/* ========================================================================= */}
+        <section id="careers" className="py-20 lg:py-24 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
+          <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+              <div className="space-y-2 max-w-2xl">
+                <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#00873E] dark:text-emerald-400 uppercase tracking-widest bg-emerald-50 dark:bg-emerald-950/60 px-3 py-1 rounded-full border border-emerald-500/20">
+                  <Briefcase className="w-3.5 h-3.5" />
+                  <span>Work With Us • Careers & Vacancies</span>
+                </span>
+                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
+                  Join Our Clinical & Academic Team
+                </h2>
+                <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Help educate and mentor the next generation of healthcare leaders in Uganda. View active openings posted by our administration.
+                </p>
+              </div>
+
+              <Link
+                to="/jobs"
+                className="inline-flex items-center gap-2 self-start md:self-auto px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 hover:border-emerald-500 text-slate-800 dark:text-slate-200 text-sm font-bold transition-all hover:bg-emerald-50 dark:hover:bg-slate-800"
+              >
+                <span>View All Career Postings</span>
+                <ArrowRight className="w-4 h-4 text-emerald-600" />
+              </Link>
+            </div>
+
+            {jobsLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 animate-pulse h-48" />
+                ))}
+              </div>
+            ) : openJobs.length === 0 ? (
+              <div className="p-8 sm:p-12 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 text-center max-w-3xl mx-auto space-y-4">
+                <div className="w-14 h-14 rounded-2xl bg-emerald-100 dark:bg-emerald-950 text-[#00873E] dark:text-emerald-400 mx-auto flex items-center justify-center">
+                  <Briefcase className="w-7 h-7" />
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
+                  No Active Vacancies Advertised Currently
+                </h3>
+                <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+                  All current positions are filled. Our administration periodically advertises roles for Nurse Tutors, Clinical Instructors, Midwifery Specialists, and Support Staff.
+                </p>
+                <div className="pt-2 flex flex-wrap justify-center gap-3">
+                  <Link
+                    to="/contact"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-black text-white text-xs sm:text-sm font-bold shadow transition-colors"
+                  >
+                    <Mail className="w-4 h-4" />
+                    <span>Inquire with HR Office</span>
+                  </Link>
+                  <Link
+                    to="/about"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs sm:text-sm font-bold hover:bg-white dark:hover:bg-slate-800 transition-colors"
+                  >
+                    <span>About School Faculty</span>
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {openJobs.map((job) => (
+                  <div
+                    key={job.job_id}
+                    className="flex flex-col justify-between p-6 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm hover:shadow-xl hover:border-emerald-500/50 transition-all group"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-100/70 dark:bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          <span>Actively Recruiting</span>
+                        </span>
+                        <span className="text-xs text-slate-400">
+                          {new Date(job.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+
+                      <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white group-hover:text-[#00873E] dark:group-hover:text-emerald-400 transition-colors leading-snug">
+                        {job.title}
+                      </h3>
+
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                        <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span>{job.location || 'RCSN Main Campus, Rakai'}</span>
+                      </div>
+
+                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 line-clamp-3 leading-relaxed">
+                        {job.description || 'Join our committed faculty and clinical training staff at Rakai Community School of Nursing.'}
+                      </p>
+                    </div>
+
+                    <div className="pt-5 mt-5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
+                      <Link
+                        to={`/jobs/${job.job_id}/apply`}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#00873E] hover:bg-[#007033] text-white text-xs sm:text-sm font-bold shadow-sm transition-all"
+                      >
+                        <span>Apply Online</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
+
+                      <Link
+                        to="/jobs"
+                        className="text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                      >
+                        Details
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 

@@ -350,6 +350,7 @@ function AppRouteTree() {
           <Route path="/apps" element={<DownloadAppsPage />} />
           <Route path="/jobs" element={<JobsPage />} />
           <Route path="/jobs/:jobId/apply" element={<JobApplyPage />} />
+          <Route path="/jobs/apply/:jobId" element={<JobApplyPage />} />
           <Route path="/affiliate" element={<AffiliatePage />} />
           <Route path="/affiliate-terms" element={<AffiliateTermsPage />} />
           <Route path="/about" element={<AboutPage />} />

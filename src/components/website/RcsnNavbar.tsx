@@ -27,6 +27,7 @@ import {
   CheckCircle2,
   MessageCircle,
   Search,
+  Briefcase,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 
@@ -404,7 +405,7 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
                     <Link
                       to="/about#geography"
                       onClick={() => handleAnchorClick('/about#geography')}
-                      className="group p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-slate-800/80 transition-all flex items-start gap-3 col-span-2"
+                      className="group p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-slate-800/80 transition-all flex items-start gap-3"
                     >
                       <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-[#00873E] dark:text-emerald-400 shrink-0 group-hover:scale-105 transition-transform">
                         <MapPin className="w-4 h-4" />
@@ -414,7 +415,30 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
                           Location & Campus Setting
                         </h4>
                         <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-                          Serene grounds off Rakai–Byakabanda Road in Rakai Town Council near Rakai General Hospital.
+                          Serene grounds off Rakai–Byakabanda Road near Rakai Hospital.
+                        </p>
+                      </div>
+                    </Link>
+
+                    <Link
+                      to="/jobs"
+                      onClick={closeDropdown}
+                      className="group p-3.5 rounded-xl border border-emerald-500/30 bg-emerald-50/30 dark:bg-emerald-950/20 hover:border-emerald-500 hover:bg-emerald-50/70 dark:hover:bg-slate-800/90 transition-all flex items-start gap-3"
+                    >
+                      <div className="p-2 rounded-lg bg-emerald-500/20 text-[#00873E] dark:text-emerald-400 shrink-0 group-hover:scale-105 transition-transform">
+                        <Briefcase className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-[#00873E] dark:group-hover:text-emerald-400 transition-colors">
+                            Careers & Job Vacancies
+                          </h4>
+                          <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-emerald-600 text-white">
+                            Hiring
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                          Join our nursing faculty, clinical instructor pool, or hospital admin staff.
                         </p>
                       </div>
                     </Link>
@@ -974,6 +998,15 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
               >
                 <Search className="w-4 h-4 text-emerald-600" />
                 <span>Application Status</span>
+              </Link>
+
+              <Link
+                to="/jobs"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 font-bold text-sm bg-emerald-50/60 dark:bg-emerald-950/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
+              >
+                <Briefcase className="w-4 h-4 text-emerald-600" />
+                <span>Careers & Job Vacancies</span>
               </Link>
 
               <Link

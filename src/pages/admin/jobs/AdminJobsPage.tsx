@@ -140,7 +140,7 @@ export default function AdminJobsPage() {
 
   const handleCopyLink = (jobId: string) => {
     const origin = window.location.origin;
-    const link = `${origin}/jobs/apply/${jobId}`;
+    const link = `${origin}/jobs/${jobId}/apply`;
     navigator.clipboard.writeText(link);
     setCopiedId(jobId);
     setTimeout(() => setCopiedId(null), 2500);
