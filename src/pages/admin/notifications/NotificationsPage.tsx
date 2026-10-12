@@ -1,7 +1,13 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import React, { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Bell,
+  Briefcase,
+  MessageSquare,
+  GraduationCap,
+  Clock,
+  ArrowRight,
   Check,
   CheckCheck,
   History,
@@ -11,21 +17,22 @@ import {
   Send,
   CreditCard,
   UserPlus,
+  Search,
+  Filter,
+  CheckCircle2,
+  ExternalLink,
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { registerApiUrl } from '../../../lib/registerApiOrigin';
 import { useAuthStore } from '../../../store/authStore';
 import { useUIStore } from '../../../store/uiStore';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
+import { fetchMyConversations, schoolChatConversationsQueryKey } from '@/lib/schoolChatApi';
 import '@/assets/pwezacore-students-scoped.css';
 import './notificationsCenter.css';
 
 const FONT_HREF =
   'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap';
-
-const STALE_TIME_MS = 5 * 60 * 1000;
-
-const INBOX_QUERY_KEY = (userId: string) => ['admin', 'notifications', 'inbox', userId] as const;
 
 export async function fetchNotificationsPage(userId: string): Promise<{ schoolId: string }> {
   const { data } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
@@ -52,6 +59,20 @@ export async function fetchInAppNotificationsInbox(userId: string): Promise<InAp
   if (error) throw error;
   return (data || []) as InAppNotificationRow[];
 }
+
+export type UnifiedNotification = {
+  id: string;
+  source: 'job' | 'admission' | 'chat' | 'leave' | 'system';
+  title: string;
+  body: string | null;
+  category: string;
+  isRead: boolean;
+  createdAt: string;
+  targetUrl: string;
+  badge?: string;
+  referenceNo?: string | null;
+  metadata?: Record<string, unknown>;
+};
 
 export type NotificationHistoryRow = {
   log_id: string;
@@ -80,7 +101,7 @@ export async function fetchNotificationHistory(filter: HistoryFilter): Promise<N
 }
 
 type TabId = 'inbox' | 'tools' | 'history';
-type InboxFilter = 'all' | 'unread' | 'read';
+type AlertCategoryFilter = 'all' | 'unread' | 'job' | 'chat' | 'admission' | 'approval' | 'system';
 type BroadcastType = 'finance' | 'general';
 type Channel = 'sms' | 'whatsapp';
 type AudienceGroup = 'parents' | 'teachers' | 'students';
@@ -107,99 +128,58 @@ function formatTimeAgo(iso: string): string {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-function categoryAccent(category: string | null): { Icon: typeof Bell; gradient: string } {
-  const c = (category || '').toLowerCase();
-  if (c.includes('student')) return { Icon: UserPlus, gradient: 'linear-gradient(135deg,#10d9a8,#3d7eff)' };
-  if (c.includes('financ') || c.includes('fee') || c.includes('pay')) return { Icon: CreditCard, gradient: 'linear-gradient(135deg,#ffb547,#ff4f6a)' };
-  if (c.includes('exam') || c.includes('grade')) return { Icon: Check, gradient: 'linear-gradient(135deg,#9d7eff,#3d7eff)' };
-  return { Icon: Bell, gradient: 'linear-gradient(135deg,#3d7eff,#9d7eff)' };
-}
-
-function NotifListRow({
-  n,
-  unread,
-  onMarkRead,
-}: {
-  n: InAppNotificationRow;
-  unread: boolean;
-  onMarkRead?: () => void;
-}) {
-  const { Icon, gradient } = categoryAccent(n.category);
-  const body = (n.body || '').trim();
-
-  return (
-    <li
-      className={[
-        'rounded-2xl border border-[var(--nc-border)] transition-shadow hover:shadow-lg hover:shadow-black/20',
-        unread ? 'pw-notif-row-unread' : 'pw-notif-row-read',
-      ].join(' ')}
-    >
-      {unread ? (
-        <button
-          type="button"
-          onClick={onMarkRead}
-          className="flex w-full gap-3 sm:gap-4 p-4 sm:p-5 text-left min-h-[4.5rem] touch-manipulation"
-        >
-          <div className="pw-notif-avatar text-white shadow-inner" style={{ background: gradient }}>
-            <Icon className="h-5 w-5 sm:h-[22px] sm:w-[22px]" strokeWidth={2} aria-hidden />
-          </div>
-          <div className="min-w-0 flex-1 space-y-1">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <span className="font-semibold text-[15px] sm:text-base ac-text-primary leading-snug pr-2">{n.title}</span>
-              <span className="text-[11px] sm:text-xs tabular-nums ac-text-muted shrink-0">{formatTimeAgo(n.created_at)}</span>
-            </div>
-            {body ? <p className="text-sm leading-relaxed ac-text-secondary line-clamp-3">{body}</p> : null}
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              {n.category ? (
-                <span className="rounded-md bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#10d9a8]/90 ring-1 ring-white/10">
-                  {n.category}
-                </span>
-              ) : null}
-              <span className="text-[11px] font-medium text-[#10d9a8] sm:hidden">Tap to mark read</span>
-            </div>
-          </div>
-          <span
-            className="hidden sm:inline-flex mt-1 h-2 w-2 shrink-0 rounded-full bg-[#10d9a8] shadow-[0_0_10px_rgba(16,217,168,0.7)]"
-            aria-hidden
-          />
-        </button>
-      ) : (
-        <div className="flex gap-3 sm:gap-4 p-4 sm:p-5">
-          <div className="pw-notif-avatar text-white opacity-80" style={{ background: gradient }}>
-            <Icon className="h-5 w-5 sm:h-[22px] sm:w-[22px]" strokeWidth={2} aria-hidden />
-          </div>
-          <div className="min-w-0 flex-1 space-y-1">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <span className="font-medium text-[15px] sm:text-base ac-text-primary leading-snug">{n.title}</span>
-              <span className="text-[11px] sm:text-xs tabular-nums ac-text-muted shrink-0 text-right">
-                {formatTimeAgo(n.created_at)}
-              </span>
-            </div>
-            {body ? <p className="text-sm leading-relaxed ac-text-secondary/90 line-clamp-3">{body}</p> : null}
-          </div>
-        </div>
-      )}
-    </li>
-  );
-}
-
-function InboxSkeleton() {
-  return (
-    <div className="space-y-3 animate-pulse px-1">
-      {[1, 2, 3].map((i) => (
-        <div key={i} className="h-24 rounded-2xl bg-white/5 border border-white/10" />
-      ))}
-    </div>
-  );
+function getNotificationStyle(source: UnifiedNotification['source']) {
+  switch (source) {
+    case 'job':
+      return {
+        Icon: Briefcase,
+        bgLight: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+        bgDark: 'dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30',
+        actionLabel: 'Review Candidate Dossier',
+      };
+    case 'chat':
+      return {
+        Icon: MessageSquare,
+        bgLight: 'bg-sky-100 text-sky-800 border-sky-300',
+        bgDark: 'dark:bg-sky-500/20 dark:text-sky-300 dark:border-sky-500/30',
+        actionLabel: 'Open Conversation',
+      };
+    case 'admission':
+      return {
+        Icon: GraduationCap,
+        bgLight: 'bg-purple-100 text-purple-800 border-purple-300',
+        bgDark: 'dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-500/30',
+        actionLabel: 'Review Student Admission',
+      };
+    case 'leave':
+      return {
+        Icon: Clock,
+        bgLight: 'bg-amber-100 text-amber-900 border-amber-300',
+        bgDark: 'dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/30',
+        actionLabel: 'Process Leave Request',
+      };
+    default:
+      return {
+        Icon: Bell,
+        bgLight: 'bg-slate-100 text-slate-800 border-slate-300',
+        bgDark: 'dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+        actionLabel: 'View Alert Details',
+      };
+  }
 }
 
 export default function NotificationsPage() {
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const schoolId = useAuthStore((s) => s.schoolId);
   const theme = useUIStore((s) => s.theme);
   const isDark = theme === 'dark';
   const queryClient = useQueryClient();
+
   const [tab, setTab] = useState<TabId>('inbox');
-  const [inboxFilter, setInboxFilter] = useState<InboxFilter>('all');
+  const [categoryFilter, setCategoryFilter] = useState<AlertCategoryFilter>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [hideSeen, setHideSeen] = useState(false);
   const [markingAll, setMarkingAll] = useState(false);
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('failed');
 
@@ -207,7 +187,6 @@ export default function NotificationsPage() {
   const [broadcastType, setBroadcastType] = useState<BroadcastType>('finance');
   const [broadcastMessage, setBroadcastMessage] = useState('');
   const [channels, setChannels] = useState<Set<Channel>>(new Set<Channel>(['whatsapp']));
-  // selectedGroups: which individual groups are ticked; sendToAll: includes admins + all groups
   const [selectedGroups, setSelectedGroups] = useState<Set<AudienceGroup>>(new Set(['parents']));
   const [sendToAll, setSendToAll] = useState(false);
   const [broadcasting, setBroadcasting] = useState(false);
@@ -259,23 +238,176 @@ export default function NotificationsPage() {
     return () => { if (pollTimerRef.current) clearTimeout(pollTimerRef.current); };
   }, [processingQueue, waRemaining]);
 
-  const { isLoading: loadingToolsContext } = useQuery({
-    queryKey: ['admin', 'notifications', user?.id ?? ''],
-    queryFn: () => fetchNotificationsPage(user!.id),
-    enabled: !!user?.id,
-    staleTime: STALE_TIME_MS,
-  });
+  // Aggregate Unified Notifications
+  const {
+    data: unifiedNotifications = [],
+    isLoading: loadingNotifications,
+    isFetching: fetchingNotifications,
+    refetch: refetchNotifications,
+  } = useQuery({
+    queryKey: ['admin_unified_alerts_feed', user?.id, schoolId],
+    queryFn: async (): Promise<UnifiedNotification[]> => {
+      if (!user?.id) return [];
 
-  const { data: inboxItems = [], isLoading: inboxLoading, isFetching: inboxFetching } = useQuery({
-    queryKey: user?.id ? INBOX_QUERY_KEY(user.id) : ['admin', 'notifications', 'inbox', ''],
-    queryFn: () => fetchInAppNotificationsInbox(user!.id),
-    enabled: !!user?.id,
-    staleTime: 60 * 1000,
-  });
+      const targetSchoolId = schoolId || '';
 
-  const refreshInbox = () => {
-    if (user?.id) queryClient.invalidateQueries({ queryKey: INBOX_QUERY_KEY(user.id) });
-  };
+      const [inAppRes, jobsRes, admissionsRes, leavesRes, chatConv] = await Promise.all([
+        supabase
+          .from('user_in_app_notifications')
+          .select('id, title, body, category, read_at, created_at, metadata')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(100),
+        targetSchoolId
+          ? supabase
+              .from('hr_job_applications')
+              .select('id, job_id, full_name, email, phone, status, created_at, reference_no')
+              .eq('school_id', targetSchoolId)
+              .order('created_at', { ascending: false })
+              .limit(50)
+          : Promise.resolve({ data: [], error: null }),
+        targetSchoolId
+          ? supabase
+              .from('admission_applications')
+              .select('id, application_number, full_name, email, phone, status, created_at, admitted_program, intake')
+              .eq('school_id', targetSchoolId)
+              .order('created_at', { ascending: false })
+              .limit(50)
+          : Promise.resolve({ data: [], error: null }),
+        targetSchoolId
+          ? supabase
+              .from('hr_leave_requests')
+              .select('id, user_id, start_date, end_date, reason, status, created_at')
+              .eq('school_id', targetSchoolId)
+              .order('created_at', { ascending: false })
+              .limit(50)
+          : Promise.resolve({ data: [], error: null }),
+        fetchMyConversations().catch(() => []),
+      ]);
+
+      const items: UnifiedNotification[] = [];
+
+      // 1. Job Applications
+      if (jobsRes.data && Array.isArray(jobsRes.data)) {
+        jobsRes.data.forEach((app) => {
+          const isNew = (app.status || '').toLowerCase() === 'new';
+          items.push({
+            id: app.id,
+            source: 'job',
+            title: `Job Application: ${app.full_name}`,
+            body: `Submitted dossier for institutional vacancy. Contact: ${app.phone || app.email || 'N/A'}${
+              app.reference_no ? ` | Ref: ${app.reference_no}` : ''
+            }`,
+            category: 'Job Application',
+            isRead: !isNew,
+            createdAt: app.created_at,
+            targetUrl: `/dashboard/admin/jobs?openApp=${app.id}&jobId=${app.job_id}`,
+            badge: isNew ? 'New Application' : 'Reviewed',
+            referenceNo: app.reference_no,
+            metadata: { job_id: app.job_id, applicant_id: app.id },
+          });
+        });
+      }
+
+      // 2. Student Admissions
+      if (admissionsRes.data && Array.isArray(admissionsRes.data)) {
+        admissionsRes.data.forEach((adm) => {
+          const isPending =
+            (adm.status || '').toLowerCase() === 'pending' ||
+            (adm.status || '').toLowerCase() === 'new' ||
+            (adm.status || '').toLowerCase() === 'submitted';
+          items.push({
+            id: adm.id,
+            source: 'admission',
+            title: `Student Admission: ${adm.full_name}`,
+            body: `Applied for ${adm.admitted_program || 'Nursing & Midwifery'} (${adm.intake || 'Current Intake'}). App #: ${
+              adm.application_number || 'Pending'
+            }`,
+            category: 'Student Admission',
+            isRead: !isPending,
+            createdAt: adm.created_at,
+            targetUrl: `/dashboard/admin/admissions`,
+            badge: isPending ? 'Pending Intake Review' : adm.status,
+            referenceNo: adm.application_number,
+            metadata: { application_id: adm.id },
+          });
+        });
+      }
+
+      // 3. School Chat Messages
+      if (Array.isArray(chatConv)) {
+        chatConv.forEach((conv) => {
+          if (conv.unread_count > 0 || conv.last_body) {
+            items.push({
+              id: `chat_${conv.conversation_id}`,
+              source: 'chat',
+              title: `Direct Message: ${conv.peer_name}`,
+              body: conv.last_body ? `"${conv.last_body}"` : 'Sent you a direct communication in school chat.',
+              category: 'Chat Message',
+              isRead: conv.unread_count === 0,
+              createdAt: conv.last_at || new Date().toISOString(),
+              targetUrl: `/dashboard/admin/messages?with=${conv.peer_user_id}&conversation=${conv.conversation_id}`,
+              badge: conv.unread_count > 0 ? `${conv.unread_count} Unread` : 'Delivered',
+              metadata: {
+                conversation_id: conv.conversation_id,
+                peer_user_id: conv.peer_user_id,
+              },
+            });
+          }
+        });
+      }
+
+      // 4. Staff Leave Approvals
+      if (leavesRes.data && Array.isArray(leavesRes.data)) {
+        leavesRes.data.forEach((l) => {
+          const isPending = (l.status || '').toLowerCase() === 'pending';
+          items.push({
+            id: l.id,
+            source: 'leave',
+            title: `Staff Leave Approval Request`,
+            body: `Faculty leave requested from ${l.start_date} to ${l.end_date}. Reason: ${l.reason || 'Not specified'}`,
+            category: 'Staff Leave',
+            isRead: !isPending,
+            createdAt: l.created_at,
+            targetUrl: `/dashboard/admin/workforce/leave`,
+            badge: isPending ? 'Pending Approval' : l.status,
+            metadata: { leave_id: l.id },
+          });
+        });
+      }
+
+      // 5. In-App Notifications
+      if (inAppRes.data && Array.isArray(inAppRes.data)) {
+        inAppRes.data.forEach((n) => {
+          const isRead = !!n.read_at;
+          const targetUrl =
+            (n.metadata?.action_url as string) ||
+            (n.metadata?.target_url as string) ||
+            (n.metadata?.link as string) ||
+            '';
+          items.push({
+            id: n.id,
+            source: 'system',
+            title: n.title,
+            body: n.body,
+            category: n.category || 'System Alert',
+            isRead,
+            createdAt: n.created_at,
+            targetUrl,
+            badge: isRead ? 'Seen' : 'Unread',
+            metadata: n.metadata as Record<string, unknown>,
+          });
+        });
+      }
+
+      // Sort by newest first
+      items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      return items;
+    },
+    enabled: !!user?.id,
+    staleTime: 15 * 1000,
+    refetchInterval: 30 * 1000,
+  });
 
   const {
     data: historyLogs = [],
@@ -289,27 +421,105 @@ export default function NotificationsPage() {
     staleTime: 30 * 1000,
   });
 
-  const markRead = async (id: string) => {
-    const readAt = new Date().toISOString();
-    const { error } = await supabase.from('user_in_app_notifications').update({ read_at: readAt }).eq('id', id);
-    if (!error) {
-      queryClient.setQueryData<InAppNotificationRow[]>(INBOX_QUERY_KEY(user!.id), (prev) =>
-        (prev || []).map((n) => (n.id === id ? { ...n, read_at: readAt } : n))
-      );
+  // Filter and Search Calculations
+  const filteredNotifications = useMemo(() => {
+    return unifiedNotifications.filter((n) => {
+      // Category filter
+      if (categoryFilter === 'unread' && n.isRead) return false;
+      if (categoryFilter === 'job' && n.source !== 'job') return false;
+      if (categoryFilter === 'chat' && n.source !== 'chat') return false;
+      if (categoryFilter === 'admission' && n.source !== 'admission') return false;
+      if (categoryFilter === 'approval' && n.source !== 'leave') return false;
+      if (categoryFilter === 'system' && n.source !== 'system') return false;
+
+      // Hide seen toggle
+      if (hideSeen && n.isRead) return false;
+
+      // Search query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchTitle = n.title.toLowerCase().includes(q);
+        const matchBody = (n.body || '').toLowerCase().includes(q);
+        const matchCategory = n.category.toLowerCase().includes(q);
+        const matchRef = (n.referenceNo || '').toLowerCase().includes(q);
+        return matchTitle || matchBody || matchCategory || matchRef;
+      }
+
+      return true;
+    });
+  }, [unifiedNotifications, categoryFilter, hideSeen, searchQuery]);
+
+  const counts = useMemo(() => {
+    const total = unifiedNotifications.length;
+    const unread = unifiedNotifications.filter((n) => !n.isRead).length;
+    const job = unifiedNotifications.filter((n) => n.source === 'job').length;
+    const chat = unifiedNotifications.filter((n) => n.source === 'chat').length;
+    const admission = unifiedNotifications.filter((n) => n.source === 'admission').length;
+    const approval = unifiedNotifications.filter((n) => n.source === 'leave').length;
+    const system = unifiedNotifications.filter((n) => n.source === 'system').length;
+    return { total, unread, job, chat, admission, approval, system };
+  }, [unifiedNotifications]);
+
+  // Click Handler: Immediately Mark as Read/Reviewed & Navigate to Destination
+  const handleNotificationClick = async (notif: UnifiedNotification) => {
+    try {
+      // If unread, mark read in database
+      if (!notif.isRead) {
+        if (notif.source === 'job' && notif.metadata?.applicant_id) {
+          await supabase
+            .from('hr_job_applications')
+            .update({ status: 'reviewed' })
+            .eq('id', notif.metadata.applicant_id as string);
+        } else if (notif.source === 'system') {
+          await supabase
+            .from('user_in_app_notifications')
+            .update({ read_at: new Date().toISOString() })
+            .eq('id', notif.id);
+        }
+
+        // Optimistically update React Query cache
+        queryClient.setQueryData<UnifiedNotification[]>(
+          ['admin_unified_alerts_feed', user?.id, schoolId],
+          (prev) => (prev || []).map((item) => (item.id === notif.id ? { ...item, isRead: true } : item))
+        );
+        void queryClient.invalidateQueries({ queryKey: ['system-alerts-count'] });
+      }
+
+      // Navigate directly to target page
+      if (notif.targetUrl) {
+        navigate(notif.targetUrl);
+      }
+    } catch (err) {
+      console.error('Error handling notification click:', err);
+      if (notif.targetUrl) navigate(notif.targetUrl);
     }
   };
 
+  // Mark All As Read / Seen
   const markAllRead = async () => {
     if (!user?.id) return;
     setMarkingAll(true);
     try {
       const readAt = new Date().toISOString();
-      const { error } = await supabase
+
+      // Mark all in-app notifications
+      await supabase
         .from('user_in_app_notifications')
         .update({ read_at: readAt })
         .eq('user_id', user.id)
         .is('read_at', null);
-      if (!error) refreshInbox();
+
+      // Mark all pending new job applications as reviewed
+      if (schoolId) {
+        await supabase
+          .from('hr_job_applications')
+          .update({ status: 'reviewed' })
+          .eq('school_id', schoolId)
+          .eq('status', 'new');
+      }
+
+      await refetchNotifications();
+      void queryClient.invalidateQueries({ queryKey: ['system-alerts-count'] });
     } finally {
       setMarkingAll(false);
     }
@@ -326,7 +536,6 @@ export default function NotificationsPage() {
   // Audience helpers
   const toggleGroup = (group: AudienceGroup) => {
     if (sendToAll) {
-      // Deselecting one individual from "All" — keep others, drop All+admins
       setSendToAll(false);
       setSelectedGroups(new Set(ALL_INDIVIDUAL_GROUPS.filter((g) => g !== group)));
     } else {
@@ -348,7 +557,6 @@ export default function NotificationsPage() {
     }
   };
 
-  // What gets sent to the API
   const effectiveAudience: string[] = sendToAll
     ? ['parents', 'teachers', 'students', 'admins']
     : [...selectedGroups];
@@ -397,7 +605,6 @@ export default function NotificationsPage() {
       });
 
       if ((data.queued ?? 0) > 0) {
-        // Immediately trigger first batch of queue processing
         const sendRes = await fetch(registerApiUrl('/api/notifications/send'), { method: 'POST' });
         if (sendRes.ok) {
           const sendData = await sendRes.json() as {
@@ -419,44 +626,16 @@ export default function NotificationsPage() {
     }
   };
 
-  const unread = inboxItems.filter((n) => !n.read_at);
-  const showUnreadBlock = inboxFilter === 'all' || inboxFilter === 'unread';
-
-  if (loadingToolsContext && tab === 'tools') {
-    return (
-      <AdminPageWrapper>
-        <div className="pw-students print:bg-[#07090f]">
-          <div className="page flex min-h-[40vh] items-center justify-center">
-            <div className="h-12 w-12 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--teal)]" />
-          </div>
-        </div>
-      </AdminPageWrapper>
-    );
-  }
-
-  const inputClass = `ac-input w-full rounded-xl border px-3 py-2.5 text-sm ac-text-primary ${
+  const inputClass = `ac-input w-full rounded-xl border px-3 py-2.5 text-xs sm:text-sm ac-text-primary ${
     isDark
       ? 'border-white/10 bg-white/5 placeholder:text-white/45'
       : 'border-slate-300 bg-white placeholder:text-slate-400 shadow-sm'
-  } focus:outline-none focus:ring-2 focus:ring-[#10d9a8]/50`;
+  } focus:outline-none focus:ring-2 focus:ring-emerald-500/50`;
 
   const tabSegmentBtn = (id: TabId, label: string, icon: ReactNode, desc: string) => (
     <button key={id} type="button" data-active={tab === id} onClick={() => setTab(id)} title={desc}>
       {icon}
       <span className="truncate">{label}</span>
-    </button>
-  );
-
-  const filterChip = (id: InboxFilter, label: string, count?: number) => (
-    <button
-      key={id}
-      type="button"
-      data-on={inboxFilter === id}
-      className="pw-notif-chip"
-      onClick={() => setInboxFilter(id)}
-    >
-      {label}
-      {count != null ? <span className="tabular-nums opacity-80">({count})</span> : null}
     </button>
   );
 
@@ -466,205 +645,322 @@ export default function NotificationsPage() {
         className={`pw-students pw-notif-center print:bg-[#07090f] ${isDark ? 'dark' : 'light'}`}
         data-theme={isDark ? 'dark' : 'light'}
       >
-        <div className="page">
+        <div className="page space-y-5">
+          {/* Header Row */}
           <div className="page-header fade-up">
             <div className="page-title-block">
-              <div className="page-eyebrow">Notification registry</div>
-              <h1 className="page-title">Notifications</h1>
-              <p className="page-sub">Manage school alerts, inbox, and parent contacts.</p>
+              <div className="page-eyebrow">Institutional Alert Registry</div>
+              <h1 className="page-title text-slate-900 dark:text-white">Alerts &amp; Notifications</h1>
+              <p className="page-sub text-slate-600 dark:text-slate-400">
+                Track candidate job submissions, student admissions, school direct messages, and pending staff approvals.
+              </p>
             </div>
+
             <div className="page-actions print:hidden !flex-wrap gap-2 sm:gap-3">
+              {/* Live Count Pill */}
               <div
-                className="inline-flex items-center gap-2 px-3 py-2"
-                style={{
-                  borderRadius: 'var(--rs, 7px)',
-                  border: `1px solid ${isDark ? 'var(--border)' : '#e2e8f0'}`,
-                  background: isDark ? 'var(--s1)' : '#ffffff',
-                  boxShadow: isDark ? 'none' : '0 1px 2px rgba(0,0,0,0.04)',
-                }}
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs"
               >
-                <Bell className="h-4 w-4 shrink-0" style={{ color: 'var(--teal)' }} aria-hidden />
-                <span className="text-[13px] font-semibold tabular-nums" style={{ color: isDark ? 'var(--t1)' : '#0f172a' }}>
-                  {unread.length === 0 ? 'No new' : `${unread.length} new`}
+                <Bell className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
+                <span className="text-xs sm:text-sm font-bold tabular-nums text-slate-900 dark:text-white">
+                  {counts.unread === 0 ? 'All alerts caught up' : `${counts.unread} pending alerts`}
                 </span>
               </div>
+
               <button
                 type="button"
-                onClick={() => void refreshInbox()}
-                disabled={inboxFetching}
-                className="btn btn-ghost !px-3 !min-w-[44px] min-h-[44px] justify-center"
-                title="Refresh inbox"
+                onClick={() => void refetchNotifications()}
+                disabled={fetchingNotifications}
+                className="btn btn-ghost !px-3 !min-w-[42px] min-h-[42px] justify-center rounded-xl border border-slate-200 dark:border-slate-800"
+                title="Refresh alerts"
               >
-                <RefreshCw className={`h-4 w-4 ${inboxFetching ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`h-4 w-4 text-slate-700 dark:text-slate-300 ${fetchingNotifications ? 'animate-spin' : ''}`} />
               </button>
+
+              {/* Segmented Top Tabs */}
               <div className="pw-notif-segment w-full basis-full min-[900px]:basis-auto min-[900px]:w-[min(100%,24rem)] sm:max-w-lg">
-                {tabSegmentBtn('inbox', 'Inbox', <Inbox className="h-4 w-4 shrink-0 opacity-90" />, 'Inbox')}
-                {tabSegmentBtn('tools', 'Broadcast', <Send className="h-4 w-4 shrink-0 opacity-90" />, 'Broadcast')}
-                {tabSegmentBtn('history', 'History', <History className="h-4 w-4 shrink-0 opacity-90" />, 'Delivery history')}
+                {tabSegmentBtn('inbox', 'Alerts Inbox', <Inbox className="h-4 w-4 shrink-0 opacity-90" />, 'Alerts Feed')}
+                {tabSegmentBtn('tools', 'Broadcast', <Send className="h-4 w-4 shrink-0 opacity-90" />, 'Send Broadcast')}
+                {tabSegmentBtn('history', 'History', <History className="h-4 w-4 shrink-0 opacity-90" />, 'Delivery History')}
               </div>
             </div>
           </div>
 
+          {/* TAB 1: Unified Alerts Inbox */}
           {tab === 'inbox' && (
-            <div className="flex flex-col gap-6 lg:grid lg:grid-cols-12 lg:gap-8 xl:gap-10 lg:items-start">
-              <aside className="order-1 lg:order-2 lg:col-span-4 xl:col-span-3 space-y-4 lg:sticky lg:top-4 lg:self-start">
-                <div className={`${adminCardClass} !rounded-[20px] border ${isDark ? 'border-white/10' : 'border-slate-200 shadow-sm'} !p-4 sm:!p-5`}>
-                  <h2 className="text-sm font-semibold ac-text-primary sm:text-base mb-3">Filter</h2>
-                  <div className="flex flex-wrap gap-2">
-                    {filterChip('all', 'All', inboxItems.length)}
-                    {filterChip('unread', 'Unread', unread.length)}
+            <div className="flex flex-col gap-5 lg:grid lg:grid-cols-12 lg:gap-6 items-start">
+              {/* Sidebar Filters on Desktop / Top Controls on Mobile */}
+              <aside className="w-full lg:col-span-4 xl:col-span-3 space-y-3.5 lg:sticky lg:top-4">
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs space-y-3.5">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                      Filter Alerts
+                    </h2>
+                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                      {filteredNotifications.length} shown
+                    </span>
                   </div>
-                  {unread.length > 0 && inboxFilter !== 'read' && (
-                    <div className={`mt-4 border-t ${isDark ? 'border-white/10' : 'border-slate-200'} pt-4`}>
+
+                  {/* Search input */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Search alerts, candidate names, ref..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/70 pl-8.5 pr-3 py-1.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  {/* Category Pills */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { id: 'all' as const, label: 'All Alerts', count: counts.total },
+                      { id: 'unread' as const, label: 'Pending Only', count: counts.unread },
+                      { id: 'job' as const, label: 'Job Applications', count: counts.job },
+                      { id: 'chat' as const, label: 'Chat Messages', count: counts.chat },
+                      { id: 'admission' as const, label: 'Admissions', count: counts.admission },
+                      { id: 'approval' as const, label: 'Staff Leaves', count: counts.approval },
+                      { id: 'system' as const, label: 'System', count: counts.system },
+                    ].map((pill) => {
+                      const isActive = categoryFilter === pill.id;
+                      return (
+                        <button
+                          key={pill.id}
+                          type="button"
+                          onClick={() => setCategoryFilter(pill.id)}
+                          className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                            isActive
+                              ? 'bg-emerald-600 text-white shadow-xs dark:bg-emerald-500/25 dark:text-emerald-300 dark:border dark:border-emerald-500/40'
+                              : 'bg-slate-100 text-slate-700 hover:text-slate-900 hover:bg-slate-200 dark:bg-slate-800/80 dark:text-slate-400 dark:hover:text-white'
+                          }`}
+                        >
+                          <span>{pill.label}</span>
+                          <span className={`text-[10.5px] tabular-nums font-bold ${isActive ? 'text-emerald-100' : 'text-slate-500'}`}>
+                            ({pill.count})
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Actions & Hide Seen Toggle */}
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-700 dark:text-slate-300">
+                      <input
+                        type="checkbox"
+                        checked={hideSeen}
+                        onChange={(e) => setHideSeen(e.target.checked)}
+                        className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                      />
+                      <span>Hide seen / reviewed alerts</span>
+                    </label>
+
+                    {counts.unread > 0 && (
                       <button
                         type="button"
                         onClick={() => void markAllRead()}
                         disabled={markingAll}
-                        className={`w-full inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold touch-manipulation disabled:opacity-50 ${
-                          isDark
-                            ? 'border-[#10d9a8]/35 bg-[#10d9a8]/10 text-[#14f0bb] hover:bg-[#10d9a8]/18'
-                            : 'border-teal-500/30 bg-teal-50 text-teal-800 hover:bg-teal-100 shadow-sm'
-                        }`}
+                        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-300 dark:hover:bg-emerald-500/25 border border-emerald-300 dark:border-emerald-500/30 px-3.5 py-2 text-xs font-bold transition-all disabled:opacity-50"
                       >
                         <CheckCheck className="h-4 w-4" />
-                        {markingAll ? 'Marking…' : 'Mark all read'}
+                        <span>{markingAll ? 'Updating...' : 'Mark all as seen / reviewed'}</span>
                       </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </aside>
 
-              <div className="order-2 lg:order-1 lg:col-span-8 xl:col-span-9 min-w-0 space-y-6">
-                {inboxLoading ? (
-                  <InboxSkeleton />
-                ) : inboxItems.length === 0 ? (
-                  <div className={`${adminCardClass} !rounded-[20px] text-center py-14 sm:py-16 lg:py-20 border ${isDark ? 'border-white/10' : 'border-slate-200 shadow-sm'}`}>
-                    <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'bg-slate-100 border border-slate-200'}`}>
-                      <Inbox className="h-8 w-8 ac-text-muted" />
+              {/* Main Notification Stream */}
+              <div className="w-full lg:col-span-8 xl:col-span-9 min-w-0 space-y-3">
+                {loadingNotifications ? (
+                  <div className="space-y-3 animate-pulse">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="h-20 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10" />
+                    ))}
+                  </div>
+                ) : filteredNotifications.length === 0 ? (
+                  <div className="rounded-2xl text-center py-14 sm:py-16 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60">
+                      <CheckCircle2 className="h-7 w-7" />
                     </div>
-                    <p className="page-title mb-2" style={{ fontSize: '22px' }}>You&apos;re all caught up</p>
-                    <p className="page-sub max-w-md mx-auto">When the school adds events or enrollments, they will show up here.</p>
+                    <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                      All Caught Up!
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-sm mx-auto">
+                      {hideSeen || categoryFilter === 'unread'
+                        ? 'There are no pending alerts in this category.'
+                        : 'No alerts match your filter. When new job applications, chat messages, or admissions arrive, they will appear right here.'}
+                    </p>
                   </div>
                 ) : (
-                  <div className="space-y-8 sm:space-y-10">
-                    {showUnreadBlock && (
-                      <section aria-labelledby="notif-unread-heading">
-                        <h2 id="notif-unread-heading" className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider ac-text-muted sm:text-sm">
-                          <span className={`flex h-6 w-6 items-center justify-center rounded-lg ${isDark ? 'bg-[#10d9a8]/15' : 'bg-teal-50'}`}>
-                            <Bell className={`h-3.5 w-3.5 ${isDark ? 'text-[#10d9a8]' : 'text-teal-600'}`} />
-                          </span>
-                          New for you
-                          <span className={`ml-1 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums ${isDark ? 'bg-[#10d9a8]/20 text-[#14f0bb]' : 'bg-teal-100 text-teal-800'}`}>
-                            {unread.length}
-                          </span>
-                        </h2>
-                        {unread.length === 0 ? (
-                          <p className={`rounded-2xl border border-dashed px-4 py-8 text-center text-sm ac-text-muted ${isDark ? 'border-white/15 bg-white/[0.02]' : 'border-slate-300 bg-slate-50'}`}>
-                            No unread notifications.
-                          </p>
-                        ) : (
-                          <ul className="space-y-3">
-                            {unread.map((n) => (
-                              <NotifListRow key={n.id} n={n} unread onMarkRead={() => void markRead(n.id)} />
-                            ))}
-                          </ul>
-                        )}
-                      </section>
-                    )}
-                  </div>
+                  <ul className="space-y-2.5">
+                    {filteredNotifications.map((notif) => {
+                      const style = getNotificationStyle(notif.source);
+                      const IconComponent = style.Icon;
+
+                      return (
+                        <li key={notif.id}>
+                          <button
+                            type="button"
+                            onClick={() => void handleNotificationClick(notif)}
+                            className={`w-full text-left rounded-2xl p-3.5 sm:p-4.5 transition-all flex items-start gap-3 sm:gap-4 shadow-xs border ${
+                              !notif.isRead
+                                ? 'bg-white dark:bg-slate-900 border-emerald-400/60 dark:border-emerald-500/40 hover:border-emerald-500 hover:shadow-md'
+                                : 'bg-slate-50/80 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800/80 hover:bg-white dark:hover:bg-slate-900 hover:border-slate-300'
+                            }`}
+                          >
+                            {/* Color-coded Category Icon */}
+                            <div
+                              className={`h-9 w-9 sm:h-10 sm:w-10 rounded-xl border flex items-center justify-center shrink-0 mt-0.5 ${style.bgLight} ${style.bgDark}`}
+                            >
+                              <IconComponent className="h-4 w-4 sm:h-5 sm:w-5" />
+                            </div>
+
+                            {/* Content Block */}
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <div className="flex flex-wrap items-center justify-between gap-1.5">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white leading-tight">
+                                    {notif.title}
+                                  </span>
+
+                                  {/* Reference Number Badge if present */}
+                                  {notif.referenceNo && (
+                                    <span className="font-mono text-[10.5px] font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30">
+                                      REF: {notif.referenceNo}
+                                    </span>
+                                  )}
+
+                                  {/* Category Tag */}
+                                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 dark:bg-white/10 dark:text-slate-300 dark:border-white/10">
+                                    {notif.category}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className="text-[11px] tabular-nums font-medium text-slate-500 dark:text-slate-400">
+                                    {formatTimeAgo(notif.createdAt)}
+                                  </span>
+                                  {!notif.isRead && (
+                                    <span
+                                      className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] shrink-0"
+                                      title="Pending / Unread"
+                                    />
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Notification Body Preview */}
+                              {notif.body && (
+                                <p className="text-xs sm:text-[13px] text-slate-700 dark:text-slate-300 line-clamp-2 leading-relaxed">
+                                  {notif.body}
+                                </p>
+                              )}
+
+                              {/* Direct Navigation Action Prompt */}
+                              <div className="pt-1 flex items-center justify-between text-xs">
+                                <span className="inline-flex items-center gap-1 font-bold text-emerald-700 dark:text-emerald-400 group-hover:underline">
+                                  <span>{style.actionLabel}</span>
+                                  <ArrowRight className="h-3 w-3" />
+                                </span>
+
+                                {!notif.isRead && (
+                                  <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+                                    Clicking directly opens record &amp; marks as seen
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
                 )}
               </div>
             </div>
           )}
 
+          {/* TAB 2: SMS & WhatsApp Broadcast */}
           {tab === 'tools' && (
-            <div className="max-w-2xl space-y-4 sm:space-y-5">
-              <div className={`${adminCardClass} !rounded-[20px] !p-0 overflow-hidden border ${isDark ? 'border-white/10' : 'border-slate-200 shadow-sm'}`}>
-                <div className={`flex items-center gap-3 px-4 py-4 sm:px-5 sm:py-4 border-b ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
-                  <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${isDark ? 'bg-[#10d9a8]/15 text-[#10d9a8]' : 'bg-teal-50 text-teal-700'}`}>
+            <div className="max-w-2xl space-y-4">
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs">
+                <div className="flex items-center gap-3 px-4 py-4 sm:px-5 border-b border-slate-200 dark:border-slate-800">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
                     <Megaphone className="h-5 w-5" />
                   </span>
                   <div>
-                    <p className="font-semibold ac-text-primary">Broadcast announcement</p>
-                    <p className="text-xs ac-text-muted mt-0.5">Send SMS or WhatsApp messages directly to parents</p>
+                    <p className="font-bold text-slate-900 dark:text-white">Broadcast Announcement</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">Send SMS or WhatsApp communications to parents, tutors, and students.</p>
                   </div>
                 </div>
 
-                <div className="space-y-5 px-4 pb-6 pt-5 sm:px-5">
+                <div className="space-y-4 px-4 pb-6 pt-5 sm:px-5">
                   {/* Type selection */}
                   <div>
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide ac-text-muted">What to send</p>
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">Campaign Type</p>
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                      {(
-                        [
-                          {
-                            id: 'finance' as BroadcastType,
-                            title: 'Outstanding balance reminder',
-                            desc: "Automatically notify parents whose children have unpaid fees, with each child's balance amount.",
-                          },
-                          {
-                            id: 'general' as BroadcastType,
-                            title: 'General announcement',
-                            desc: 'Write your own message and send it to all parents in the school.',
-                          },
-                        ] as const
-                      ).map((opt) => (
+                      {[
+                        {
+                          id: 'finance' as BroadcastType,
+                          title: 'Outstanding Balance Reminder',
+                          desc: 'Notify sponsors/parents whose students have pending tuition fees.',
+                        },
+                        {
+                          id: 'general' as BroadcastType,
+                          title: 'General School Notice',
+                          desc: 'Send customized institutional memos and announcements.',
+                        },
+                      ].map((opt) => (
                         <button
                           key={opt.id}
                           type="button"
                           onClick={() => setBroadcastType(opt.id)}
-                          className={[
-                            'rounded-xl border p-3 text-left transition-colors touch-manipulation',
+                          className={`rounded-xl border p-3 text-left transition-colors ${
                             broadcastType === opt.id
-                              ? isDark ? 'border-[#10d9a8]/60 bg-[#10d9a8]/10' : 'border-teal-500 bg-teal-50 text-teal-900 shadow-sm'
-                              : isDark ? 'border-white/10 bg-white/5 hover:bg-white/[0.08]' : 'border-slate-200 bg-slate-50 hover:bg-slate-100',
-                          ].join(' ')}
+                              ? 'border-emerald-500 bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200'
+                              : 'border-slate-200 bg-slate-50 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-950/50'
+                          }`}
                         >
                           <span className="flex items-center gap-2 mb-1">
                             <span
-                              className={[
-                                'h-4 w-4 rounded-full border-2 shrink-0 flex items-center justify-center',
-                                broadcastType === opt.id ? 'border-[#10d9a8]' : isDark ? 'border-white/30' : 'border-slate-300',
-                              ].join(' ')}
+                              className={`h-4 w-4 rounded-full border-2 shrink-0 flex items-center justify-center ${
+                                broadcastType === opt.id ? 'border-emerald-600' : 'border-slate-300'
+                              }`}
                             >
-                              {broadcastType === opt.id && (
-                                <span className="h-2 w-2 rounded-full bg-[#10d9a8]" />
-                              )}
+                              {broadcastType === opt.id && <span className="h-2 w-2 rounded-full bg-emerald-600" />}
                             </span>
-                            <span className="text-sm font-semibold ac-text-primary">{opt.title}</span>
+                            <span className="text-xs font-bold text-slate-900 dark:text-white">{opt.title}</span>
                           </span>
-                          <p className="text-xs ac-text-muted pl-6">{opt.desc}</p>
+                          <p className="text-[11px] text-slate-600 dark:text-slate-400 pl-6">{opt.desc}</p>
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  {/* General-only options: audience + message */}
+                  {/* General broadcast recipient selection */}
                   {broadcastType === 'general' && (
                     <>
                       <div>
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide ac-text-muted">Send to</p>
+                        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">Target Audience</p>
                         <div className="flex flex-wrap gap-2">
-                          {/* All button */}
                           <button
                             type="button"
                             onClick={toggleAll}
-                            className={[
-                              'flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-colors touch-manipulation',
+                            className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold ${
                               sendToAll
-                                ? isDark ? 'border-[#10d9a8]/60 bg-[#10d9a8]/15 text-[#14f0bb]' : 'border-teal-500 bg-teal-50 text-teal-900 shadow-sm'
-                                : isDark ? 'border-white/15 bg-white/5 ac-text-secondary hover:bg-white/[0.08]' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100',
-                            ].join(' ')}
+                                ? 'border-emerald-500 bg-emerald-50 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-300'
+                                : 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-950'
+                            }`}
                           >
-                            <span className={[
-                              'h-4 w-4 rounded border-2 flex items-center justify-center shrink-0',
-                              sendToAll ? 'border-[#10d9a8] bg-[#10d9a8]' : isDark ? 'border-white/30' : 'border-slate-300',
-                            ].join(' ')}>
-                              {sendToAll && <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />}
+                            <span className={`h-3.5 w-3.5 rounded border flex items-center justify-center ${sendToAll ? 'bg-emerald-600 border-emerald-600' : 'border-slate-300'}`}>
+                              {sendToAll && <Check className="h-2.5 w-2.5 text-white" />}
                             </span>
-                            All <span className="text-xs font-normal opacity-70">(incl. admins)</span>
+                            All Audiences
                           </button>
-                          {/* Individual group buttons */}
+
                           {AUDIENCE_OPTIONS.map((opt) => {
                             const on = selectedGroups.has(opt.id);
                             return (
@@ -672,37 +968,29 @@ export default function NotificationsPage() {
                                 key={opt.id}
                                 type="button"
                                 onClick={() => toggleGroup(opt.id)}
-                                className={[
-                                  'flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition-colors touch-manipulation',
+                                className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold ${
                                   on
-                                    ? isDark ? 'border-[#10d9a8]/60 bg-[#10d9a8]/10 text-[#14f0bb]' : 'border-teal-500 bg-teal-50 text-teal-900 shadow-sm font-semibold'
-                                    : isDark ? 'border-white/15 bg-white/5 ac-text-secondary hover:bg-white/[0.08]' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100',
-                                ].join(' ')}
+                                    ? 'border-emerald-500 bg-emerald-50 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-300'
+                                    : 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-950'
+                                }`}
                               >
-                                <span className={[
-                                  'h-4 w-4 rounded border-2 flex items-center justify-center shrink-0',
-                                  on ? 'border-[#10d9a8] bg-[#10d9a8]' : isDark ? 'border-white/30' : 'border-slate-300',
-                                ].join(' ')}>
-                                  {on && <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />}
+                                <span className={`h-3.5 w-3.5 rounded border flex items-center justify-center ${on ? 'bg-emerald-600 border-emerald-600' : 'border-slate-300'}`}>
+                                  {on && <Check className="h-2.5 w-2.5 text-white" />}
                                 </span>
                                 {opt.label}
                               </button>
                             );
                           })}
                         </div>
-                        {effectiveAudience.length > 0 && (
-                          <p className="mt-2 text-[11px] ac-text-muted">
-                            Sending to: <span className={`${isDark ? 'text-[#10d9a8]' : 'text-teal-700'} font-medium`}>{audienceSummary}</span>
-                          </p>
-                        )}
                       </div>
+
                       <div>
-                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide ac-text-muted">
-                          Message
+                        <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
+                          Message Body
                         </label>
                         <textarea
-                          className={inputClass + ' min-h-[120px] resize-y'}
-                          placeholder="Type your announcement here… e.g. School will be closed on Friday for a sports day."
+                          className={inputClass + ' min-h-[100px] resize-y'}
+                          placeholder="Type your official announcement here..."
                           value={broadcastMessage}
                           onChange={(e) => setBroadcastMessage(e.target.value)}
                         />
@@ -712,180 +1000,115 @@ export default function NotificationsPage() {
 
                   {/* Channel selection */}
                   <div>
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide ac-text-muted">Send via</p>
-                    <div className="flex flex-wrap gap-3">
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">Dispatch Channels</p>
+                    <div className="flex flex-wrap gap-2.5">
                       {(['sms', 'whatsapp'] as Channel[]).map((ch) => (
                         <button
                           key={ch}
                           type="button"
                           onClick={() => toggleChannel(ch)}
-                          className={[
-                            'flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors touch-manipulation',
+                          className={`flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-bold transition-colors ${
                             channels.has(ch)
-                              ? isDark ? 'border-[#10d9a8]/60 bg-[#10d9a8]/10 text-[#14f0bb]' : 'border-teal-500 bg-teal-50 text-teal-900 shadow-sm font-semibold'
-                              : isDark ? 'border-white/15 bg-white/5 ac-text-secondary hover:bg-white/[0.08]' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100',
-                          ].join(' ')}
+                              ? 'border-emerald-500 bg-emerald-50 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-300'
+                              : 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-950'
+                          }`}
                         >
-                          <span
-                            className={[
-                              'h-4 w-4 rounded border-2 flex items-center justify-center shrink-0',
-                              channels.has(ch) ? 'border-[#10d9a8] bg-[#10d9a8]' : isDark ? 'border-white/30' : 'border-slate-300',
-                            ].join(' ')}
-                          >
-                            {channels.has(ch) && (
-                              <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />
-                            )}
+                          <span className={`h-3.5 w-3.5 rounded border flex items-center justify-center ${channels.has(ch) ? 'bg-emerald-600 border-emerald-600' : 'border-slate-300'}`}>
+                            {channels.has(ch) && <Check className="h-2.5 w-2.5 text-white" />}
                           </span>
-                          {ch === 'sms' ? 'SMS' : 'WhatsApp'}
+                          {ch === 'sms' ? 'SMS Messages' : 'WhatsApp Messages'}
                         </button>
                       ))}
                     </div>
-                    {channels.has('whatsapp') && (
-                      <p className="mt-2 text-[11px] ac-text-muted">
-                        WhatsApp messages are sent in batches of 20 every 30 seconds to stay within rate limits. Large lists will complete automatically in the background.
-                      </p>
-                    )}
                   </div>
 
-                  {/* Result / status */}
-                  {broadcastResult && (
-                    <div className={`rounded-xl border px-4 py-3 space-y-1 ${isDark ? 'border-[#10d9a8]/30 bg-[#10d9a8]/8' : 'border-teal-300 bg-teal-50'}`}>
-                      {broadcastResult.message ? (
-                        <p className="text-sm ac-text-secondary">{broadcastResult.message}</p>
-                      ) : (
-                        <>
-                          <p className={`text-sm font-semibold ${isDark ? 'text-[#14f0bb]' : 'text-teal-800'}`}>
-                            {broadcastResult.queued} message{broadcastResult.queued !== 1 ? 's' : ''} queued
-                            {broadcastResult.sms > 0 && broadcastResult.whatsapp > 0
-                              ? ` — ${broadcastResult.sms} SMS, ${broadcastResult.whatsapp} WhatsApp`
-                              : broadcastResult.sms > 0 ? ` — ${broadcastResult.sms} SMS` : ` — ${broadcastResult.whatsapp} WhatsApp`}
-                          </p>
-                          {processingQueue && waRemaining > 0 && (
-                            <p className="flex items-center gap-1.5 text-xs ac-text-muted">
-                              <RefreshCw className="h-3 w-3 animate-spin shrink-0" />
-                              Sending WhatsApp… {waRemaining} remaining (next batch in ~30 s)
-                            </p>
-                          )}
-                          {!processingQueue && waRemaining === 0 && broadcastResult.whatsapp > 0 && deliveryStats !== null && (
-                            deliveryStats.failed === 0 ? (
-                              <p className={`text-xs ${isDark ? 'text-[#10d9a8]' : 'text-emerald-700 font-semibold'}`}>
-                                All {deliveryStats.sent} WhatsApp message{deliveryStats.sent !== 1 ? 's' : ''} delivered.
-                              </p>
-                            ) : (
-                              <p className={`text-xs ${isDark ? 'text-amber-400' : 'text-amber-700 font-medium'}`}>
-                                {deliveryStats.sent} delivered, {deliveryStats.failed} failed
-                                {deliveryStats.failed > 0 ? ' (numbers may not be on WhatsApp)' : ''}.
-                              </p>
-                            )
-                          )}
-                        </>
-                      )}
-                    </div>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => void sendBroadcast()}
-                    disabled={broadcasting || channels.size === 0}
-                    className="w-full rounded-xl border border-[#10d9a8]/40 bg-[#10d9a8] py-3 text-sm font-semibold text-slate-900 hover:bg-[#14f0bb] disabled:opacity-50 sm:w-auto sm:px-8 touch-manipulation"
-                  >
-                    {broadcasting ? 'Sending…' : 'Send broadcast'}
-                  </button>
+                  {/* Submit Button */}
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      disabled={broadcasting}
+                      onClick={() => void sendBroadcast()}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#00873E] hover:bg-[#007033] text-white text-xs font-bold shadow-md transition-all disabled:opacity-50"
+                    >
+                      <Send className="h-3.5 w-3.5" />
+                      <span>{broadcasting ? 'Dispatching...' : 'Dispatch Broadcast'}</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
+          {/* TAB 3: Delivery History */}
           {tab === 'history' && (
-            <div className="max-w-3xl space-y-4 sm:space-y-5">
-              <div className={`${adminCardClass} !rounded-[20px] !p-0 overflow-hidden border ${isDark ? 'border-white/10' : 'border-slate-200 shadow-sm'}`}>
-                <div className={`flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-5 sm:py-4 border-b ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
-                  <div className="flex items-center gap-3">
-                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${isDark ? 'bg-[#10d9a8]/15 text-[#10d9a8]' : 'bg-teal-50 text-teal-700'}`}>
-                      <History className="h-5 w-5" />
-                    </span>
-                    <div>
-                      <p className="font-semibold ac-text-primary">Delivery history</p>
-                      <p className="text-xs ac-text-muted mt-0.5">Who was messaged, whether it sent, and why it failed</p>
-                    </div>
-                  </div>
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                {(['all', 'sent', 'pending', 'failed'] as HistoryFilter[]).map((f) => (
                   <button
+                    key={f}
                     type="button"
-                    onClick={() => void refetchHistory()}
-                    disabled={historyFetching}
-                    className="btn btn-ghost !px-3 !min-w-[40px] min-h-[40px] justify-center"
-                    title="Refresh"
+                    onClick={() => setHistoryFilter(f)}
+                    className={`rounded-lg px-3 py-1 text-xs font-semibold capitalize ${
+                      historyFilter === f
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400'
+                    }`}
                   >
-                    <RefreshCw className={`h-4 w-4 ${historyFetching ? 'animate-spin' : ''}`} />
+                    {f}
                   </button>
-                </div>
-
-                <div className="flex flex-wrap gap-2 px-4 pt-4 sm:px-5">
-                  {(['failed', 'all', 'sent', 'pending'] as const).map((f) => (
-                    <button
-                      key={f}
-                      type="button"
-                      data-on={historyFilter === f}
-                      className="pw-notif-chip"
-                      onClick={() => setHistoryFilter(f)}
-                    >
-                      {f.charAt(0).toUpperCase() + f.slice(1)}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="space-y-2 px-4 pb-6 pt-4 sm:px-5">
-                  {historyLoading ? (
-                    <div className="space-y-2 animate-pulse">
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className={`h-16 rounded-xl border ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-slate-100'}`} />
-                      ))}
-                    </div>
-                  ) : historyLogs.length === 0 ? (
-                    <p className={`rounded-2xl border border-dashed px-4 py-8 text-center text-sm ac-text-muted ${isDark ? 'border-white/15 bg-white/[0.02]' : 'border-slate-300 bg-slate-50'}`}>
-                      No {historyFilter !== 'all' ? historyFilter : ''} messages found.
-                    </p>
-                  ) : (
-                    historyLogs.map((log) => (
-                      <div key={log.log_id} className={`rounded-xl border px-4 py-3 ${isDark ? 'border-white/10 bg-white/[0.03]' : 'border-slate-200 bg-white shadow-sm'}`}>
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold ac-text-primary truncate">
-                              {log.recipient_name || 'Unknown recipient'}
-                              {log.recipient_role ? (
-                                <span className={`ml-1.5 text-[10px] font-semibold uppercase tracking-wide ${isDark ? 'text-[#10d9a8]/80' : 'text-teal-700'}`}>
-                                  ({log.recipient_role})
-                                </span>
-                              ) : null}
-                            </p>
-                            <p className="text-xs ac-text-muted tabular-nums">{log.recipient}</p>
-                          </div>
-                          <span
-                            className={[
-                              'rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide shrink-0',
-                              log.status === 'failed'
-                                ? 'bg-red-500/15 text-red-500'
-                                : log.status === 'sent'
-                                ? isDark ? 'bg-[#10d9a8]/15 text-[#10d9a8]' : 'bg-teal-50 text-teal-800 border border-teal-200'
-                                : isDark ? 'bg-amber-500/15 text-amber-400' : 'bg-amber-50 text-amber-800 border border-amber-200',
-                            ].join(' ')}
-                          >
-                            {log.status}
-                          </span>
-                        </div>
-                        {log.error_message ? (
-                          <p className="mt-1.5 text-xs text-red-500 font-medium">{log.error_message}</p>
-                        ) : null}
-                        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] ac-text-muted">
-                          <span className="uppercase">{log.notification_type}</span>
-                          {log.category ? <span>· {log.category}</span> : null}
-                          <span>· {formatTimeAgo(log.sent_at || log.created_at)}</span>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
+                ))}
               </div>
+
+              {historyLoading ? (
+                <div className="p-8 text-center text-xs text-slate-500">Loading delivery logs...</div>
+              ) : historyLogs.length === 0 ? (
+                <div className="p-12 text-center rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-500">
+                  No delivery logs recorded for this filter.
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 dark:bg-slate-950/60 border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase">
+                        <tr>
+                          <th className="p-3">Recipient</th>
+                          <th className="p-3">Channel</th>
+                          <th className="p-3">Status</th>
+                          <th className="p-3">Time</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
+                        {historyLogs.map((log) => (
+                          <tr key={log.log_id} className="hover:bg-slate-50 dark:hover:bg-white/5">
+                            <td className="p-3 font-medium text-slate-900 dark:text-white">
+                              {log.recipient_name || log.recipient}
+                            </td>
+                            <td className="p-3 text-slate-600 dark:text-slate-400 uppercase font-semibold">
+                              {log.notification_type}
+                            </td>
+                            <td className="p-3">
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                  log.status === 'sent'
+                                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300'
+                                    : log.status === 'failed'
+                                    ? 'bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-500/20 dark:text-rose-300'
+                                    : 'bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-500/20 dark:text-amber-300'
+                                }`}
+                              >
+                                {log.status}
+                              </span>
+                            </td>
+                            <td className="p-3 tabular-nums text-slate-500 dark:text-slate-400">
+                              {new Date(log.created_at).toLocaleDateString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

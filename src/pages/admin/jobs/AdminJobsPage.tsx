@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
@@ -77,6 +78,10 @@ export default function AdminJobsPage() {
   const isDark = theme === 'dark';
   const t = getTokens(isDark);
   const queryClient = useQueryClient();
+
+  const [searchParams] = useSearchParams();
+  const paramJobId = searchParams.get('jobId');
+  const paramOpenApp = searchParams.get('openApp');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'Open' | 'Pending' | 'Closed'>('all');
@@ -177,6 +182,7 @@ export default function AdminJobsPage() {
         if (!applicantFilterQuery.trim()) return true;
         const q = applicantFilterQuery.toLowerCase();
         return (
+          a.id === applicantFilterQuery ||
           a.full_name?.toLowerCase().includes(q) ||
           a.email?.toLowerCase().includes(q) ||
           (a.phone && a.phone.includes(q)) ||
@@ -184,6 +190,33 @@ export default function AdminJobsPage() {
         );
       });
   }, [applications, activeReviewJob, applicantFilterQuery]);
+
+  // Deep-linking: auto-open job or candidate dossier from notification click
+  useEffect(() => {
+    if (!jobs || jobs.length === 0) return;
+
+    if (paramOpenApp && applications.length > 0) {
+      const matchedApp = applications.find((a) => a.id === paramOpenApp);
+      if (matchedApp) {
+        const matchedJob = jobs.find((j) => j.job_id === matchedApp.job_id);
+        if (matchedJob) {
+          setActiveReviewJob(matchedJob);
+          setApplicantFilterQuery(matchedApp.id);
+          if (matchedApp.status === 'new') {
+            void updateApplicantStatus(matchedApp.id, 'reviewed');
+          }
+          return;
+        }
+      }
+    }
+
+    if (paramJobId) {
+      const matchedJob = jobs.find((j) => j.job_id === paramJobId);
+      if (matchedJob) {
+        setActiveReviewJob(matchedJob);
+      }
+    }
+  }, [jobs, applications, paramJobId, paramOpenApp]);
 
   // KPI Calculations
   const stats = useMemo(() => {

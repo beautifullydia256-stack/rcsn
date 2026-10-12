@@ -39,6 +39,7 @@ import HeadTeacherMobileBottomNav from './HeadTeacherMobileBottomNav';
 import { supabase } from '../../lib/supabase';
 import { logoutWithSyncCheck } from '../../lib/logoutWithSyncCheck';
 import { useSchoolChatUnreadTotal } from '../../hooks/useSchoolChatUnreadTotal';
+import { useSystemAlertsCount } from '@/hooks/useSystemAlertsCount';
 import { usePwezaStore } from '../../store/pwezaStore';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
@@ -215,7 +216,9 @@ export default function HeadTeacherLayout() {
   const authUserId = useAuthStore((s) => s.user?.id);
   const role = useAuthStore((s) => s.role);
   const showBackToAdminDashboard = role === "admin";
+  const currentSchoolId = useAuthStore((s) => s.schoolId);
   const chatUnread = useSchoolChatUnreadTotal(authUserId ?? undefined);
+  const systemAlerts = useSystemAlertsCount(authUserId, currentSchoolId);
   const chatUnreadBadge =
     chatUnread > 0 ? (chatUnread > 99 ? '99+' : chatUnread) : undefined;
   const theme = useUIStore((s) => s.theme);
@@ -405,7 +408,7 @@ export default function HeadTeacherLayout() {
               onPrefetch={onPrefetchNav}
             />
             <NavItem to="/dashboard/academic-registrar/calendar" icon={<CalendarDays className="w-4 h-4 text-teal-400" />} label="School Calendar &amp; Planner" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/academic-registrar/notifications" icon={<Bell className="w-4 h-4" />} label="Notifications" badge={notifCount ?? undefined} badgeColor="amber" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/academic-registrar/notifications" icon={<Bell className="w-4 h-4" />} label="Alerts &amp; Notifications" badge={systemAlerts.total > 0 ? (systemAlerts.total > 99 ? '99+' : systemAlerts.total) : undefined} badgeColor="rose" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem
               to="/dashboard/academic-registrar/profile"
               icon={<UserCheck className="w-4 h-4" />}
@@ -597,7 +600,7 @@ export default function HeadTeacherLayout() {
           </div>
         </main>
 
-        <HeadTeacherMobileBottomNav notifCount={notifCount} onPrefetch={onPrefetchNav} />
+        <HeadTeacherMobileBottomNav notifCount={systemAlerts.total} onPrefetch={onPrefetchNav} />
       </div>
     </>
   );

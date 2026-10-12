@@ -418,6 +418,7 @@ export default function SchoolChatPage() {
   }, [user?.user_metadata?.name, user?.email]);
   const [searchParams, setSearchParams] = useSearchParams();
   const withUserId = searchParams.get('with');
+  const paramConvId = searchParams.get('conversation');
 
   const embedded = /\/(admin|teacher|parent|student|accountant)\/messages/.test(location.pathname);
   const uiTheme = useUIStore((s) => s.theme);
@@ -484,6 +485,20 @@ export default function SchoolChatPage() {
   useEffect(() => {
     if (selectedConv) setPeerPreview(null);
   }, [selectedConv]);
+
+  // Deep-linking: auto-open specific conversation from notification alert
+  useEffect(() => {
+    if (paramConvId) {
+      setSelectedId(paramConvId);
+      setMobileThread(true);
+    } else if (withUserId && conversations.length > 0) {
+      const existing = conversations.find((c) => c.peer_user_id === withUserId);
+      if (existing) {
+        setSelectedId(existing.conversation_id);
+        setMobileThread(true);
+      }
+    }
+  }, [paramConvId, withUserId, conversations]);
 
   useEffect(() => {
     setSendError(null);
