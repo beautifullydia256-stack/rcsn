@@ -62,6 +62,7 @@ export default function AccountsPage() {
   const schoolId = useAuthStore((s) => s.schoolId);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [page, setPage] = useState(1);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [toggling, setToggling] = useState<string | null>(null);
@@ -72,25 +73,6 @@ export default function AccountsPage() {
   const [editExtraRoles, setEditExtraRoles] = useState<string[]>([]);
   const [savingRoles, setSavingRoles] = useState(false);
 
-  const roleOptions = useMemo(() => [
-    { value: '', label: 'All roles' },
-    { value: 'admin', label: getRoleTitle('admin', schoolType) },
-    { value: 'head_teacher', label: getRoleTitle('head_teacher', schoolType) },
-    { value: 'deputy_head_teacher', label: getRoleTitle('deputy_head_teacher', schoolType) },
-    { value: 'dos', label: getRoleTitle('dos', schoolType) },
-    { value: 'deputy_dos', label: getRoleTitle('deputy_dos', schoolType) },
-    { value: 'accountant', label: getRoleTitle('accountant', schoolType) },
-    { value: 'teacher', label: getRoleTitle('teacher', schoolType) },
-    { value: 'secretary', label: getRoleTitle('secretary', schoolType) },
-    { value: 'librarian', label: 'Librarian' },
-    { value: 'lab_technician', label: getRoleTitle('lab_technician', schoolType) },
-    { value: 'clinician', label: getRoleTitle('clinician', schoolType) },
-    { value: 'student', label: getRoleTitle('student', schoolType) },
-    { value: 'parent', label: getRoleTitle('parent', schoolType) },
-  ], [schoolType]);
-
-  const assignableRoles = useMemo(() => getAllAssignableRoles(schoolType), [schoolType]);
-
   const { data: accounts = [], isLoading } = useQuery({
     queryKey: ['admin', 'accounts', authUser?.id ?? ''],
     queryFn: () => fetchAccounts(authUser!.id),
@@ -98,6 +80,43 @@ export default function AccountsPage() {
     staleTime: ADMIN_STALE_TIME_MS,
     gcTime: ADMIN_GC_TIME_MS,
   });
+
+  const kpiTeachers = useMemo(() => accounts.filter((a) => a.role === 'teacher').length, [accounts]);
+  const kpiParents = useMemo(() => accounts.filter((a) => a.role === 'parent').length, [accounts]);
+  const kpiActive = useMemo(() => accounts.filter((a) => a.is_active !== false).length, [accounts]);
+
+  const roleCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const a of accounts) {
+      if (a.role) counts[a.role] = (counts[a.role] || 0) + 1;
+    }
+    return counts;
+  }, [accounts]);
+
+  const roleOptions = useMemo(() => [
+    { value: '', label: `All roles (${accounts.length})` },
+    { value: 'admin', label: `${getRoleTitle('admin', schoolType)}${roleCounts.admin ? ` (${roleCounts.admin})` : ''}` },
+    { value: 'head_teacher', label: `${getRoleTitle('head_teacher', schoolType)}${roleCounts.head_teacher ? ` (${roleCounts.head_teacher})` : ''}` },
+    { value: 'deputy_head_teacher', label: `${getRoleTitle('deputy_head_teacher', schoolType)}${roleCounts.deputy_head_teacher ? ` (${roleCounts.deputy_head_teacher})` : ''}` },
+    { value: 'dos', label: `${getRoleTitle('dos', schoolType)}${roleCounts.dos ? ` (${roleCounts.dos})` : ''}` },
+    { value: 'deputy_dos', label: `${getRoleTitle('deputy_dos', schoolType)}${roleCounts.deputy_dos ? ` (${roleCounts.deputy_dos})` : ''}` },
+    { value: 'accountant', label: `${getRoleTitle('accountant', schoolType)}${roleCounts.accountant ? ` (${roleCounts.accountant})` : ''}` },
+    { value: 'teacher', label: `${getRoleTitle('teacher', schoolType)}${roleCounts.teacher ? ` (${roleCounts.teacher})` : ''}` },
+    { value: 'secretary', label: `${getRoleTitle('secretary', schoolType)}${roleCounts.secretary ? ` (${roleCounts.secretary})` : ''}` },
+    { value: 'librarian', label: `Librarian${roleCounts.librarian ? ` (${roleCounts.librarian})` : ''}` },
+    { value: 'lab_technician', label: `${getRoleTitle('lab_technician', schoolType)}${roleCounts.lab_technician ? ` (${roleCounts.lab_technician})` : ''}` },
+    { value: 'clinician', label: `${getRoleTitle('clinician', schoolType)}${roleCounts.clinician ? ` (${roleCounts.clinician})` : ''}` },
+    { value: 'student', label: `${getRoleTitle('student', schoolType)}${roleCounts.student ? ` (${roleCounts.student})` : ''}` },
+    { value: 'parent', label: `${getRoleTitle('parent', schoolType)}${roleCounts.parent ? ` (${roleCounts.parent})` : ''}` },
+  ], [schoolType, accounts.length, roleCounts]);
+
+  const statusOptions = useMemo(() => [
+    { value: 'all', label: 'All statuses' },
+    { value: 'active', label: `Active (${kpiActive})` },
+    { value: 'inactive', label: `Inactive (${accounts.length - kpiActive})` },
+  ], [kpiActive, accounts.length]);
+
+  const assignableRoles = useMemo(() => getAllAssignableRoles(schoolType), [schoolType]);
 
   const filteredAccounts = useMemo(() => {
     let result = accounts;
@@ -111,12 +130,14 @@ export default function AccountsPage() {
       );
     }
     if (roleFilter) result = result.filter((a) => a.role === roleFilter);
+    if (statusFilter === 'active') result = result.filter((a) => a.is_active !== false);
+    if (statusFilter === 'inactive') result = result.filter((a) => a.is_active === false);
     return result;
-  }, [accounts, searchQuery, roleFilter]);
+  }, [accounts, searchQuery, roleFilter, statusFilter]);
 
   useEffect(() => {
     setPage(1);
-  }, [searchQuery, roleFilter]);
+  }, [searchQuery, roleFilter, statusFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredAccounts.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -131,10 +152,6 @@ export default function AccountsPage() {
 
   const startIdx = filteredAccounts.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
   const endIdx = Math.min(safePage * PAGE_SIZE, filteredAccounts.length);
-
-  const kpiTeachers = useMemo(() => accounts.filter((a) => a.role === 'teacher').length, [accounts]);
-  const kpiParents = useMemo(() => accounts.filter((a) => a.role === 'parent').length, [accounts]);
-  const kpiActive = useMemo(() => accounts.filter((a) => a.is_active !== false).length, [accounts]);
 
   const handleDelete = async (userId: string, email: string) => {
     if (!confirm(`Are you sure you want to delete the account for ${email}? This action cannot be undone. Prefer deactivating instead.`)) return;
@@ -300,22 +317,80 @@ export default function AccountsPage() {
   return (
     <>
     <PwParentsDirectoryShell>
+      <style>{`
+        .pw-parents .par-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 18px;
+          margin-bottom: 24px;
+        }
+        .pw-parents .par-pcard-foot {
+          display: grid !important;
+          grid-template-columns: repeat(2, 1fr) !important;
+          gap: 6px !important;
+          padding: 10px 14px !important;
+        }
+        .pw-parents .par-crd-btn {
+          width: 100% !important;
+          padding: 8px 6px !important;
+          font-size: 11.5px !important;
+          text-align: center !important;
+          border-radius: 8px !important;
+        }
+        @media (max-width: 768px) {
+          .pw-parents .par-header {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 16px !important;
+          }
+          .pw-parents .par-actions {
+            flex-wrap: wrap !important;
+            width: 100% !important;
+          }
+          .pw-parents .par-actions .par-btn {
+            flex: 1 1 calc(50% - 6px) !important;
+            justify-content: center !important;
+          }
+        }
+        @media (max-width: 640px) {
+          .pw-parents .par-kpi-strip {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 8px !important;
+          }
+          .pw-parents .par-kpi {
+            padding: 12px 14px !important;
+            gap: 10px !important;
+          }
+          .pw-parents .par-kpi-ic {
+            width: 36px !important;
+            height: 36px !important;
+          }
+          .pw-parents .par-kpi-val {
+            font-size: 24px !important;
+          }
+          .pw-parents .par-card-grid {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+          }
+        }
+      `}</style>
       <div className="par-header par-fu">
         <div>
           <div className="par-eyebrow">User Management</div>
           <h1 className="par-title">All users</h1>
           <p className="par-sub">
-            Same card layout as Parents &amp; Guardians — search, filter by role, reset passwords, and manage access.
+            Directory and access control for staff, tutors, trainees, and sponsors.
           </p>
         </div>
         <div className="par-actions">
-          <button type="button" className="par-btn par-btn-ghost" onClick={() => setShowAddStaff(true)}>
-            Add School Staff
+          <button type="button" className="par-btn par-btn-violet" onClick={() => setShowAddStaff(true)}>
+            ＋ Add School Staff
           </button>
           <Link to="/dashboard/admin/accounts/invite" className="par-btn par-btn-ghost">
             Send invitations
           </Link>
-          <Link to="/dashboard/admin/permissions" className="par-btn par-btn-violet">
+          <Link to="/dashboard/admin/permissions" className="par-btn par-btn-ghost">
             Access &amp; permissions
           </Link>
         </div>
@@ -356,35 +431,64 @@ export default function AccountsPage() {
         </div>
       </div>
 
-      <div className="par-toolbar par-fu par-d2">
-        <div className="par-search" style={{ flex: '1 1 260px', maxWidth: '520px' }}>
-          <span style={{ opacity: 0.75, display: 'inline-flex', alignItems: 'center' }} aria-hidden>
-            <Search className="w-3.5 h-3.5" />
-          </span>
-          <input
-            type="search"
-            placeholder="Search name, email, department…"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            autoComplete="off"
-          />
-        </div>
-      </div>
+      <div className="par-toolbar-wrap par-fu par-d2" style={{ marginBottom: 20 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', width: '100%' }}>
+          <div className="par-search" style={{ flex: '2 1 240px', minWidth: '220px', maxWidth: '100%' }}>
+            <span style={{ opacity: 0.75, display: 'inline-flex', alignItems: 'center' }} aria-hidden>
+              <Search className="w-3.5 h-3.5" />
+            </span>
+            <input
+              type="search"
+              placeholder="Search name, email, department…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              autoComplete="off"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                style={{ background: 'transparent', border: 'none', color: 'var(--t3)', cursor: 'pointer', padding: '0 6px', fontSize: 13 }}
+                aria-label="Clear search"
+              >
+                ✕
+              </button>
+            )}
+          </div>
 
-      <div className="par-fu par-d2" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 18 }}>
-        {roleOptions.map((o) => {
-          const active = roleFilter === o.value;
-          return (
+          <div style={{ flex: '1.5 1 200px', minWidth: '180px', maxWidth: '100%' }}>
+            <LiquidGlassSelect
+              value={roleFilter}
+              onChange={(val) => setRoleFilter(val)}
+              options={roleOptions}
+              placeholder="Filter by role"
+            />
+          </div>
+
+          <div style={{ flex: '1 1 140px', minWidth: '130px', maxWidth: '100%' }}>
+            <LiquidGlassSelect
+              value={statusFilter}
+              onChange={(val) => setStatusFilter(val as 'all' | 'active' | 'inactive')}
+              options={statusOptions}
+              placeholder="Status"
+            />
+          </div>
+
+          {(roleFilter || statusFilter !== 'all' || searchQuery) && (
             <button
-              key={o.value || 'all'}
               type="button"
-              className={active ? 'par-btn par-btn-sm par-btn-violet' : 'par-btn par-btn-sm par-btn-ghost'}
-              onClick={() => setRoleFilter(o.value)}
+              className="par-btn par-btn-ghost par-btn-sm"
+              onClick={() => {
+                setRoleFilter('');
+                setStatusFilter('all');
+                setSearchQuery('');
+              }}
+              style={{ fontSize: 12, padding: '7px 12px' }}
             >
-              {o.label}
+              Reset filters
             </button>
-          );
-        })}
+          )}
+        </div>
       </div>
 
       {filteredAccounts.length === 0 ? (
