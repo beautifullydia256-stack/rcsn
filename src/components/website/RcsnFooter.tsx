@@ -115,7 +115,7 @@ export default function RcsnFooter() {
                 </Link>
               </li>
               <li>
-                <Link to="/jobs" className="hover:text-emerald-400 transition-colors flex items-center gap-1.5">
+                <Link to="/careers" className="hover:text-emerald-400 transition-colors flex items-center gap-1.5">
                   <ArrowRight className="w-3.5 h-3.5 text-emerald-600" />
                   <span>Careers</span>
                 </Link>

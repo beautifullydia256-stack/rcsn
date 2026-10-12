@@ -47,7 +47,7 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
     { name: 'Programs & Courses', path: '/courses', hasDropdown: true },
     { name: 'Admissions & Fees', path: '/admissions', hasDropdown: true },
     { name: 'Clinical Training', path: '/clinical-training', hasDropdown: true },
-    { name: 'Careers', path: '/jobs', hasDropdown: false },
+    { name: 'Careers', path: '/careers', hasDropdown: false },
     { name: 'Contact & Location', path: '/contact', hasDropdown: true },
   ];
 
@@ -232,7 +232,7 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
 
               {/* Mobile Upper Nav: Quiet, clean Careers icon link (No blinking circle) */}
               <Link
-                to="/jobs"
+                to="/careers"
                 onClick={closeDropdown}
                 className="inline-flex xl:hidden items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold transition-colors"
                 title="Careers"
@@ -433,7 +433,7 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
                     </Link>
 
                     <Link
-                      to="/jobs"
+                      to="/careers"
                       onClick={closeDropdown}
                       className="group p-3.5 rounded-xl border border-emerald-500/30 bg-emerald-50/30 dark:bg-emerald-950/20 hover:border-emerald-500 hover:bg-emerald-50/70 dark:hover:bg-slate-800/90 transition-all flex items-start gap-3"
                     >
@@ -975,7 +975,7 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
                   }`}
                 >
                   <span className="flex items-center gap-2">
-                    {link.path === '/jobs' && <Briefcase className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
+                    {link.path === '/careers' && <Briefcase className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
                     <span>{link.name}</span>
                   </span>
                 </Link>

@@ -987,7 +987,7 @@ export default function Home() {
               </div>
 
               <Link
-                to="/jobs"
+                to="/careers"
                 className="inline-flex items-center gap-2 self-start md:self-auto px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 hover:border-emerald-500 text-slate-800 dark:text-slate-200 text-sm font-bold transition-all hover:bg-emerald-50 dark:hover:bg-slate-800"
               >
                 <span>View Careers</span>
@@ -1062,7 +1062,7 @@ export default function Home() {
 
                     <div className="pt-5 mt-5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
                       <Link
-                        to={`/jobs/${job.job_id}/apply`}
+                        to={`/careers/${job.job_id}/apply`}
                         className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#00873E] hover:bg-[#007033] text-white text-xs sm:text-sm font-bold shadow-sm transition-all"
                       >
                         <span>Apply Online</span>
@@ -1070,7 +1070,7 @@ export default function Home() {
                       </Link>
 
                       <Link
-                        to="/jobs"
+                        to="/careers"
                         className="text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
                       >
                         Details

@@ -3,7 +3,7 @@ import Footer from "@/components/Footer";
 
 export default function FooterGate() {
   const { pathname } = useLocation();
-  const show = pathname === "/" || pathname?.startsWith("/library") || pathname?.startsWith("/jobs");
+  const show = pathname === "/" || pathname?.startsWith("/library") || pathname?.startsWith("/jobs") || pathname?.startsWith("/careers");
   if (!show) return null;
   return <Footer />;
 }

@@ -347,8 +347,10 @@ function AppRouteTree() {
         <>
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/library" element={<LibraryPage />} />
-          <Route path="/apps" element={<DownloadAppsPage />} />
-          <Route path="/jobs" element={<JobsPage />} />
+          <Route path="/careers" element={<JobsPage />} />
+          <Route path="/careers/:jobId/apply" element={<JobApplyPage />} />
+          <Route path="/careers/apply/:jobId" element={<JobApplyPage />} />
+          <Route path="/jobs" element={<Navigate to="/careers" replace />} />
           <Route path="/jobs/:jobId/apply" element={<JobApplyPage />} />
           <Route path="/jobs/apply/:jobId" element={<JobApplyPage />} />
           <Route path="/affiliate" element={<AffiliatePage />} />

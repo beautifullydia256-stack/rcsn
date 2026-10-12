@@ -96,7 +96,7 @@ export default function Library() {
               </Link>
               <div className="flex items-center gap-4">
                 <Link to="/" className="text-gray-600 dark:text-gray-300 hover:text-blue-600 transition-colors text-sm">Home</Link>
-                <Link to="/jobs" className="text-gray-600 dark:text-gray-300 hover:text-blue-600 transition-colors text-sm">Jobs</Link>
+                <Link to="/careers" className="text-gray-600 dark:text-gray-300 hover:text-blue-600 transition-colors text-sm">Careers</Link>
                 <Link to="/login" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">Sign In</Link>
               </div>
             </div>

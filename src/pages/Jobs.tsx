@@ -68,7 +68,7 @@ export default function Jobs() {
 
   const handleShare = (jobId: string) => {
     const origin = window.location.origin;
-    const url = `${origin}/jobs/${jobId}/apply`;
+    const url = `${origin}/careers/${jobId}/apply`;
     navigator.clipboard.writeText(url);
     setCopiedId(jobId);
     setTimeout(() => setCopiedId(null), 2500);
@@ -179,7 +179,7 @@ export default function Jobs() {
 
                     <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-3 shrink-0 pt-4 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-slate-800">
                       <Link
-                        to={`/jobs/${job.job_id}/apply`}
+                        to={`/careers/${job.job_id}/apply`}
                         className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#00873E] hover:bg-[#007033] text-white text-sm font-bold shadow-md transition-all active:scale-[0.98] w-full sm:w-auto"
                       >
                         <span>Apply Online</span>

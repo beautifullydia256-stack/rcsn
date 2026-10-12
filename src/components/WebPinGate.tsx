@@ -11,6 +11,7 @@ const NON_AUTH_PREFIXES = [
   '/register',
   '/auth/',
   '/jobs',
+  '/careers',
   '/contact',
   '/help',
   '/privacy-policy',

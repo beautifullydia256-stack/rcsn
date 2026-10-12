@@ -360,7 +360,7 @@ ${fullName.trim() || '[Your Full Name]'}`;
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
           {/* Back Navigation */}
           <Link
-            to="/jobs"
+            to="/careers"
             className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-[#00873E] dark:text-emerald-400 hover:underline"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -383,7 +383,7 @@ ${fullName.trim() || '[Your Full Name]'}`;
               </p>
               <div className="pt-2">
                 <Link
-                  to="/jobs"
+                  to="/careers"
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#00873E] hover:bg-[#007033] text-white text-sm font-bold shadow-md transition-all"
                 >
                   <span>Explore Open Positions</span>
@@ -444,7 +444,7 @@ ${fullName.trim() || '[Your Full Name]'}`;
               </div>
               <div className="pt-4 flex flex-wrap justify-center gap-3">
                 <Link
-                  to="/jobs"
+                  to="/careers"
                   className="px-6 py-3 rounded-xl bg-[#00873E] hover:bg-[#007033] text-white text-sm font-bold shadow-md transition-colors"
                 >
                   View Other Vacancies

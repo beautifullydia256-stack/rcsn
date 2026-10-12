@@ -298,7 +298,7 @@ export default function RecruitmentPage() {
                             <span>{new Date(app.created_at).toLocaleDateString()}</span>
                             <span>·</span>
                             <a
-                              href={`/jobs/${app.job_id}/apply`}
+                              href={`/careers/${app.job_id}/apply`}
                               target="_blank"
                               rel="noreferrer"
                               className="inline-flex items-center gap-0.5 hover:underline"

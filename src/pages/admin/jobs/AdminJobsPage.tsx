@@ -237,7 +237,7 @@ export default function AdminJobsPage() {
 
   const handleCopyLink = (jobId: string) => {
     const origin = window.location.origin;
-    const link = `${origin}/jobs/${jobId}/apply`;
+    const link = `${origin}/careers/${jobId}/apply`;
     navigator.clipboard.writeText(link);
     setCopiedId(jobId);
     setTimeout(() => setCopiedId(null), 2500);
@@ -725,7 +725,7 @@ export default function AdminJobsPage() {
 
                       {/* Public Page View */}
                       <a
-                        href={`/jobs/${j.job_id}/apply`}
+                        href={`/careers/${j.job_id}/apply`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="rounded-lg p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-colors"
