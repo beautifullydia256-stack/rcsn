@@ -63,64 +63,89 @@ const MONTH_NAMES = [
 const WEEKDAY_NAMES_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 function getEventTypeBadge(type: SchoolEventType, isDark: boolean) {
-  switch (type) {
-    case 'exam':
-      return {
-        label: 'Examinations',
-        icon: <GraduationCap className="w-3.5 h-3.5" />,
-        color: isDark ? '#a78bfa' : '#6d28d9',
-        bg: isDark ? 'rgba(139, 92, 246, 0.15)' : '#ede9fe',
-        border: isDark ? 'rgba(139, 92, 246, 0.3)' : '#ddd6fe',
-      };
-    case 'sports':
-      return {
-        label: 'Sports & Athletics',
-        icon: <Trophy className="w-3.5 h-3.5" />,
-        color: isDark ? '#38bdf8' : '#0284c7',
-        bg: isDark ? 'rgba(56, 189, 248, 0.15)' : '#e0f2fe',
-        border: isDark ? 'rgba(56, 189, 248, 0.3)' : '#bae6fd',
-      };
-    case 'tour':
-      return {
-        label: 'School Tour / Trip',
-        icon: <Compass className="w-3.5 h-3.5" />,
-        color: isDark ? '#34d399' : '#059669',
-        bg: isDark ? 'rgba(16, 185, 129, 0.15)' : '#ecfdf5',
-        border: isDark ? 'rgba(16, 185, 129, 0.3)' : '#a7f3d0',
-      };
-    case 'term_dates':
-      return {
-        label: 'Term Dates',
-        icon: <CalendarDays className="w-3.5 h-3.5" />,
-        color: isDark ? '#f59e0b' : '#d97706',
-        bg: isDark ? 'rgba(245, 158, 11, 0.15)' : '#fffbeb',
-        border: isDark ? 'rgba(245, 158, 11, 0.3)' : '#fde68a',
-      };
-    case 'meeting':
-      return {
-        label: 'Meeting / Visitation',
-        icon: <Users className="w-3.5 h-3.5" />,
-        color: isDark ? '#f43f5e' : '#e11d48',
-        bg: isDark ? 'rgba(244, 63, 94, 0.15)' : '#ffe4e6',
-        border: isDark ? 'rgba(244, 63, 94, 0.3)' : '#fecdd3',
-      };
-    case 'cultural':
-      return {
-        label: 'Cultural & Speech Day',
-        icon: <Award className="w-3.5 h-3.5" />,
-        color: isDark ? '#ec4899' : '#db2777',
-        bg: isDark ? 'rgba(236, 72, 153, 0.15)' : '#fdf2f8',
-        border: isDark ? 'rgba(236, 72, 153, 0.3)' : '#fbcfe8',
-      };
-    default:
-      return {
-        label: 'School Event',
-        icon: <CalendarIcon className="w-3.5 h-3.5" />,
-        color: isDark ? '#94a3b8' : '#475569',
-        bg: isDark ? 'rgba(148, 163, 184, 0.15)' : '#f1f5f9',
-        border: isDark ? 'rgba(148, 163, 184, 0.3)' : '#e2e8f0',
-      };
+  const normalized = (type || '').toLowerCase();
+  if (
+    normalized.includes('exam') ||
+    normalized.includes('paper') ||
+    normalized.includes('assessment') ||
+    normalized.includes('test') ||
+    normalized.includes('unmeb')
+  ) {
+    return {
+      label: type || 'Examination',
+      icon: <GraduationCap className="w-3.5 h-3.5" />,
+      color: isDark ? '#a78bfa' : '#6d28d9',
+      bg: isDark ? 'rgba(139, 92, 246, 0.15)' : '#ede9fe',
+      border: isDark ? 'rgba(139, 92, 246, 0.3)' : '#ddd6fe',
+    };
   }
+  if (
+    normalized.includes('clinic') ||
+    normalized.includes('practic') ||
+    normalized.includes('hospital') ||
+    normalized.includes('ward') ||
+    normalized.includes('rotation')
+  ) {
+    return {
+      label: type || 'Clinical Practicum',
+      icon: <BookOpen className="w-3.5 h-3.5" />,
+      color: isDark ? '#34d399' : '#059669',
+      bg: isDark ? 'rgba(16, 185, 129, 0.15)' : '#ecfdf5',
+      border: isDark ? 'rgba(16, 185, 129, 0.3)' : '#a7f3d0',
+    };
+  }
+  if (normalized.includes('sport') || normalized.includes('athletic')) {
+    return {
+      label: type || 'Sports & Athletics',
+      icon: <Trophy className="w-3.5 h-3.5" />,
+      color: isDark ? '#38bdf8' : '#0284c7',
+      bg: isDark ? 'rgba(56, 189, 248, 0.15)' : '#e0f2fe',
+      border: isDark ? 'rgba(56, 189, 248, 0.3)' : '#bae6fd',
+    };
+  }
+  if (
+    normalized.includes('ceremony') ||
+    normalized.includes('capping') ||
+    normalized.includes('graduation')
+  ) {
+    return {
+      label: type || 'Ceremony',
+      icon: <Award className="w-3.5 h-3.5" />,
+      color: isDark ? '#ec4899' : '#db2777',
+      bg: isDark ? 'rgba(236, 72, 153, 0.15)' : '#fdf2f8',
+      border: isDark ? 'rgba(236, 72, 153, 0.3)' : '#fbcfe8',
+    };
+  }
+  if (
+    normalized.includes('meet') ||
+    normalized.includes('board') ||
+    normalized.includes('assembly') ||
+    normalized.includes('symposium')
+  ) {
+    return {
+      label: type || 'Meeting / Assembly',
+      icon: <Users className="w-3.5 h-3.5" />,
+      color: isDark ? '#f43f5e' : '#e11d48',
+      bg: isDark ? 'rgba(244, 63, 94, 0.15)' : '#ffe4e6',
+      border: isDark ? 'rgba(244, 63, 94, 0.3)' : '#fecdd3',
+    };
+  }
+  if (normalized.includes('academic') || normalized.includes('calendar')) {
+    return {
+      label: type || 'Academic Calendar',
+      icon: <CalendarDays className="w-3.5 h-3.5" />,
+      color: isDark ? '#f59e0b' : '#d97706',
+      bg: isDark ? 'rgba(245, 158, 11, 0.15)' : '#fffbeb',
+      border: isDark ? 'rgba(245, 158, 11, 0.3)' : '#fde68a',
+    };
+  }
+  return {
+    label: type || 'Calendar Event',
+    icon: <CalendarIcon className="w-3.5 h-3.5" />,
+    color: isDark ? '#94a3b8' : '#475569',
+    bg: isDark ? 'rgba(148, 163, 184, 0.15)' : '#f1f5f9',
+    border: isDark ? 'rgba(148, 163, 184, 0.3)' : '#e2e8f0',
+  };
 }
 
 function formatDateDisplay(isoDate: string): string {
@@ -231,6 +256,15 @@ export default function SchoolCalendarPage() {
     return Array.from(set).sort();
   }, [examSessions]);
 
+  // Unique event categories derived dynamically from loaded events
+  const availableCategories = useMemo(() => {
+    const set = new Set<string>();
+    events.forEach((ev) => {
+      if (ev.event_type) set.add(ev.event_type);
+    });
+    return Array.from(set).sort();
+  }, [events]);
+
   // Today's live events and exam sessions
   const todayActivities = useMemo(() => {
     const todayEvents = events.filter(
@@ -250,7 +284,9 @@ export default function SchoolCalendarPage() {
         (ev.description && ev.description.toLowerCase().includes(q)) ||
         (ev.location && ev.location.toLowerCase().includes(q));
 
-      const matchCat = categoryFilter === 'all' || ev.event_type === categoryFilter;
+      const matchCat =
+        categoryFilter === 'all' ||
+        ev.event_type?.toLowerCase() === categoryFilter.toLowerCase();
       return matchQ && matchCat;
     });
   }, [events, searchQuery, categoryFilter]);
@@ -481,27 +517,18 @@ export default function SchoolCalendarPage() {
           </button>
 
           {canManageEvents && (
-            <>
-              <button
-                type="button"
-                onClick={() => setExamSessionModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-white transition-transform active:scale-95 shadow-xs"
-                style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)' }}
-              >
-                <Clock className="w-3.5 h-3.5" />
-                <span>+ Exam Paper</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setEventModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white shadow-md transition-transform active:scale-95"
-                style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Event</span>
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={() => {
+                setEditingEvent(null);
+                setEventModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white shadow-md transition-transform active:scale-95"
+              style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Event</span>
+            </button>
           )}
         </div>
       </div>
@@ -618,7 +645,7 @@ export default function SchoolCalendarPage() {
           <div className="mt-1 text-xs" style={{ color: t.textMuted }}>
             {todayActivities.events.length > 0
               ? `${todayActivities.events[0].title}`
-              : 'Regular daily lessons in progress'}
+              : 'Regular lectures & clinical skills practice in progress'}
           </div>
         </div>
       </div>
@@ -797,12 +824,11 @@ export default function SchoolCalendarPage() {
             }}
           >
             <option value="all">All Categories</option>
-            <option value="exam">Examinations</option>
-            <option value="sports">Sports &amp; Athletics</option>
-            <option value="tour">School Tours</option>
-            <option value="term_dates">Term Dates</option>
-            <option value="meeting">Meetings &amp; Visitation</option>
-            <option value="cultural">Cultural &amp; Speech Day</option>
+            {availableCategories.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
           </select>
 
           {/* Class Filter (useful when in timetable view) */}
@@ -904,13 +930,28 @@ export default function SchoolCalendarPage() {
 
                       // Determine dominant color indicator
                       let markerColor = 'bg-emerald-500';
-                      if (hasPapers || dayData?.events.some((e) => e.event_type === 'exam')) {
+                      if (
+                        hasPapers ||
+                        dayData?.events.some(
+                          (e) =>
+                            e.event_type?.toLowerCase().includes('exam') ||
+                            e.event_type?.toLowerCase().includes('paper')
+                        )
+                      ) {
                         markerColor = 'bg-purple-500';
-                      } else if (dayData?.events.some((e) => e.event_type === 'sports')) {
+                      } else if (
+                        dayData?.events.some(
+                          (e) =>
+                            e.event_type?.toLowerCase().includes('clinic') ||
+                            e.event_type?.toLowerCase().includes('practic')
+                        )
+                      ) {
+                        markerColor = 'bg-teal-500';
+                      } else if (dayData?.events.some((e) => e.event_type?.toLowerCase().includes('sport'))) {
                         markerColor = 'bg-sky-500';
-                      } else if (dayData?.events.some((e) => e.event_type === 'tour')) {
-                        markerColor = 'bg-emerald-500';
-                      } else if (dayData?.events.some((e) => e.event_type === 'term_dates')) {
+                      } else if (dayData?.events.some((e) => e.event_type?.toLowerCase().includes('ceremony'))) {
+                        markerColor = 'bg-pink-500';
+                      } else if (dayData?.events.some((e) => e.event_type?.toLowerCase().includes('calendar'))) {
                         markerColor = 'bg-amber-500';
                       }
 
@@ -1106,17 +1147,20 @@ export default function SchoolCalendarPage() {
                 Examination Timetable Schedule
               </h3>
               <p className="text-xs" style={{ color: t.textMuted }}>
-                Paper sessions, classes, examination halls, and assigned invigilators.
+                Modular examination schedules, cohorts, examination venues, and time windows.
               </p>
             </div>
             {canManageEvents && (
               <button
                 type="button"
-                onClick={() => setExamSessionModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 shadow-xs"
+                onClick={() => {
+                  setEditingEvent(null);
+                  setEventModalOpen(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 shadow-xs"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Add Timetable Paper</span>
+                <span>Add Event</span>
               </button>
             )}
           </div>
@@ -1132,18 +1176,17 @@ export default function SchoolCalendarPage() {
                   }}
                 >
                   <th className="py-3 px-4 font-semibold uppercase tracking-wider">Date</th>
-                  <th className="py-3 px-4 font-semibold uppercase tracking-wider">Class / Cohort</th>
+                  <th className="py-3 px-4 font-semibold uppercase tracking-wider">Course / Cohort</th>
                   <th className="py-3 px-4 font-semibold uppercase tracking-wider">Examination Paper</th>
                   <th className="py-3 px-4 font-semibold uppercase tracking-wider">Time Window</th>
-                  <th className="py-3 px-4 font-semibold uppercase tracking-wider">Hall / Room</th>
-                  <th className="py-3 px-4 font-semibold uppercase tracking-wider">Invigilator</th>
+                  <th className="py-3 px-4 font-semibold uppercase tracking-wider">Venue / Room</th>
                   {canManageEvents && <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">Actions</th>}
                 </tr>
               </thead>
               <tbody className="divide-y" style={{ borderColor: t.cardBorder }}>
                 {filteredExamSessions.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-slate-400">
+                    <td colSpan={6} className="py-8 text-center text-slate-400">
                       No exam papers scheduled matching criteria.
                     </td>
                   </tr>
@@ -1179,11 +1222,6 @@ export default function SchoolCalendarPage() {
                               Code: {s.paper_code}
                             </div>
                           )}
-                          {s.instructions && (
-                            <div className="text-[11px] mt-0.5 text-slate-500 dark:text-slate-400">
-                              {s.instructions}
-                            </div>
-                          )}
                         </td>
                         <td className="py-3 px-4">
                           <div className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
@@ -1198,16 +1236,6 @@ export default function SchoolCalendarPage() {
                             <MapPin className="w-3.5 h-3.5 text-slate-400" />
                             <span>{s.room_or_hall}</span>
                           </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          {s.invigilator_name ? (
-                            <div className="flex items-center gap-1 font-medium" style={{ color: t.textPrimary }}>
-                              <UserCheck className="w-3.5 h-3.5 text-slate-400" />
-                              <span>{s.invigilator_name}</span>
-                            </div>
-                          ) : (
-                            <span style={{ color: t.textMuted }}>Not assigned</span>
-                          )}
                         </td>
                         {canManageEvents && (
                           <td className="py-3 px-4 text-right">
@@ -1410,12 +1438,9 @@ export default function SchoolCalendarPage() {
           dayData={eventsByDate.get(inspectingDay) || { events: [], papers: [] }}
           canManage={canManageEvents}
           onClose={() => setInspectingDay(null)}
-          onAddPaper={() => {
-            setInspectingDay(null);
-            setExamSessionModalOpen(true);
-          }}
           onAddEvent={() => {
             setInspectingDay(null);
+            setEditingEvent(null);
             setEventModalOpen(true);
           }}
         />
@@ -1444,7 +1469,7 @@ function AddEditEventModal({
   onSave: (input: Partial<CreateSchoolEventInput>) => void;
 }) {
   const [title, setTitle] = useState(initialEvent?.title || '');
-  const [eventType, setEventType] = useState<SchoolEventType>(initialEvent?.event_type || 'exam');
+  const [eventType, setEventType] = useState<string>(initialEvent?.event_type || '');
   const [startDate, setStartDate] = useState(
     initialEvent?.start_date || `${defaultYear}-06-01`
   );
@@ -1456,7 +1481,7 @@ function AddEditEventModal({
     initialEvent?.target_audience || 'all'
   );
   const [hasExamTimetable, setHasExamTimetable] = useState(
-    initialEvent ? initialEvent.has_exam_timetable : eventType === 'exam'
+    initialEvent ? initialEvent.has_exam_timetable : false
   );
   const [description, setDescription] = useState(initialEvent?.description || '');
 
@@ -1469,12 +1494,15 @@ function AddEditEventModal({
 
     onSave({
       title: title.trim(),
-      event_type: eventType,
+      event_type: eventType.trim() || 'General Event',
       start_date: startDate,
       end_date: endDate || startDate,
       location: location.trim() || null,
       target_audience: targetAudience,
-      has_exam_timetable: eventType === 'exam' ? true : hasExamTimetable,
+      has_exam_timetable:
+        eventType.toLowerCase().includes('exam') ||
+        eventType.toLowerCase().includes('paper') ||
+        hasExamTimetable,
       description: description.trim() || null,
     });
   };
@@ -1484,7 +1512,7 @@ function AddEditEventModal({
       isOpen={true}
       onClose={onClose}
       title={initialEvent ? 'Edit Calendar Event' : 'Add School Calendar Event'}
-      subtitle="Exams, sports, tours, holidays, and term dates"
+      subtitle="Institutional calendar, examinations, clinical rotations, and events"
       icon={CalendarDays}
       size="lg"
     >
@@ -1498,7 +1526,7 @@ function AddEditEventModal({
             required
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. End of Term 2 Examinations, Annual Sports Gala"
+            placeholder="e.g. Semester Final Examinations, Clinical Practicum, UNMEB Licensure Mocks"
             className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
           />
         </div>
@@ -1508,24 +1536,14 @@ function AddEditEventModal({
             <label className="block text-xs font-semibold text-white/70 mb-1">
               Event Category *
             </label>
-            <select
+            <input
+              type="text"
+              required
               value={eventType}
-              onChange={(e) => {
-                const val = e.target.value as SchoolEventType;
-                setEventType(val);
-                if (val === 'exam') setHasExamTimetable(true);
-              }}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-slate-900/90 dark:bg-black/90 hover:border-white/35 focus:border-white/70 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
-            >
-              <option value="exam" className="bg-slate-900 text-white">Examination / Assessment Period</option>
-              <option value="sports" className="bg-slate-900 text-white">Sports &amp; Athletics</option>
-              <option value="tour" className="bg-slate-900 text-white">School Tour / Excursion</option>
-              <option value="term_dates" className="bg-slate-900 text-white">Term Dates (Opening/Closing)</option>
-              <option value="meeting" className="bg-slate-900 text-white">Meeting / Parent Visitation</option>
-              <option value="cultural" className="bg-slate-900 text-white">Cultural Gala &amp; Speech Day</option>
-              <option value="holiday" className="bg-slate-900 text-white">School / Public Holiday</option>
-              <option value="other" className="bg-slate-900 text-white">General Event</option>
-            </select>
+              onChange={(e) => setEventType(e.target.value)}
+              placeholder="e.g. Examination, Clinical Practicum, Academic Calendar, Symposium"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+            />
           </div>
 
           <div>
@@ -1641,18 +1659,16 @@ function AddExamSessionModal({
   const [selectedEventId, setSelectedEventId] = useState(examEvents[0]?.event_id || '');
   const [paperName, setPaperName] = useState('');
   const [paperCode, setPaperCode] = useState('');
-  const [className, setClassName] = useState('Senior 4');
+  const [className, setClassName] = useState('');
   const [examDate, setExamDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [startTime, setStartTime] = useState('09:00');
-  const [endTime, setEndTime] = useState('11:30');
+  const [endTime, setEndTime] = useState('12:00');
   const [room, setRoom] = useState('Main Examination Hall');
-  const [invigilator, setInvigilator] = useState('');
-  const [instructions, setInstructions] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!paperName.trim() || !className.trim() || !examDate) {
-      alert('Please fill in paper name, class, and examination date.');
+      alert('Please fill in paper name, course/cohort, and examination date.');
       return;
     }
 
@@ -1664,9 +1680,9 @@ function AddExamSessionModal({
       exam_date: examDate,
       start_time: startTime,
       end_time: endTime,
-      room_or_hall: room.trim() || 'Main Exam Hall',
-      invigilator_name: invigilator.trim() || null,
-      instructions: instructions.trim() || null,
+      room_or_hall: room.trim() || 'Main Examination Hall',
+      invigilator_name: null,
+      instructions: null,
     });
   };
 
@@ -1674,8 +1690,8 @@ function AddExamSessionModal({
     <NativeModal
       isOpen={true}
       onClose={onClose}
-      title="Schedule Examination Paper"
-      subtitle="Add to the class exam timetable"
+      title="Schedule Examination Session"
+      subtitle="Add to the examination timetable schedule"
       icon={GraduationCap}
       size="lg"
     >
@@ -1683,7 +1699,7 @@ function AddExamSessionModal({
         {examEvents.length > 0 && (
           <div>
             <label className="block text-xs font-semibold text-white/70 mb-1">
-              Parent Examination Period
+              Examination Period / Block
             </label>
             <select
               value={selectedEventId}
@@ -1702,14 +1718,14 @@ function AddExamSessionModal({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-semibold text-white/70 mb-1">
-              Paper Name *
+              Examination Paper Name *
             </label>
             <input
               type="text"
               required
               value={paperName}
               onChange={(e) => setPaperName(e.target.value)}
-              placeholder="e.g. Mathematics Paper 1"
+              placeholder="e.g. Anatomy & Physiology for Nurses, Foundations of Nursing"
               className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
             />
           </div>
@@ -1722,7 +1738,7 @@ function AddExamSessionModal({
               type="text"
               value={paperCode}
               onChange={(e) => setPaperCode(e.target.value)}
-              placeholder="e.g. 456/1, PHY-P3"
+              placeholder="e.g. NR-111, MW-121, UNMEB-NR1"
               className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
             />
           </div>
@@ -1731,14 +1747,14 @@ function AddExamSessionModal({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-semibold text-white/70 mb-1">
-              Class / Cohort *
+              Course / Cohort *
             </label>
             <input
               type="text"
               required
               value={className}
               onChange={(e) => setClassName(e.target.value)}
-              placeholder="e.g. Senior 4, Senior 1, Primary 7"
+              placeholder="e.g. Certificate in Nursing (Year 1), Diploma in Midwifery"
               className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition font-semibold"
             />
           </div>
@@ -1757,7 +1773,7 @@ function AddExamSessionModal({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-semibold text-white/70 mb-1">
               Start Time *
@@ -1785,44 +1801,16 @@ function AddExamSessionModal({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-white/70 mb-1">
-              Hall / Examination Room *
-            </label>
-            <input
-              type="text"
-              required
-              value={room}
-              onChange={(e) => setRoom(e.target.value)}
-              placeholder="e.g. Main Exam Hall A, Lab 2"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-white/70 mb-1">
-              Invigilator / Supervisor
-            </label>
-            <input
-              type="text"
-              value={invigilator}
-              onChange={(e) => setInvigilator(e.target.value)}
-              placeholder="e.g. Mr. Mukasa John"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
-            />
-          </div>
-        </div>
-
         <div>
           <label className="block text-xs font-semibold text-white/70 mb-1">
-            Special Paper Instructions
+            Examination Venue / Room *
           </label>
           <input
             type="text"
-            value={instructions}
-            onChange={(e) => setInstructions(e.target.value)}
-            placeholder="e.g. Calculators allowed. Bring drawing instruments."
+            required
+            value={room}
+            onChange={(e) => setRoom(e.target.value)}
+            placeholder="e.g. Main Examination Hall, Skills Lab A"
             className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
           />
         </div>
@@ -1858,7 +1846,6 @@ function DayInspectorModal({
   dayData,
   canManage,
   onClose,
-  onAddPaper,
   onAddEvent,
 }: {
   isDark: boolean;
@@ -1867,7 +1854,6 @@ function DayInspectorModal({
   dayData: { events: SchoolEvent[]; papers: ExamTimetableSession[] };
   canManage: boolean;
   onClose: () => void;
-  onAddPaper: () => void;
   onAddEvent: () => void;
 }) {
   return (
@@ -1910,18 +1896,9 @@ function DayInspectorModal({
                       <div className="flex items-center justify-between text-white/70">
                         <span className="flex items-center gap-1">
                           <MapPin className="w-3 h-3 text-indigo-400" />
-                          {p.room_or_hall}
+                          <span>{p.room_or_hall}</span>
                         </span>
-                        {p.invigilator_name && (
-                          <span className="flex items-center gap-1">
-                            <UserCheck className="w-3 h-3 text-indigo-400" />
-                            {p.invigilator_name}
-                          </span>
-                        )}
                       </div>
-                      {p.instructions && (
-                        <div className="text-[11px] text-white/50 italic">Note: {p.instructions}</div>
-                      )}
                     </div>
                   ))}
                 </div>
@@ -1974,22 +1951,14 @@ function DayInspectorModal({
 
         <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-2">
           {canManage ? (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onAddPaper}
-                className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-500 hover:bg-indigo-400 text-white shadow-md shadow-indigo-500/20 transition"
-              >
-                + Paper
-              </button>
-              <button
-                type="button"
-                onClick={onAddEvent}
-                className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-500 hover:bg-emerald-400 text-white shadow-md shadow-emerald-500/20 transition"
-              >
-                + Event
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={onAddEvent}
+              className="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-500 hover:bg-emerald-400 text-white shadow-md shadow-emerald-500/20 transition flex items-center gap-1.5"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Event</span>
+            </button>
           ) : <div />}
 
           <button

@@ -1,12 +1,4 @@
-export type SchoolEventType =
-  | 'exam'
-  | 'sports'
-  | 'tour'
-  | 'term_dates'
-  | 'holiday'
-  | 'meeting'
-  | 'cultural'
-  | 'other';
+export type SchoolEventType = string;
 
 export type TargetAudience = 'all' | 'students' | 'staff' | 'parents';
 
