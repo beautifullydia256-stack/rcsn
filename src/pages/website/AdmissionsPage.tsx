@@ -7,13 +7,11 @@ import {
   CheckCircle2,
   Download,
   Phone,
-  Building2,
   CreditCard,
   ShieldCheck,
   Award,
   ArrowRight,
   Clock,
-  AlertCircle,
   Search,
   Check,
   UserCheck
@@ -138,7 +136,7 @@ export default function AdmissionsPage() {
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Step 1</span>
                 </div>
                 <h4 className="text-base font-bold text-slate-900 dark:text-white">Submit Application</h4>
-                <p className="text-xs text-slate-600 dark:text-slate-300">Complete the 5-minute online form with your UNEB details and pay UGX 50,000 via MoMo.</p>
+                <p className="text-xs text-slate-600 dark:text-slate-300">Complete the online application form with your UNEB and academic details.</p>
               </div>
 
               <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2">
@@ -202,49 +200,29 @@ export default function AdmissionsPage() {
                 </div>
               </div>
 
-              {/* Right Column: Fees & Payment Channels */}
+              {/* Right Column: Fees */}
               <div id="fees" className="scroll-mt-28 lg:col-span-5 space-y-5">
                 <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md space-y-5">
                   <div>
                     <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest block mb-1">
-                      Payment Channels & Fees
+                      Fees
                     </span>
                     <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
-                      Official Fees Structure
+                      Application Fee
                     </h3>
                   </div>
 
-                  <div className="space-y-3">
+                  <div>
                     {/* Application Processing Fee */}
                     <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-[#00873E] dark:border-emerald-600 flex items-center justify-between gap-3">
-                      <div>
-                        <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-sm">
-                          <CreditCard className="w-4 h-4 text-[#00873E]" />
-                          <span>Application Processing Fee</span>
-                        </div>
-                        <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">Paid online via MTN MoMo (*165#) or Airtel Money (*185#)</p>
+                      <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-sm">
+                        <CreditCard className="w-4 h-4 text-[#00873E]" />
+                        <span>Application Processing Fee</span>
                       </div>
                       <span className="text-xs font-black px-3 py-1 rounded-full bg-[#00873E] text-white shrink-0">
                         UGX 50,000
                       </span>
                     </div>
-
-                    {/* Bank Tuition Accounts */}
-                    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-2">
-                      <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-sm">
-                        <Building2 className="w-4 h-4 text-emerald-600" />
-                        <span>Official Tuition Bank Accounts</span>
-                      </div>
-                      <div className="text-xs text-slate-600 dark:text-slate-300 space-y-1">
-                        <p>• <strong>Centenary Bank:</strong> Rakai Branch — Account Name: Rakai Community School of Nursing</p>
-                        <p>• <strong>Stanbic Bank:</strong> Kyotera Branch — School Pay Code Available</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/40 text-xs text-amber-900 dark:text-amber-200 leading-relaxed flex items-start gap-2.5">
-                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                    <span>RCSN does NOT accept cash in hand. All payments are strictly through MTN MoMo, Airtel Money, or bank accounts.</span>
                   </div>
                 </div>
               </div>

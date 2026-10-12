@@ -710,28 +710,28 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
                       </div>
                       <div>
                         <h4 className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-[#00873E] dark:group-hover:text-emerald-400 transition-colors">
-                          Tuition & Accommodation Fees
+                          Application Processing Fee
                         </h4>
                         <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-                          Semester fee structure covering tuition, accommodation, meals, and practical supplies.
+                          Official application processing fee for certificate and diploma applicants.
                         </p>
                       </div>
                     </Link>
 
                     <Link
-                      to="/admissions#fees"
-                      onClick={() => handleAnchorClick('/admissions#fees')}
+                      to="/admissions#requirements"
+                      onClick={() => handleAnchorClick('/admissions#requirements')}
                       className="group p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-slate-800/80 transition-all flex items-start gap-3"
                     >
                       <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-[#00873E] dark:text-emerald-400 shrink-0 group-hover:scale-105 transition-transform">
-                        <ShieldCheck className="w-4 h-4" />
+                        <CheckCircle2 className="w-4 h-4" />
                       </div>
                       <div>
                         <h4 className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-[#00873E] dark:group-hover:text-emerald-400 transition-colors">
-                          Official Bank Payment Channels
+                          Interview Checklist
                         </h4>
                         <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-                          Verified Centenary Bank and Stanbic Bank school fee collection accounts.
+                          Original academic documents, passport photos, and LC1 recommendation letters.
                         </p>
                       </div>
                     </Link>
