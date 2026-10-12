@@ -637,7 +637,7 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
                       Admissions, Requirements & Fees
                     </h3>
                     <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                      Admissions are open for March/April and August/September Intakes. Transparent government-aligned fee structure with flexible installment options.
+                      Admissions are open for January and July Intakes. Transparent government-aligned fee structure with flexible installment options.
                     </p>
                     {onOpenAdmissions ? (
                       <button
@@ -677,7 +677,7 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
                           Intakes & Academic Calendar
                         </h4>
                         <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-                          March/April and August/September intake cycles, deadline dates, and interview schedules.
+                          January and July intake cycles, interview windows, and admission requirements.
                         </p>
                       </div>
                     </Link>

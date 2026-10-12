@@ -94,11 +94,21 @@ export default function AdmissionsPage() {
                   Admissions Open
                 </span>
                 <h2 className="text-2xl sm:text-4xl font-black">
-                  August / September 2026 Main Intake
+                  January &amp; July Intakes (2026/2027)
                 </h2>
                 <p className="text-sm sm:text-base text-slate-300 max-w-2xl leading-relaxed">
-                  Certificate and Diploma courses in Nursing and Midwifery. Apply online or track an existing application in real time.
+                  Certificate and Diploma courses in Nursing and Midwifery. Apply online for the upcoming January or July intake, or track an existing application in real time.
                 </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-xs sm:text-sm max-w-xl">
+                  <div className="bg-black/40 p-3 rounded-xl border border-white/10">
+                    <span className="font-bold text-white block">January Intake</span>
+                    <span className="text-emerald-300 font-medium">Interviews: November – December</span>
+                  </div>
+                  <div className="bg-black/40 p-3 rounded-xl border border-white/10">
+                    <span className="font-bold text-white block">July Intake</span>
+                    <span className="text-emerald-300 font-medium">Interviews: March – April</span>
+                  </div>
+                </div>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3.5 shrink-0 w-full sm:w-auto">

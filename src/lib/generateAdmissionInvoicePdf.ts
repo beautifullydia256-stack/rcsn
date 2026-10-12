@@ -149,7 +149,7 @@ export async function generateAdmissionInvoicePdf(app: AdmissionApplicationRecor
   y += 4.5;
 
   doc.text(`Application Ref: ${app.application_number}`, leftX, y);
-  doc.text(`Academic Intake: ${app.intake || 'August/September 2026'}`, midX, y);
+  doc.text(`Academic Intake: ${app.intake || 'January / July 2026/2027 Intake'}`, midX, y);
   y += 4.5;
 
   doc.text(`Contact Phone: ${app.phone}`, leftX, y);

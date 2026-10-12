@@ -289,9 +289,6 @@ export default function CoursesPage() {
                   <span className="text-emerald-300 font-semibold">Interviews: March – April</span>
                 </div>
               </div>
-              <p className="text-[11px] sm:text-xs text-slate-300 italic pt-1">
-                * Academic year for Certificate courses begins in January and July.
-              </p>
             </div>
           </div>
         </section>

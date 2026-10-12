@@ -85,7 +85,7 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
   const [selectedPrograms, setSelectedPrograms] = useState<string[]>(() => [
     resolveProgramName(preselectedProgram),
   ]);
-  const [intake, setIntake] = useState('August/September 2026 Intake');
+  const [intake, setIntake] = useState('January Intake (2026/2027)');
 
   // Immediately synchronize pre-selected course whenever modal opens or course changes
   useEffect(() => {
@@ -473,7 +473,7 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
                     Select Preferred Intake
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {['August/September 2026 Intake', 'January/February 2027 Intake'].map((i) => (
+                    {['January Intake (2026/2027)', 'July Intake (2026/2027)'].map((i) => (
                       <button
                         key={i}
                         type="button"

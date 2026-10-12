@@ -214,7 +214,7 @@ export async function sendApplicationSubmittedEmail(
         </tr>
         <tr>
           <td style="padding: 4px 0; color: #64748b; font-size: 14px;"><strong>Target Intake:</strong></td>
-          <td style="padding: 4px 0; color: #0f172a; font-size: 14px; text-align: right;">${app.intake || 'August/September 2026'}</td>
+          <td style="padding: 4px 0; color: #0f172a; font-size: 14px; text-align: right;">${app.intake || 'January / July 2026/2027 Intake'}</td>
         </tr>
         <tr>
           <td style="padding: 4px 0; color: #64748b; font-size: 14px;"><strong>Application Fee:</strong></td>
@@ -362,7 +362,7 @@ export async function sendAdmissionOfferEmail(
         </tr>
         <tr>
           <td style="padding: 4px 0; color: #64748b; font-size: 14px;"><strong>Reporting Intake:</strong></td>
-          <td style="padding: 4px 0; color: #0f172a; font-size: 14px; text-align: right;">${app.intake || 'August/September 2026 Intake'}</td>
+          <td style="padding: 4px 0; color: #0f172a; font-size: 14px; text-align: right;">${app.intake || 'January / July 2026/2027 Intake'}</td>
         </tr>
         <tr>
           <td style="padding: 4px 0; color: #64748b; font-size: 14px;"><strong>Residency Category:</strong></td>

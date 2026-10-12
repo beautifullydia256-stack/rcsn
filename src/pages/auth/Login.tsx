@@ -3,7 +3,6 @@ import { Turnstile } from '@marsidev/react-turnstile';
 import { motion } from 'framer-motion';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import {
-  ArrowLeft,
   ShieldCheck,
   Lock,
   Mail,
@@ -343,15 +342,6 @@ export default function LoginPage() {
         />
       </div>
 
-      {/* Floating Back to School Website Button - iOS Liquid Glass Pill */}
-      <Link
-        to="/"
-        className="absolute top-5 left-5 z-20 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-slate-900/40 hover:bg-slate-900/60 text-white text-xs font-semibold backdrop-blur-md border border-white/25 shadow-lg transition-all"
-      >
-        <ArrowLeft className="w-3.5 h-3.5" />
-        <span>Back to Website</span>
-      </Link>
-
       {/* Apple iOS Liquid Glass Login Card - Reduced Gentle Blur, Frosted Transparency */}
       <motion.div
         initial={{ opacity: 0, y: 14, scale: 0.97 }}
@@ -371,23 +361,13 @@ export default function LoginPage() {
 
         {/* School Crest / Badge Only - Free-standing, no box */}
         <div className="text-center mb-3 relative z-10">
-          {isPWA ? (
-            <div className="inline-block group focus:outline-none" title="RCSN School Portal">
-              <img
-                src="/images/rcsn/logo.png"
-                alt="Rakai Community School of Nursing Crest"
-                className="w-24 h-24 sm:w-28 sm:h-28 mx-auto object-contain drop-shadow-xl filter contrast-105"
-              />
-            </div>
-          ) : (
-            <Link to="/" className="inline-block group focus:outline-none" title="Return to Home">
-              <img
-                src="/images/rcsn/logo.png"
-                alt="Rakai Community School of Nursing Crest"
-                className="w-24 h-24 sm:w-28 sm:h-28 mx-auto object-contain drop-shadow-xl group-hover:scale-105 transition-transform duration-200 filter contrast-105"
-              />
-            </Link>
-          )}
+          <div className="inline-block group focus:outline-none" title="RCSN School Portal">
+            <img
+              src="/images/rcsn/logo.png"
+              alt="Rakai Community School of Nursing Crest"
+              className="w-24 h-24 sm:w-28 sm:h-28 mx-auto object-contain drop-shadow-xl filter contrast-105"
+            />
+          </div>
           <h1 className="text-2xl font-black text-white tracking-tight mt-2 drop-shadow-sm">
             Login
           </h1>
@@ -408,7 +388,7 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} className="space-y-3.5 relative z-10">
           <div>
             <label className="block mb-1 text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm">
-              Official or Personal Email / Phone
+              Email or Phone Number
             </label>
             <input
               type="text"
@@ -417,7 +397,7 @@ export default function LoginPage() {
               onChange={handleChange}
               autoComplete="username email tel"
               className="w-full px-4 py-2.5 rounded-xl border border-white/25 bg-black/20 hover:border-white/40 focus:border-white/80 focus:bg-black/35 backdrop-blur-md text-white placeholder-white/50 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
-              placeholder="e.g. name@rcsn.ac.ug, personal email, or phone"
+              placeholder="Email or phone number"
               required
             />
           </div>

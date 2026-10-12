@@ -46,10 +46,34 @@ module.exports = async function handler(req, res) {
     }
     toEmail = toEmail.toLowerCase().trim();
 
-    const subject = emailData.subject || '(No Subject)';
-    const bodyText = emailData.text || '';
-    const bodyHtml = emailData.html || (bodyText ? `<p>${bodyText.replace(/\n/g, '<br/>')}</p>` : '');
+    let subject = emailData.subject || '(No Subject)';
+    let bodyText = emailData.text || '';
+    let bodyHtml = emailData.html || '';
     const resendId = emailData.email_id || emailData.id || null;
+
+    // Resend email.received webhook sends metadata only. Retrieve body via API:
+    const resendApiKey = process.env.RESEND_API_KEY?.trim();
+    if ((!bodyText && !bodyHtml) && resendId && resendApiKey) {
+      try {
+        const receivedRes = await fetch(`https://api.resend.com/emails/receiving/${resendId}`, {
+          headers: {
+            Authorization: `Bearer ${resendApiKey}`,
+          },
+        });
+        if (receivedRes.ok) {
+          const detail = await receivedRes.json();
+          bodyText = detail.text || bodyText;
+          bodyHtml = detail.html || bodyHtml;
+          if (detail.subject) subject = detail.subject;
+        }
+      } catch (err) {
+        console.warn('[resend-inbound] Error fetching email body from Resend API:', err);
+      }
+    }
+
+    if (!bodyHtml && bodyText) {
+      bodyHtml = `<p>${bodyText.replace(/\n/g, '<br/>')}</p>`;
+    }
 
     if (!fromEmail && !toEmail) {
       console.warn('[resend-inbound] Received webhook without from/to email:', payload);

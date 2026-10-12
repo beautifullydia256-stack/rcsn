@@ -132,9 +132,9 @@ export async function generateAdmissionLetterPdf(app: AdmissionApplicationRecord
     },
     body: [
       ['Program of Study:', admittedCourse],
-      ['Academic Intake:', app.intake || 'August / September 2026 Intake'],
+      ['Academic Intake:', app.intake || 'January / July 2026/2027 Intake'],
       ['Approved Status:', isResident ? 'Resident (Full Boarding Scholar)' : 'Non-Resident (Day Scholar)'],
-      ['Reporting / Orientation Date:', 'Monday, 24th August 2026 (8:00 AM)'],
+      ['Reporting / Orientation Date:', app.intake?.includes('January') ? 'Monday, 19th January (8:00 AM)' : 'Monday, 20th July (8:00 AM)'],
       ['First Term Tuition Estimate:', `${tuitionAmount} per Semester`],
     ],
   });

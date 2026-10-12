@@ -179,6 +179,7 @@ module.exports = async function handler(req, res) {
     case 'admissions-send-email':    return load('./admissions/_send-email')(req, res);
     case 'resend-inbound':           return load('./webhooks/_resend-inbound')(req, res);
     case 'institutional-send-reply': return load('./admin/_institutional-reply')(req, res);
+    case 'sync-email-body':          return load('./admin/_sync-email-body')(req, res);
     default:
       res.statusCode = 404;
       return res.end(JSON.stringify({ error: `Unknown action: ${action}` }));

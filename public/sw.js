@@ -8,8 +8,8 @@
  *  Images (logos, photos):     Stale-while-revalidate
  */
 
-const APP_SHELL_CACHE  = 'pweza-shell-v9';
-const IMAGES_CACHE     = 'pweza-images-v9';
+const APP_SHELL_CACHE  = 'rcsn-shell-v12';
+const IMAGES_CACHE     = 'rcsn-images-v12';
 const KNOWN_CACHES     = [APP_SHELL_CACHE, IMAGES_CACHE];
 
 // Static assets cached immediately on install
@@ -18,6 +18,11 @@ const PRECACHE_URLS = [
   '/login',
   '/dashboard',
   '/manifest.json',
+  '/rcsn-badge-192.png',
+  '/rcsn-badge-512.png',
+  '/rcsn-badge-maskable-192.png',
+  '/rcsn-badge-maskable-512.png',
+  '/rcsn-apple-touch-icon.png',
   '/android-chrome-192x192.png',
   '/android-chrome-512x512.png',
   '/apple-touch-icon.png',
