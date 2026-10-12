@@ -976,10 +976,10 @@ export default function Home() {
               <div className="space-y-2 max-w-2xl">
                 <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#00873E] dark:text-emerald-400 uppercase tracking-widest bg-emerald-50 dark:bg-emerald-950/60 px-3 py-1 rounded-full border border-emerald-500/20">
                   <Briefcase className="w-3.5 h-3.5" />
-                  <span>Work With Us • Careers & Vacancies</span>
+                  <span>Careers</span>
                 </span>
                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
-                  Join Our Clinical & Academic Team
+                  Join Our Clinical &amp; Academic Team
                 </h2>
                 <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
                   Help educate and mentor the next generation of healthcare leaders in Uganda. View active openings posted by our administration.
@@ -990,7 +990,7 @@ export default function Home() {
                 to="/jobs"
                 className="inline-flex items-center gap-2 self-start md:self-auto px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 hover:border-emerald-500 text-slate-800 dark:text-slate-200 text-sm font-bold transition-all hover:bg-emerald-50 dark:hover:bg-slate-800"
               >
-                <span>View All Career Postings</span>
+                <span>View Careers</span>
                 <ArrowRight className="w-4 h-4 text-emerald-600" />
               </Link>
             </div>

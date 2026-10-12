@@ -91,7 +91,7 @@ export default function Jobs() {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-200">
       <SeoHead
-        title="Careers & Job Vacancies | Rakai Community School of Nursing"
+        title="Careers | Rakai Community School of Nursing"
         description="Explore career opportunities at Rakai Community School of Nursing. Apply online for clinical instructor, nurse tutor, medical lecturer, and staff positions."
       />
 
@@ -102,10 +102,10 @@ export default function Jobs() {
         <section className="bg-gradient-to-r from-[#004720] via-[#005C29] to-[#007033] text-white py-6 sm:py-8 border-b border-emerald-800/40">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-1">
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              Careers & Vacancies
+              Careers
             </h1>
             <p className="text-xs sm:text-sm text-emerald-100/90 max-w-lg mx-auto">
-              Current job openings and clinical teaching positions at Rakai Community School of Nursing.
+              Current employment and clinical teaching opportunities at Rakai Community School of Nursing.
             </p>
           </div>
         </section>

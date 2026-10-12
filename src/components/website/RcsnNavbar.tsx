@@ -235,7 +235,7 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
                 to="/jobs"
                 onClick={closeDropdown}
                 className="inline-flex xl:hidden items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold transition-colors"
-                title="Careers & Vacancies"
+                title="Careers"
               >
                 <Briefcase className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" />
                 <span>Careers</span>

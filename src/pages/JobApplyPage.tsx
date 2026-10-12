@@ -198,7 +198,7 @@ Yours faithfully,
             className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-[#00873E] dark:text-emerald-400 hover:underline"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Back to All Careers</span>
+            <span>Back to Careers</span>
           </Link>
 
           {loadingJob ? (
