@@ -47,6 +47,7 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
     { name: 'Programs & Courses', path: '/courses', hasDropdown: true },
     { name: 'Admissions & Fees', path: '/admissions', hasDropdown: true },
     { name: 'Clinical Training', path: '/clinical-training', hasDropdown: true },
+    { name: 'Jobs', path: '/jobs', hasDropdown: false },
     { name: 'Contact & Location', path: '/contact', hasDropdown: true },
   ];
 
@@ -152,6 +153,16 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
               <span>WhatsApp: +256 783 399 322</span>
             </a>
             <span className="inline-block h-3 w-px bg-emerald-600" />
+            <Link
+              to="/jobs"
+              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-800/90 hover:bg-emerald-700 text-emerald-100 hover:text-white text-[11px] font-bold transition-all border border-emerald-600/50 shadow-xs"
+              title="Explore Open Vacancies"
+            >
+              <Briefcase className="w-3 h-3 text-emerald-300" />
+              <span>Jobs &amp; Careers</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+            </Link>
+            <span className="inline-block h-3 w-px bg-emerald-600" />
             <span className="text-[11px] font-bold tracking-wider text-amber-300 uppercase">
               UNMEB Center: U028
             </span>
@@ -219,6 +230,11 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
                       }`}
                     >
                       <span>{link.name}</span>
+                      {link.path === '/jobs' && (
+                        <span className="ml-1.5 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-emerald-600 text-white shadow-xs">
+                          Hiring
+                        </span>
+                      )}
                     </Link>
                   </div>
                 );
@@ -228,6 +244,30 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
             {/* Right Side Actions - Always visible, perfectly fitted */}
             <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
               <ThemeToggle />
+
+              {/* Mobile Upper Nav: Instant Jobs Button */}
+              <Link
+                to="/jobs"
+                onClick={closeDropdown}
+                className="inline-flex xl:hidden items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/70 text-[#00873E] dark:text-emerald-400 border border-emerald-500/40 text-xs font-bold shadow-xs hover:bg-emerald-100 transition-colors"
+                title="View Open Jobs"
+              >
+                <Briefcase className="w-3.5 h-3.5" />
+                <span className="text-[11px] font-black uppercase">Jobs</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              </Link>
+
+              {/* Desktop Careers Action Button */}
+              <Link
+                to="/jobs"
+                onClick={closeDropdown}
+                className="hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 lg:px-3.5 lg:py-2 rounded-lg border border-emerald-500/40 bg-emerald-50/70 dark:bg-emerald-950/50 text-[#00873E] dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 font-bold text-xs lg:text-sm transition-colors whitespace-nowrap shadow-xs"
+                title="View Current Job Openings"
+              >
+                <Briefcase className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>Careers</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              </Link>
 
               {/* Application Status Button */}
               <Link
@@ -956,13 +996,21 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
                       window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
                     }
                   }}
-                  className={`block px-4 py-3 rounded-xl text-base font-bold transition-colors ${
+                  className={`flex items-center justify-between px-4 py-3 rounded-xl text-base font-bold transition-colors ${
                     active
                       ? 'text-[#00873E] dark:text-emerald-400 bg-emerald-50 dark:bg-slate-800 font-black'
                       : 'text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
-                  {link.name}
+                  <span className="flex items-center gap-2">
+                    {link.path === '/jobs' && <Briefcase className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
+                    <span>{link.name}</span>
+                  </span>
+                  {link.path === '/jobs' && (
+                    <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                      Openings
+                    </span>
+                  )}
                 </Link>
               );
             })}
