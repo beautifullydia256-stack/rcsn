@@ -6,6 +6,7 @@ import { ToastProvider } from './components/Toast';
 import ProtectedRoute from './router/ProtectedRoute';
 import ScrollToTop from './components/ScrollToTop';
 import { isDesktopApp } from './lib/isDesktopApp';
+import { isStandalone } from './utils/platform';
 import SchoolChatPresenceHeartbeat from './components/SchoolChatPresenceHeartbeat';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import OfflineBanner from './components/OfflineBanner';
@@ -43,6 +44,7 @@ import {
   AddStudentPage,
   AdminDashboard,
   AdminJobsPage,
+  AdminEmailsPage,
   AffiliatePage,
   AffiliateTermsPage,
   AffiliatePortalPage,
@@ -334,10 +336,14 @@ function OfflineSyncEngine() {
 }
 
 function AppRouteTree() {
+  const isPWAStandalone = isStandalone();
+
   return (
     <Routes>
       {isDesktopApp ? (
         <Route path="/" element={<DesktopSplash />} />
+      ) : isPWAStandalone ? (
+        <Route path="/" element={<Navigate to="/login" replace />} />
       ) : (
         <Route path="/" element={<HomePage />} />
       )}
@@ -467,6 +473,7 @@ function AppRouteTree() {
           <Route path="reports/viewer" element={<ReportViewer />} />
           <Route path="reports" element={<ReportsHub />} />
           <Route path="messages" element={<SchoolChatPage />} />
+          <Route path="emails" element={<AdminEmailsPage />} />
           <Route path="templates" element={<AdminTemplateListPage />} />
           <Route path="templates/designer" element={<AdminTemplateDesignerPage />} />
           <Route path="gate-passes" element={<GatePassManager portalRole="admin" />} />
@@ -551,6 +558,7 @@ function AppRouteTree() {
           <Route path="reports/viewer" element={<ReportViewer />} />
           <Route path="reports" element={<ReportsHub />} />
           <Route path="messages" element={<SchoolChatPage />} />
+          <Route path="emails" element={<AdminEmailsPage />} />
           <Route path="gate-passes" element={<GatePassManager portalRole="academic-registrar" />} />
         </Route>
         {/* Legacy redirects */}

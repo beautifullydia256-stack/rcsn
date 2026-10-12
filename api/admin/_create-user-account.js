@@ -935,9 +935,25 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    const isRcsnEmail = String(email).toLowerCase().endsWith('@rcsn.ac.ug');
+    let officialEmail = isRcsnEmail ? String(email).toLowerCase() : null;
+    let personalEmail = !isRcsnEmail ? String(email).toLowerCase() : null;
+
+    if (!officialEmail && name) {
+      const clean = String(name).replace(/\b(dr|mr|mrs|ms|prof|rev|sr|br|hon)\.?\b/gi, '').trim();
+      const parts = clean.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(Boolean);
+      if (parts.length >= 2) {
+        officialEmail = `${parts[0]}.${parts[parts.length - 1]}@rcsn.ac.ug`;
+      } else if (parts.length === 1) {
+        officialEmail = `${parts[0]}@rcsn.ac.ug`;
+      }
+    }
+
     const upsertPayload = {
       user_id: authUserId,
       email: String(email),
+      official_email: officialEmail,
+      personal_email: personalEmail,
       name,
       role: String(roleOut ?? 'teacher'),
       school_id: adminData.school_id,

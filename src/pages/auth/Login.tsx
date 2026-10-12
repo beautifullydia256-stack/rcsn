@@ -10,13 +10,15 @@ import {
   Phone,
   HelpCircle,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Smartphone
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { registerApiUrl } from '../../lib/registerApiOrigin';
 import { useAuthStore } from '../../store/authStore';
 import { applyReturnUrlOverride, resolvePostLoginPath, userMustChangePassword } from '../../lib/postAuthRedirect';
 import { isDesktopApp } from '../../lib/isDesktopApp';
+import { isStandalone } from '../../utils/platform';
 import { NO_INTERNET_USER_MESSAGE, userFacingAuthOrNetworkMessage } from '../../lib/networkErrorMessage';
 
 export default function LoginPage() {
@@ -238,6 +240,23 @@ export default function LoginPage() {
     }
   };
 
+  const isPWA = isStandalone();
+
+  const handleInstallApp = async () => {
+    if (window.__pwaInstallPrompt) {
+      const p = window.__pwaInstallPrompt;
+      p.prompt();
+      await p.userChoice;
+    } else {
+      const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+      if (isIos) {
+        alert("To install RCSN School Portal on iPhone / iPad:\n1. Tap the Share button in Safari (at the bottom)\n2. Scroll down and tap 'Add to Home Screen'\n3. Tap 'Add' to confirm.");
+      } else {
+        alert("To install RCSN School Portal:\nOpen your browser menu (⋮ or ...) and tap 'Install app' or 'Add to Home screen'.");
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -257,22 +276,23 @@ export default function LoginPage() {
       let data: any = null;
       let authError: any = null;
 
-      const looksLikePhone = !email.includes('@') && /^[0-9+\s]+$/.test(email) && email.length > 0;
-      if (looksLikePhone) {
+      // Multi-identifier resolver: supports official school email (@rcsn.ac.ug), personal email, or phone
+      if (email) {
         try {
           const resolveRes = await fetch(registerApiUrl('/api/misc?action=auth-resolve-login-identifier'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone: email }),
+            body: JSON.stringify({ identifier: email }),
           });
           const resolveData = await resolveRes.json().catch(() => ({ email: null }));
-          if (!resolveData.email) {
+          if (resolveData?.email) {
+            email = resolveData.email;
+          } else if (!email.includes('@')) {
             throw new Error('Invalid login credentials');
           }
-          email = resolveData.email;
         } catch (resolveErr) {
           if (resolveErr instanceof Error && resolveErr.message === 'Invalid login credentials') throw resolveErr;
-          throw new Error('Invalid login credentials');
+          // Non-fatal if offline / network fallback — continue with entered identifier
         }
       }
 
@@ -351,13 +371,23 @@ export default function LoginPage() {
 
         {/* School Crest / Badge Only - Free-standing, no box */}
         <div className="text-center mb-3 relative z-10">
-          <Link to="/" className="inline-block group focus:outline-none" title="Return to Home">
-            <img
-              src="/images/rcsn/logo.png"
-              alt="Rakai Community School of Nursing Crest"
-              className="w-24 h-24 sm:w-28 sm:h-28 mx-auto object-contain drop-shadow-xl group-hover:scale-105 transition-transform duration-200 filter contrast-105"
-            />
-          </Link>
+          {isPWA ? (
+            <div className="inline-block group focus:outline-none" title="RCSN School Portal">
+              <img
+                src="/images/rcsn/logo.png"
+                alt="Rakai Community School of Nursing Crest"
+                className="w-24 h-24 sm:w-28 sm:h-28 mx-auto object-contain drop-shadow-xl filter contrast-105"
+              />
+            </div>
+          ) : (
+            <Link to="/" className="inline-block group focus:outline-none" title="Return to Home">
+              <img
+                src="/images/rcsn/logo.png"
+                alt="Rakai Community School of Nursing Crest"
+                className="w-24 h-24 sm:w-28 sm:h-28 mx-auto object-contain drop-shadow-xl group-hover:scale-105 transition-transform duration-200 filter contrast-105"
+              />
+            </Link>
+          )}
           <h1 className="text-2xl font-black text-white tracking-tight mt-2 drop-shadow-sm">
             Login
           </h1>
@@ -378,7 +408,7 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} className="space-y-3.5 relative z-10">
           <div>
             <label className="block mb-1 text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm">
-              Phone Number or Email
+              Official or Personal Email / Phone
             </label>
             <input
               type="text"
@@ -387,7 +417,7 @@ export default function LoginPage() {
               onChange={handleChange}
               autoComplete="username email tel"
               className="w-full px-4 py-2.5 rounded-xl border border-white/25 bg-black/20 hover:border-white/40 focus:border-white/80 focus:bg-black/35 backdrop-blur-md text-white placeholder-white/50 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
-              placeholder="e.g. phone number or email"
+              placeholder="e.g. name@rcsn.ac.ug, personal email, or phone"
               required
             />
           </div>
@@ -544,6 +574,21 @@ export default function LoginPage() {
               admissions@rcsn.ac.ug
             </a>
           </p>
+
+          {/* Compact, clean "Install App on Phone" badge that preserves structure */}
+          {!isPWA && (
+            <div className="pt-2 flex justify-center">
+              <button
+                type="button"
+                onClick={handleInstallApp}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 text-white/90 hover:text-white border border-white/20 text-[11px] font-semibold backdrop-blur-sm transition-all shadow-sm active:scale-95 cursor-pointer"
+                title="Install RCSN School Portal on your phone or computer"
+              >
+                <Smartphone className="w-3 h-3 text-emerald-300" />
+                <span>Install App on Phone</span>
+              </button>
+            </div>
+          )}
         </div>
       </motion.div>
 

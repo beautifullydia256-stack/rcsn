@@ -117,7 +117,7 @@ function getLocalAssignments(schoolId: string): StaffDepartmentAssignment[] {
     console.warn('Error reading local assignments:', err);
   }
 
-  // Pre-seed realistic institutional portfolio assignments for Oxford School tutors
+  // Pre-seed realistic institutional portfolio assignments for Rakai Community School of Nursing tutors
   const starters: StaffDepartmentAssignment[] = [
     {
       id: `assign-namutebi-${schoolId}`,

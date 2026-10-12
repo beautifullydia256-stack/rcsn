@@ -93,6 +93,7 @@ export const AccountsPage = lazyWithRetry(() => import('@/pages/admin/accounts/A
 export const CreateStaffPage = lazyWithRetry(() => import('@/pages/admin/accounts/CreateStaffPage'));
 export const InviteFromRosterPage = lazyWithRetry(() => import('@/pages/admin/accounts/InviteFromRosterPage'));
 export const PermissionsPage = lazyWithRetry(() => import('@/pages/admin/permissions/PermissionsPage'));
+export const AdminEmailsPage = lazyWithRetry(() => import('@/pages/admin/emails/AdminEmailsPage'));
 export const StaffPage = lazyWithRetry(() => import('@/pages/admin/staff/StaffPage'));
 export const OtherStaffProfilePage = lazyWithRetry(() => import('@/pages/admin/staff/OtherStaffProfilePage'));
 export const ExamSetsPage = lazyWithRetry(() => import('@/pages/admin/exam-sets/ExamSetsPage'));

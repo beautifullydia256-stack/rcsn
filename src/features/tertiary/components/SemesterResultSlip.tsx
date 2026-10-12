@@ -78,11 +78,11 @@ export const SemesterResultSlip: React.FC<SemesterResultSlipProps> = ({
 
           <div className="flex-1 text-center">
             <h1 className="text-2xl font-black uppercase tracking-tight" style={{ color: '#0b192c' }}>
-              {schoolName || 'Oxford School of Nursing & Midwifery'}
+              {schoolName || 'Rakai Community School of Nursing'}
             </h1>
             {schoolMotto && <p className="text-xs italic" style={{ color: '#475569' }}>"{schoolMotto}"</p>}
             <p className="text-xs" style={{ color: '#475569' }}>
-              {schoolAddress || 'P.O. Box 712, Uganda'} {schoolContact ? `| Tel: ${schoolContact}` : ''}
+              {schoolAddress || 'P.O. Box 118, Kalisizo / Rakai, Uganda'} {schoolContact ? `| Tel: ${schoolContact}` : ''}
             </p>
             <div className="mt-2 inline-block px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-blue-50 text-blue-900 border border-blue-200">
               {mode === 'internal'

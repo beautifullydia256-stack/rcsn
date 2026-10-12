@@ -88,6 +88,247 @@ html[data-theme="light"] .pw-students .table-wrap,
 .pw-students[data-theme="light"] .table-wrap {
   background: #FFFFFF;
   border-color: #E2E8F0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Light mode buttons (Multiple Input, Import, Export, History, PDF Roster) */
+html.light .pw-students .btn-ghost,
+html[data-theme="light"] .pw-students .btn-ghost,
+.pw-students[data-theme="light"] .btn-ghost {
+  background: #FFFFFF;
+  color: #334155;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+html.light .pw-students .btn-ghost:hover,
+html[data-theme="light"] .pw-students .btn-ghost:hover,
+.pw-students[data-theme="light"] .btn-ghost:hover {
+  background: #F8FAFC;
+  color: #0F172A;
+  border-color: #CBD5E1;
+}
+
+html.light .pw-students .btn-outline,
+html[data-theme="light"] .pw-students .btn-outline,
+.pw-students[data-theme="light"] .btn-outline {
+  background: #FFFFFF;
+  color: #0D9488;
+  border: 1px solid rgba(13, 148, 136, 0.35);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+html.light .pw-students .btn-outline:hover,
+html[data-theme="light"] .pw-students .btn-outline:hover,
+.pw-students[data-theme="light"] .btn-outline:hover {
+  background: rgba(13, 148, 136, 0.08);
+  border-color: #0D9488;
+  color: #0F766E;
+}
+
+/* Light mode table header & text */
+html.light .pw-students .table-head,
+html[data-theme="light"] .pw-students .table-head,
+.pw-students[data-theme="light"] .table-head {
+  background: #F8FAFC;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+html.light .pw-students .th,
+html[data-theme="light"] .pw-students .th,
+.pw-students[data-theme="light"] .th {
+  color: #64748B;
+  font-weight: 700;
+}
+
+html.light .pw-students .th:hover,
+html[data-theme="light"] .pw-students .th:hover,
+.pw-students[data-theme="light"] .th:hover {
+  color: #0F172A;
+}
+
+html.light .pw-students .table-row,
+html[data-theme="light"] .pw-students .table-row,
+.pw-students[data-theme="light"] .table-row {
+  border-bottom: 1px solid #F1F5F9;
+}
+
+html.light .pw-students .td,
+html[data-theme="light"] .pw-students .td,
+.pw-students[data-theme="light"] .td {
+  color: #334155;
+}
+
+html.light .pw-students .student-name,
+html[data-theme="light"] .pw-students .student-name,
+.pw-students[data-theme="light"] .student-name {
+  color: #0F172A;
+}
+
+html.light .pw-students .student-sub,
+html[data-theme="light"] .pw-students .student-sub,
+.pw-students[data-theme="light"] .student-sub {
+  color: #64748B;
+}
+
+/* Light mode action buttons in table rows */
+html.light .pw-students .row-btn,
+html[data-theme="light"] .pw-students .row-btn,
+.pw-students[data-theme="light"] .row-btn {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  color: #475569;
+}
+
+html.light .pw-students .row-btn:hover,
+html[data-theme="light"] .pw-students .row-btn:hover,
+.pw-students[data-theme="light"] .row-btn:hover {
+  background: #EEF2F6;
+  border-color: #CBD5E1;
+  color: #0F172A;
+}
+
+html.light .pw-students .row-btn.arrow,
+html[data-theme="light"] .pw-students .row-btn.arrow,
+.pw-students[data-theme="light"] .row-btn.arrow {
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  color: #334155;
+}
+
+html.light .pw-students .row-btn.arrow:hover,
+html[data-theme="light"] .pw-students .row-btn.arrow:hover,
+.pw-students[data-theme="light"] .row-btn.arrow:hover {
+  background: #0D9488;
+  border-color: #0D9488;
+  color: #FFFFFF;
+}
+
+/* Light mode filters & view switcher */
+html.light .pw-students .filter-select,
+html[data-theme="light"] .pw-students .filter-select,
+.pw-students[data-theme="light"] .filter-select {
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  color: #0F172A;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+html.light .pw-students .filter-select:hover,
+html[data-theme="light"] .pw-students .filter-select:hover,
+.pw-students[data-theme="light"] .filter-select:hover {
+  border-color: #CBD5E1;
+  background-color: #F8FAFC;
+}
+
+html.light .pw-students .view-toggle,
+html[data-theme="light"] .pw-students .view-toggle,
+.pw-students[data-theme="light"] .view-toggle {
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+}
+
+html.light .pw-students .view-btn,
+html[data-theme="light"] .pw-students .view-btn,
+.pw-students[data-theme="light"] .view-btn {
+  color: #64748B;
+}
+
+html.light .pw-students .view-btn:hover,
+html[data-theme="light"] .pw-students .view-btn:hover,
+.pw-students[data-theme="light"] .view-btn:hover {
+  color: #0F172A;
+}
+
+html.light .pw-students .view-btn.active,
+html[data-theme="light"] .pw-students .view-btn.active,
+.pw-students[data-theme="light"] .view-btn.active {
+  background: #FFFFFF;
+  color: #0F172A;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Light mode pagination */
+html.light .pw-students .page-btn,
+html[data-theme="light"] .pw-students .page-btn,
+.pw-students[data-theme="light"] .page-btn {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  color: #334155;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+html.light .pw-students .page-btn:hover,
+html[data-theme="light"] .pw-students .page-btn:hover,
+.pw-students[data-theme="light"] .page-btn:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+  border-color: #CBD5E1;
+}
+
+html.light .pw-students .page-btn.active,
+html[data-theme="light"] .pw-students .page-btn.active,
+.pw-students[data-theme="light"] .page-btn.active {
+  background: #0D9488;
+  color: #FFFFFF;
+  border-color: #0D9488;
+  font-weight: 700;
+}
+
+/* Light mode student cards */
+html.light .pw-students .student-card,
+html[data-theme="light"] .pw-students .student-card,
+.pw-students[data-theme="light"] .student-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+html.light .pw-students .student-card-top,
+html[data-theme="light"] .pw-students .student-card-top,
+.pw-students[data-theme="light"] .student-card-top {
+  background: #F8FAFC;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+html.light .pw-students .sc-name,
+html[data-theme="light"] .pw-students .sc-name,
+.pw-students[data-theme="light"] .sc-name {
+  color: #0F172A;
+}
+
+html.light .pw-students .sc-row,
+html[data-theme="light"] .pw-students .sc-row,
+.pw-students[data-theme="light"] .sc-row {
+  border-bottom: 1px solid #F1F5F9;
+}
+
+html.light .pw-students .sc-row-label,
+html[data-theme="light"] .pw-students .sc-row-label,
+.pw-students[data-theme="light"] .sc-row-label {
+  color: #64748B;
+}
+
+html.light .pw-students .sc-row-value,
+html[data-theme="light"] .pw-students .sc-row-value,
+.pw-students[data-theme="light"] .sc-row-value {
+  color: #0F172A;
+}
+
+html.light .pw-students .student-card-foot,
+html[data-theme="light"] .pw-students .student-card-foot,
+.pw-students[data-theme="light"] .student-card-foot {
+  border-top: 1px solid #E2E8F0;
+  background: #FAFAFA;
+}
+
+html.light .pw-students .sc-btn-ghost,
+html[data-theme="light"] .pw-students .sc-btn-ghost,
+.pw-students[data-theme="light"] .sc-btn-ghost {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  color: #334155;
 }
 
 .pw-students {

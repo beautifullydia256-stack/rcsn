@@ -9,6 +9,7 @@ import {
   buildPublishedClassBundleZipDownloadFilename,
   buildSingleStudentReportPdfFilename,
 } from '../../../lib/reportPdfFilenames';
+import { useSchoolType } from '../../../hooks/useSchoolType';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -143,6 +144,7 @@ type RecordsTab = 'students' | 'class_zips';
 export default function ReportRecordsPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const { isTertiary } = useSchoolType();
   const [tab, setTab] = useState<RecordsTab>('students');
   const [filterYear, setFilterYear] = useState('');
   const [filterTerm, setFilterTerm] = useState('');
@@ -264,7 +266,8 @@ export default function ReportRecordsPage() {
         const cleanStudentName = (row.student || 'Student').replace(/[^a-zA-Z0-9]/g, '_');
         const cleanClassName = (row.class || 'Class').replace(/[^a-zA-Z0-9]/g, '_');
         const cleanExamName = (row.exam || 'Report').replace(/[^a-zA-Z0-9]/g, '_');
-        const filename = `${cleanStudentName}_${cleanClassName}_Term_${row.term}_${cleanExamName}_${row.year}.pdf`;
+        const termOrSem = isTertiary ? 'Semester' : 'Term';
+        const filename = `${cleanStudentName}_${cleanClassName}_${termOrSem}_${row.term}_${cleanExamName}_${row.year}.pdf`;
 
         // Use mobileOptimizedDownload with retry logic
         await mobileOptimizedDownload(supabase, row.storage_bucket, row.file, filename);
@@ -368,17 +371,17 @@ export default function ReportRecordsPage() {
 
   return (
     <AdminPageWrapper
-      eyebrow="History"
-      title="Report Records"
-      subtitle="View and manage historical report records"
+      eyebrow="Academic Records"
+      title="Archived Result Slips & Broadsheets"
+      subtitle="View and download archived semester result slips and cohort broadsheet bundles."
     >
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <button
           type="button"
-          onClick={() => navigate('/dashboard/admin/reports')}
+          onClick={() => navigate('/dashboard/admin/reports/generate-tertiary')}
           className="ac-glass-btn-secondary min-h-[44px] rounded-xl px-4 py-2 text-sm font-medium ac-text-primary"
         >
-          Back to Reports
+          Back to Result Slips & Broadsheets
         </button>
       </div>
 
@@ -392,7 +395,7 @@ export default function ReportRecordsPage() {
               : 'ac-text-muted hover:ac-text-primary'
           }`}
         >
-          Student PDFs
+          Trainee Result Slips
         </button>
         <button
           type="button"
@@ -403,7 +406,7 @@ export default function ReportRecordsPage() {
               : 'ac-text-muted hover:ac-text-primary'
           }`}
         >
-          Class ZIP bundles
+          Cohort ZIP Bundles
         </button>
       </div>
 
@@ -412,24 +415,24 @@ export default function ReportRecordsPage() {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Filter by student, class, or exam"
+            placeholder="Filter by trainee, cohort, or exam"
             className="ac-input rounded-xl px-3 py-2.5 lg:col-span-2"
           />
         ) : (
-          <div className="ac-text-muted text-sm lg:col-span-2 flex items-center px-1">
-            Complete class ZIP files for download
+          <div className="ac-text-muted text-sm lg:col-span-2 flex items-center px-1 font-medium">
+            Complete cohort ZIP bundles for download
           </div>
         )}
         <select
           value={filterYear}
           onChange={(e) => setFilterYear(e.target.value)}
           className="ac-input rounded-xl px-3 py-2.5"
-          aria-label="Filter by year"
+          aria-label="Filter by academic year"
         >
-          <option value="">All years</option>
+          <option value="">All Academic Years</option>
           {yearOptions.map((y) => (
             <option key={y} value={y}>
-              {y}
+              {`${y}/${Number(y) + 1} Academic Year`}
             </option>
           ))}
         </select>
@@ -437,18 +440,17 @@ export default function ReportRecordsPage() {
           value={filterTerm}
           onChange={(e) => setFilterTerm(e.target.value)}
           className="ac-input rounded-xl px-3 py-2.5"
-          aria-label="Filter by term"
+          aria-label="Filter by academic semester"
         >
-          <option value="">All terms</option>
-          <option value="1">Term 1</option>
-          <option value="2">Term 2</option>
-          <option value="3">Term 3</option>
+          <option value="">All Semesters</option>
+          <option value="1">Semester 1</option>
+          <option value="2">Semester 2</option>
         </select>
         <select
           value={filterExamId}
           onChange={(e) => setFilterExamId(e.target.value)}
           className="ac-input rounded-xl px-3 py-2.5"
-          aria-label="Filter by exam"
+          aria-label="Filter by examination"
         >
           <option value="">All exams</option>
           {examOptions.map(([id, name]) => (
@@ -517,24 +519,26 @@ export default function ReportRecordsPage() {
               <thead>
                 <tr className="border-b border-[var(--ac-border)] bg-[var(--ac-card-bg)] text-left">
                   <th className="px-4 py-3 font-medium ac-text-muted hidden sm:table-cell">Date</th>
-                  <th className="px-4 py-3 font-medium ac-text-muted">Student</th>
-                  <th className="px-4 py-3 font-medium ac-text-muted">Class</th>
+                  <th className="px-4 py-3 font-medium ac-text-muted">Trainee</th>
+                  <th className="px-4 py-3 font-medium ac-text-muted">Course / Cohort</th>
                   <th className="px-4 py-3 font-medium ac-text-muted">Exam</th>
-                  <th className="px-4 py-3 font-medium ac-text-muted hidden md:table-cell">Term / Year</th>
-                  <th className="px-4 py-3 font-medium ac-text-muted">File</th>
+                  <th className="px-4 py-3 font-medium ac-text-muted hidden md:table-cell">
+                    Academic Semester & Year
+                  </th>
+                  <th className="px-4 py-3 font-medium ac-text-muted">Result Slip</th>
                 </tr>
               </thead>
               <tbody className="[&>tr:nth-child(even)]:bg-[var(--ac-sidebar-active-bg)]/50">
                 {filteredStudents.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="ac-text-muted px-4 py-8 text-center hidden sm:table-cell">
-                      No reports found
+                      No archived trainee result slips found
                     </td>
                     <td colSpan={5} className="ac-text-muted px-4 py-8 text-center sm:hidden md:table-cell">
-                      No reports found
+                      No archived trainee result slips found
                     </td>
                     <td colSpan={5} className="ac-text-muted px-4 py-8 text-center sm:table-cell md:hidden">
-                      No reports found
+                      No archived trainee result slips found
                     </td>
                   </tr>
                 ) : (
@@ -546,8 +550,8 @@ export default function ReportRecordsPage() {
                       <td className="ac-text-primary px-4 py-2.5 font-medium">{r.student}</td>
                       <td className="ac-text-secondary px-4 py-2.5">{r.class}</td>
                       <td className="ac-text-secondary px-4 py-2.5">{r.exam}</td>
-                      <td className="ac-text-secondary px-4 py-2.5 hidden md:table-cell">
-                        Term {r.term} · {r.year}
+                      <td className="ac-text-secondary px-4 py-2.5 hidden md:table-cell font-medium">
+                        {`Semester ${r.term} · ${r.year}/${Number(r.year) + 1} Academic Year`}
                       </td>
                       <td className="px-4 py-2.5">
                         <button
@@ -572,23 +576,25 @@ export default function ReportRecordsPage() {
               <thead>
                 <tr className="border-b border-[var(--ac-border)] bg-[var(--ac-card-bg)] text-left">
                   <th className="px-4 py-3 font-medium ac-text-muted hidden sm:table-cell">Date</th>
-                  <th className="px-4 py-3 font-medium ac-text-muted">Class</th>
+                  <th className="px-4 py-3 font-medium ac-text-muted">Cohort</th>
                   <th className="px-4 py-3 font-medium ac-text-muted">Exam</th>
-                  <th className="px-4 py-3 font-medium ac-text-muted hidden md:table-cell">Term / Year</th>
-                  <th className="px-4 py-3 font-medium ac-text-muted">ZIP</th>
+                  <th className="px-4 py-3 font-medium ac-text-muted hidden md:table-cell">
+                    Academic Semester & Year
+                  </th>
+                  <th className="px-4 py-3 font-medium ac-text-muted">ZIP Bundle</th>
                 </tr>
               </thead>
               <tbody className="[&>tr:nth-child(even)]:bg-[var(--ac-sidebar-active-bg)]/50">
                 {filteredBundles.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="ac-text-muted px-4 py-8 text-center hidden sm:table-cell">
-                      No class ZIP bundles found
+                      No cohort ZIP bundles found
                     </td>
                     <td colSpan={3} className="ac-text-muted px-4 py-8 text-center sm:hidden md:table-cell">
-                      No class ZIP bundles found
+                      No cohort ZIP bundles found
                     </td>
                     <td colSpan={4} className="ac-text-muted px-4 py-8 text-center sm:table-cell md:hidden">
-                      No class ZIP bundles found
+                      No cohort ZIP bundles found
                     </td>
                   </tr>
                 ) : (
@@ -599,8 +605,8 @@ export default function ReportRecordsPage() {
                       </td>
                       <td className="ac-text-primary px-4 py-2.5 font-medium">{r.class_name}</td>
                       <td className="ac-text-secondary px-4 py-2.5">{r.exam_name}</td>
-                      <td className="ac-text-secondary px-4 py-2.5 hidden md:table-cell">
-                        Term {r.term} · {r.year}
+                      <td className="ac-text-secondary px-4 py-2.5 hidden md:table-cell font-medium">
+                        {`Semester ${r.term} · ${r.year}/${Number(r.year) + 1} Academic Year`}
                       </td>
                       <td className="px-4 py-2.5">
                         <button

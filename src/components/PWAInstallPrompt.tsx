@@ -39,9 +39,6 @@ function wasDismissedRecently(): boolean {
 }
 
 export default function PWAInstallPrompt() {
-  // Temporarily disabled per user request (can be re-enabled later)
-  return null;
-
   const [show, setShow] = useState(false);
   const [mode, setMode] = useState<'android' | 'ios' | null>(null);
 
@@ -118,20 +115,20 @@ export default function PWAInstallPrompt() {
         >
           <div className="relative overflow-hidden rounded-2xl shadow-2xl border border-white/20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl">
             {/* Accent bar */}
-            <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
+            <div className="h-1 w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-green-600" />
 
             <div className="p-5">
               <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-11 h-11 rounded-xl bg-blue-500/10 dark:bg-blue-500/20 flex items-center justify-center">
-                  <Smartphone className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <div className="flex-shrink-0 w-11 h-11 rounded-xl bg-white border border-slate-200 dark:border-slate-700 p-1 flex items-center justify-center shadow-sm">
+                  <img src="/images/rcsn/logo.png" alt="RCSN Crest" className="w-9 h-9 object-contain" />
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <p className="font-bold text-gray-900 dark:text-white text-sm">Install PwezaCore</p>
+                      <p className="font-bold text-gray-900 dark:text-white text-sm">Install RCSN Portal</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                        Faster access, offline support, works like a native app
+                        Faster login, offline access, installs directly on your phone
                       </p>
                     </div>
                     <button
@@ -146,7 +143,7 @@ export default function PWAInstallPrompt() {
                   {mode === 'android' && (
                     <button
                       onClick={handleInstall}
-                      className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors"
+                      className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm"
                     >
                       <Download className="w-4 h-4" />
                       Add to Home Screen

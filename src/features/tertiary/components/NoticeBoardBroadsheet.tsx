@@ -427,7 +427,7 @@ export const NoticeBoardBroadsheet: React.FC<NoticeBoardBroadsheetProps> = ({
               <span className="text-[10px] italic" style={{ color: '#94a3b8' }}>[Official College Stamp]</span>
             </div>
             <strong className="block" style={{ color: '#0f172a' }}>Academic Registrar / Principal</strong>
-            <span className="text-[10px]" style={{ color: '#64748b' }}>Oxford School of Nursing</span>
+            <span className="text-[10px]" style={{ color: '#64748b' }}>{schoolName || 'Rakai Community School of Nursing'}</span>
           </div>
         </div>
 

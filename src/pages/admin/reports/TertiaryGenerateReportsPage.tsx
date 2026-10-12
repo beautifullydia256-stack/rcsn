@@ -510,7 +510,28 @@ export default function TertiaryGenerateReportsPage() {
     return determineAwardClassification(cumulativeCGPA);
   }, [cumulativeCGPA]);
 
-  if (students.length === 0 && !studentsLoading) {
+  if (studentsLoading) {
+    return (
+      <AdminPageWrapper
+        eyebrow="Academic Records &amp; Transcripts"
+        title="Examination Broadsheets &amp; Transcripts Hub"
+        subtitle="Generate whole-class notice board broadsheets, official semester result slips, and cumulative transcripts."
+      >
+        <div
+          className="rounded-2xl p-12 flex flex-col items-center justify-center gap-3 text-center"
+          style={{
+            backgroundColor: t.panel,
+            border: `1px solid ${t.stroke}`,
+          }}
+        >
+          <Loader2 className="w-8 h-8 text-teal-400 animate-spin" />
+          <p className="text-sm text-slate-300 font-medium">Loading academic records...</p>
+        </div>
+      </AdminPageWrapper>
+    );
+  }
+
+  if (students.length === 0) {
     return (
       <AdminPageWrapper
         title="Result Slips, Transcripts &amp; Broadsheets"
@@ -1005,11 +1026,11 @@ export default function TertiaryGenerateReportsPage() {
             {/* MODE 1: WHOLE CLASS / COHORT NOTICE BOARD BROADSHEET */}
             {docType === 'broadsheet' && (
               <NoticeBoardBroadsheet
-                schoolName={schoolData?.name || 'Oxford School of Nursing & Midwifery'}
+                schoolName={schoolData?.name || 'Rakai Community School of Nursing'}
                 schoolLogoUrl={schoolData?.logo_url}
-                schoolMotto={schoolData?.motto || 'Excellence in Health & Clinical Practice'}
-                schoolAddress={schoolData?.address || 'P.O. Box 712, Uganda'}
-                schoolContact={schoolData?.contact || '+256 700 000000'}
+                schoolMotto={schoolData?.motto || 'Training for Quality Health and Compassion'}
+                schoolAddress={schoolData?.address || 'P.O. Box 118, Kalisizo / Rakai, Uganda'}
+                schoolContact={schoolData?.contact || '+256 701 444 870'}
                 className={selectedCohort === 'all' ? cohorts[0] || 'Diploma in Midwifery' : selectedCohort}
                 academicYearSession="2025/2026 Academic Year – Semester 1"
                 examinationTitle="Internal Assessment Semester Examination Results"
@@ -1023,11 +1044,11 @@ export default function TertiaryGenerateReportsPage() {
             {activeStudent && docType === 'slip' && (
               <div className="overflow-x-auto rounded-2xl bg-white p-4 sm:p-8 text-black shadow-2xl">
                 <SemesterResultSlip
-                  schoolName={schoolData?.name || 'Oxford School of Nursing & Midwifery'}
+                  schoolName={schoolData?.name || 'Rakai Community School of Nursing'}
                   schoolLogoUrl={schoolData?.logo_url}
-                  schoolMotto={schoolData?.motto || 'Excellence in Health & Clinical Practice'}
-                  schoolAddress={schoolData?.address || 'P.O. Box 712, Uganda'}
-                  schoolContact={schoolData?.contact || '+256 700 000000'}
+                  schoolMotto={schoolData?.motto || 'Training for Quality Health and Compassion'}
+                  schoolAddress={schoolData?.address || 'P.O. Box 118, Kalisizo / Rakai, Uganda'}
+                  schoolContact={schoolData?.contact || '+256 701 444 870'}
                   mode={mode}
                   student={activeStudent}
                   semesterStage={selectedStage}
@@ -1050,11 +1071,11 @@ export default function TertiaryGenerateReportsPage() {
           {activeStudent && docType === 'transcript' && (
             <div className="overflow-x-auto rounded-2xl bg-white p-4 sm:p-8 text-black shadow-2xl">
               <AcademicTranscript
-                schoolName={schoolData?.name || 'Oxford School of Nursing & Midwifery'}
+                schoolName={schoolData?.name || 'Rakai Community School of Nursing'}
                 schoolLogoUrl={schoolData?.logo_url}
-                schoolAddress={schoolData?.address || 'P.O. Box 712, Uganda'}
-                schoolContact={schoolData?.contact || '+256 700 000000'}
-                schoolEmail={schoolData?.email || 'registrar@oxfordnursing.ac.ug'}
+                schoolAddress={schoolData?.address || 'P.O. Box 118, Kalisizo / Rakai, Uganda'}
+                schoolContact={schoolData?.contact || '+256 701 444 870'}
+                schoolEmail={schoolData?.email || 'info@rcsn.ac.ug'}
                 student={activeStudent}
                 serialNumber="TR-004928"
                 yearOfEntry="Jan-2023"

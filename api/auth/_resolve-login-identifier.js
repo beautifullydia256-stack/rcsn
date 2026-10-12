@@ -2,11 +2,8 @@
 
 // CommonJS — package.json has no "type":"module" so .ts ESM output breaks Node.js
 
-// Supabase Auth's native `phone` field is never populated in this app — every account is
-// email-only at the GoTrue level (see api/auth/_request-phone-reset.js for the same pattern
-// applied to password reset). To let someone log in with a phone number, we resolve it
-// server-side to the matching account's email first, then the frontend calls the normal
-// signInWithPassword({ email, password }) unchanged.
+// Resolves a login identifier (official school email, personal email, or phone number)
+// to the account's primary Supabase Auth email.
 
 const { createClient } = require('@supabase/supabase-js');
 const { normalizePhone, isUgandaNumber, candidatePhoneFormats } = require('../../lib/sms');
@@ -21,19 +18,37 @@ function getSupabase() {
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const phoneInput = typeof req.body?.phone === 'string' ? req.body.phone.trim() : '';
-  if (!phoneInput) return res.status(200).json({ email: null });
+  const input = typeof req.body?.identifier === 'string'
+    ? req.body.identifier.trim()
+    : typeof req.body?.phone === 'string'
+    ? req.body.phone.trim()
+    : typeof req.body?.email === 'string'
+    ? req.body.email.trim()
+    : '';
 
-  const normalized = normalizePhone(phoneInput);
-  if (!isUgandaNumber(normalized)) return res.status(200).json({ email: null });
+  if (!input) return res.status(200).json({ email: null });
 
   try {
     const supabase = getSupabase();
-    const candidates = candidatePhoneFormats(normalized);
 
-    // .maybeSingle() intentionally errors (falls to the catch below, still returns
-    // { email: null }) rather than picking one, if a phone happens to be shared by more
-    // than one account — safer than silently logging someone into the wrong account.
+    // 1. Email identifier resolution (checks official_email, personal_email, and primary email)
+    if (input.includes('@')) {
+      const cleanEmail = input.toLowerCase();
+      const { data: user } = await supabase
+        .from('users')
+        .select('email')
+        .or(`email.ilike.${cleanEmail},official_email.ilike.${cleanEmail},personal_email.ilike.${cleanEmail}`)
+        .limit(1)
+        .maybeSingle();
+
+      return res.status(200).json({ email: user?.email || cleanEmail });
+    }
+
+    // 2. Phone identifier resolution
+    const normalized = normalizePhone(input);
+    if (!isUgandaNumber(normalized)) return res.status(200).json({ email: null });
+
+    const candidates = candidatePhoneFormats(normalized);
     const { data: user } = await supabase
       .from('users')
       .select('email')

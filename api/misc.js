@@ -177,6 +177,8 @@ module.exports = async function handler(req, res) {
     case 'expire-guild-tenures':     return load('./cron/_expire-guild-tenures')(req, res);
     case 'register-school':          return load('./register/_school')(req, res);
     case 'admissions-send-email':    return load('./admissions/_send-email')(req, res);
+    case 'resend-inbound':           return load('./webhooks/_resend-inbound')(req, res);
+    case 'institutional-send-reply': return load('./admin/_institutional-reply')(req, res);
     default:
       res.statusCode = 404;
       return res.end(JSON.stringify({ error: `Unknown action: ${action}` }));

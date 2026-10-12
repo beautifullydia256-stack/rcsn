@@ -65,7 +65,7 @@ function saveLocalApprovals(schoolId: string, approvals: BudgetAdminApproval[]) 
 }
 
 /**
- * Starter mock requisitions for Oxford School of Nursing & Midwifery if none exist
+ * Starter mock requisitions for Rakai Community School of Nursing & Midwifery if none exist
  */
 function generateStarterRequisitions(schoolId: string, deptMap: Map<string, any>): BudgetRequisition[] {
   const depts = Array.from(deptMap.values());
@@ -582,7 +582,7 @@ export async function fetchMonthlyConsolidatedBudget(
       id: `budget-${budgetMonth}`,
       school_id: schoolId,
       budget_month: budgetMonth,
-      total_inflow_projected: 48500000, // Projected tuition inflow for Oxford
+      total_inflow_projected: 48500000, // Projected tuition inflow for Rakai Community School of Nursing
       total_budget_requested: totalRequested,
       total_budget_approved: totalRequested,
       status: 'proposed',

@@ -993,10 +993,23 @@ export default function DesignStudentsPage() {
                               border:
                                 attendanceStatus === 'present'
                                   ? '1px solid rgba(16,185,129,0.32)'
+                                  : theme === 'light'
+                                  ? '1px solid #e2e8f0'
                                   : '1px solid rgba(148,163,184,0.22)',
                               background:
-                                attendanceStatus === 'present' ? 'rgba(16,185,129,0.14)' : 'rgba(148,163,184,0.1)',
-                              color: attendanceStatus === 'present' ? '#34d399' : 'var(--t3)',
+                                attendanceStatus === 'present'
+                                  ? 'rgba(16,185,129,0.14)'
+                                  : theme === 'light'
+                                  ? '#f1f5f9'
+                                  : 'rgba(148,163,184,0.1)',
+                              color:
+                                attendanceStatus === 'present'
+                                  ? theme === 'light'
+                                    ? '#059669'
+                                    : '#34d399'
+                                  : theme === 'light'
+                                  ? '#475569'
+                                  : 'var(--t3)',
                             }}
                           >
                             {attendanceStatus === 'present' ? '● Present' : '○ Not Marked'}

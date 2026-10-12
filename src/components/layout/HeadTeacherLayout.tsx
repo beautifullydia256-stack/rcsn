@@ -33,6 +33,7 @@ import {
   Repeat,
   CalendarDays,
   UtensilsCrossed,
+  Mail,
 } from 'lucide-react';
 import AdminContentSkeleton from './AdminContentSkeleton';
 import HeadTeacherMobileBottomNav from './HeadTeacherMobileBottomNav';
@@ -472,7 +473,7 @@ export default function HeadTeacherLayout() {
                 className="pw-nav-subitem--hidden"
               />
               <SubItem to="/dashboard/academic-registrar/reports/generate" label={navTerms.generateReportsLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItem to="/dashboard/academic-registrar/report-records" label="Report Records" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/academic-registrar/report-records" label={isTertiary ? "Archived Result Slips" : "Report Records"} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>
           </div>
 
@@ -538,6 +539,7 @@ export default function HeadTeacherLayout() {
               <SubItem to="/dashboard/academic-registrar/accounts/invite" label="Send invitations" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/academic-registrar/permissions" label="Access &amp; permissions" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>
+            <NavItem to="/dashboard/academic-registrar/emails" icon={<Mail className="w-4 h-4" />} label="Official Emails" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/academic-registrar/gate-passes" icon={<ShieldCheck className="w-4 h-4 text-emerald-400" />} label="Gate Passes &amp; Exits" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/academic-registrar/headed-paper" icon={<FileText className="w-4 h-4" />} label="Headed Paper" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/academic-registrar/settings" icon={<Settings className="w-4 h-4" />} label="System Settings" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
