@@ -16,11 +16,12 @@ import {
   Phone,
   GraduationCap,
   Clock,
-  MessageSquare,
+  ExternalLink,
+  Upload,
+  X,
+  FileCheck,
   Copy,
   Check,
-  ExternalLink,
-  ImageIcon,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import RcsnNavbar from '@/components/website/RcsnNavbar';
@@ -42,14 +43,70 @@ interface JobDetails {
   poster_url?: string | null;
 }
 
+interface UploadedDocMeta {
+  label: string;
+  name: string;
+  path: string;
+  size: number;
+  type: string;
+}
+
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 Megabytes
+
+// Compresses image files client-side before upload to prevent excessive storage consumption
+async function compressImageIfNeeded(file: File): Promise<File> {
+  if (!file.type.startsWith('image/')) return file;
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+        const MAX_DIM = 1600;
+        if (width > MAX_DIM || height > MAX_DIM) {
+          if (width > height) {
+            height = Math.round((height * MAX_DIM) / width);
+            width = MAX_DIM;
+          } else {
+            width = Math.round((width * MAX_DIM) / height);
+            height = MAX_DIM;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (blob && blob.size < file.size) {
+              const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, '.jpg'), {
+                type: 'image/jpeg',
+              });
+              resolve(newFile);
+            } else {
+              resolve(file);
+            }
+          },
+          'image/jpeg',
+          0.82
+        );
+      };
+      img.onerror = () => resolve(file);
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => resolve(file);
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function JobApplyPage() {
   const { jobId } = useParams<{ jobId: string }>();
 
   const [job, setJob] = useState<JobDetails | null>(null);
   const [loadingJob, setLoadingJob] = useState(true);
   const [jobError, setJobError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'online' | 'email' | 'whatsapp'>('online');
-  const [copiedDraft, setCopiedDraft] = useState(false);
+  const [activeTab, setActiveTab] = useState<'online' | 'whatsapp' | 'email'>('online');
 
   // Online Form Fields
   const [fullName, setFullName] = useState('');
@@ -60,9 +117,16 @@ export default function JobApplyPage() {
   const [coverLetter, setCoverLetter] = useState('');
   const [cvUrl, setCvUrl] = useState('');
 
+  // 3 Document Upload Slots (max 5MB each)
+  const [cvFile, setCvFile] = useState<File | null>(null);
+  const [coverLetterFile, setCoverLetterFile] = useState<File | null>(null);
+  const [certsFile, setCertsFile] = useState<File | null>(null);
+
   // Submit State
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [applicationRef, setApplicationRef] = useState<string | null>(null);
+  const [copiedRef, setCopiedRef] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -105,6 +169,31 @@ export default function JobApplyPage() {
     };
   }, [jobId]);
 
+  // Handle Document Selection with Validation & Auto-Compression
+  const handleFileSelect = async (
+    file: File | undefined,
+    setter: (f: File | null) => void,
+    label: string
+  ) => {
+    if (!file) {
+      setter(null);
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      setSubmitError(`${label} exceeds the 5MB size limit. Please upload a file smaller than 5MB.`);
+      return;
+    }
+
+    setSubmitError(null);
+    if (file.type.startsWith('image/')) {
+      const compressed = await compressImageIfNeeded(file);
+      setter(compressed);
+    } else {
+      setter(file);
+    }
+  };
+
   // Online Form Submit
   const handleOnlineSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,6 +208,67 @@ export default function JobApplyPage() {
     setSubmitError(null);
 
     try {
+      // 0. Pre-check for duplicate application for the same vacancy
+      const { data: existingApps } = await supabase
+        .from('hr_job_applications')
+        .select('id, reference_no, email, phone')
+        .eq('job_id', jobId)
+        .or(`email.ilike.${email.trim().toLowerCase()},phone.eq.${phone.trim()}`)
+        .limit(1);
+
+      if (existingApps && existingApps.length > 0) {
+        const dup = existingApps[0];
+        const refMsg = dup.reference_no ? ` (Reference: ${dup.reference_no})` : '';
+        setSubmitError(
+          `An application for this position has already been submitted using your email or telephone number${refMsg}. Multiple submissions for the same vacancy are not allowed.`
+        );
+        setSubmitting(false);
+        return;
+      }
+
+      // 1. Upload attached documents to Supabase Storage (Private job-applications bucket)
+      const uploadedDocs: UploadedDocMeta[] = [];
+      let cvPath: string | null = cvUrl.trim() || null;
+      let coverLetterPath: string | null = null;
+      let certsPath: string | null = null;
+
+      const uploadDoc = async (file: File, label: string): Promise<UploadedDocMeta> => {
+        const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const storagePath = `${jobId}/${Date.now()}_${Math.random().toString(36).slice(2, 7)}_${cleanName}`;
+        const { error: uploadErr } = await supabase.storage
+          .from('job-applications')
+          .upload(storagePath, file, { cacheControl: '3600', upsert: false });
+
+        if (uploadErr) throw uploadErr;
+
+        return {
+          label,
+          name: file.name,
+          path: storagePath,
+          size: file.size,
+          type: file.type,
+        };
+      };
+
+      if (cvFile) {
+        const doc = await uploadDoc(cvFile, 'Curriculum Vitae (CV)');
+        uploadedDocs.push(doc);
+        cvPath = doc.path;
+      }
+
+      if (coverLetterFile) {
+        const doc = await uploadDoc(coverLetterFile, 'Application / Cover Letter');
+        uploadedDocs.push(doc);
+        coverLetterPath = doc.path;
+      }
+
+      if (certsFile) {
+        const doc = await uploadDoc(certsFile, 'Academic Certificates / Credentials');
+        uploadedDocs.push(doc);
+        certsPath = doc.path;
+      }
+
+      // 2. Compile notes and save application record
       const compiledNotes = [
         qualification.trim() ? `Highest Qualification: ${qualification.trim()}` : null,
         experience.trim() ? `Relevant Experience: ${experience.trim()}` : null,
@@ -129,18 +279,41 @@ export default function JobApplyPage() {
         .filter((line) => line !== null)
         .join('\n');
 
-      const { error: insErr } = await supabase.from('hr_job_applications').insert({
-        job_id: jobId,
-        school_id: job.school_id || 'e1b10000-0000-4000-a000-000000000001',
-        full_name: fullName.trim(),
-        email: email.trim().toLowerCase(),
-        phone: phone.trim(),
-        cover_letter: compiledNotes,
-        cv_url: cvUrl.trim() || null,
-        status: 'new',
-      });
+      const { data: insData, error: insErr } = await supabase
+        .from('hr_job_applications')
+        .insert({
+          job_id: jobId,
+          school_id: job.school_id || 'e1b10000-0000-4000-a000-000000000001',
+          full_name: fullName.trim(),
+          email: email.trim().toLowerCase(),
+          phone: phone.trim(),
+          cover_letter: compiledNotes,
+          cv_url: cvPath,
+          cover_letter_doc_url: coverLetterPath,
+          certificates_doc_url: certsPath,
+          documents: uploadedDocs,
+          status: 'new',
+        })
+        .select('reference_no')
+        .single();
 
-      if (insErr) throw insErr;
+      if (insErr) {
+        if (
+          insErr.message?.includes('already been registered') ||
+          insErr.message?.includes('duplicate') ||
+          insErr.code === '23505'
+        ) {
+          setSubmitError(
+            'An application for this position has already been submitted with your email or telephone number. Duplicate submissions are not accepted.'
+          );
+          return;
+        }
+        throw insErr;
+      }
+
+      if (insData?.reference_no) {
+        setApplicationRef(insData.reference_no);
+      }
       setSubmitted(true);
     } catch (err: any) {
       setSubmitError(err.message || 'Failed to submit application. Please try again.');
@@ -149,37 +322,30 @@ export default function JobApplyPage() {
     }
   };
 
-  // Pre-filled Email Draft Builder
+  // Contact Destinations
   const targetEmail = job?.contact_email?.trim() || 'info@rcsn.ac.ug';
   const emailSubject = `Application for ${job?.title || 'Job Vacancy'} - Rakai Community School of Nursing`;
-  const emailDraftBody = `Dear Hiring Committee / Human Resources,
+  const emailDraftBody = `Dear Human Resources / Recruitment Committee,
 
 I am writing to formally submit my application for the position of "${job?.title || 'Vacancy'}" at Rakai Community School of Nursing.
 
-Please find attached my Curriculum Vitae (CV), certified academic transcripts, and professional nursing registration certificates for your consideration.
+Please find attached my Curriculum Vitae (CV), certified academic transcripts, and professional registration certificates for your consideration.
 
-Applicant Full Name: [Your Full Name]
-Contact Phone Number: [Your Phone Number]
-Highest Academic / Clinical Qualification: [e.g. Diploma in Nursing / Midwifery]
-Current Location / District: [Your Town / District]
-
-Thank you for reviewing my application. I look forward to hearing from you.
+Full Name: ${fullName.trim() || '[Your Full Name]'}
+Telephone: ${phone.trim() || '[Your Phone Number]'}
 
 Yours faithfully,
-[Your Full Name]`;
+${fullName.trim() || '[Your Full Name]'}`;
 
   const mailtoLink = `mailto:${encodeURIComponent(targetEmail)}?subject=${encodeURIComponent(
     emailSubject
   )}&body=${encodeURIComponent(emailDraftBody)}`;
 
-  const handleCopyEmailDraft = () => {
-    const textToCopy = `To: ${targetEmail}\nSubject: ${emailSubject}\n\n${emailDraftBody}`;
-    navigator.clipboard.writeText(textToCopy);
-    setCopiedDraft(true);
-    setTimeout(() => setCopiedDraft(false), 3000);
-  };
-
-  const cleanPhone = (job?.contact_phone || '').replace(/[^0-9]/g, '');
+  // WhatsApp Destination
+  const rawPhone = (job?.contact_phone || '0783399322').replace(/[^0-9]/g, '');
+  const cleanPhone = rawPhone.startsWith('0') ? `256${rawPhone.slice(1)}` : rawPhone.startsWith('256') ? rawPhone : `256${rawPhone}`;
+  const whatsappMsg = `Hello Rakai Community School of Nursing HR, I am applying for the position of "${job?.title || 'Vacancy'}".`;
+  const whatsappLink = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(whatsappMsg)}`;
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-200">
@@ -244,6 +410,35 @@ Yours faithfully,
                 Thank you, <strong className="text-slate-900 dark:text-white">{fullName}</strong>. Your candidate dossier for{' '}
                 <strong className="text-slate-900 dark:text-white">{job.title}</strong> has been transmitted directly to the Human Resources Registry at Rakai Community School of Nursing.
               </p>
+
+              {applicationRef && (
+                <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/60 border border-emerald-500/30 max-w-md mx-auto space-y-2">
+                  <span className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-widest block">
+                    Application Reference Number
+                  </span>
+                  <div className="flex items-center justify-center gap-2">
+                    <code className="text-xl sm:text-2xl font-black text-[#00873E] dark:text-emerald-400 tracking-wider">
+                      {applicationRef}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(applicationRef);
+                        setCopiedRef(true);
+                        setTimeout(() => setCopiedRef(false), 2500);
+                      }}
+                      className="p-1.5 rounded-lg border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-colors"
+                      title="Copy Reference Number"
+                    >
+                      {copiedRef ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-emerald-700/80 dark:text-emerald-300/80">
+                    Please save this reference number. Quote it when following up with our Human Resources Office.
+                  </p>
+                </div>
+              )}
+
               <div className="p-4 rounded-2xl bg-emerald-50/70 dark:bg-slate-800/80 border border-emerald-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 max-w-md mx-auto">
                 Our HR interview panel reviews applications continuously. If shortlisted, you will be contacted via telephone or email for the interview schedule.
               </div>
@@ -263,7 +458,7 @@ Yours faithfully,
               </div>
             </motion.div>
           ) : (
-            /* Vacancy Details and Multi-Channel Submission */
+            /* Vacancy Details and Application Channels */
             <div className="space-y-8">
               {/* Job Header & Overview Card */}
               <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
@@ -306,13 +501,10 @@ Yours faithfully,
                 {/* Optional Official Flyer / Picture */}
                 {job.poster_url && (
                   <div className="pt-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-2">
-                      Official Vacancy Flyer / Announcement
-                    </span>
                     <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 max-w-lg bg-black/5">
                       <img
                         src={job.poster_url}
-                        alt={`${job.title} Official Poster`}
+                        alt={`${job.title} Announcement Flyer`}
                         className="w-full h-auto object-contain max-h-96"
                       />
                     </div>
@@ -341,18 +533,18 @@ Yours faithfully,
                 )}
               </div>
 
-              {/* Multi-Channel "How to Apply" Suite */}
+              {/* Application Options */}
               <div className="p-6 sm:p-10 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
                 <div>
                   <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
                     Choose How You Want to Apply
                   </h2>
                   <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-                    Select your preferred application channel below:
+                    Select your preferred application channel:
                   </p>
                 </div>
 
-                {/* Tabs to select method */}
+                {/* Clean Tabs */}
                 <div className="flex flex-wrap gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
                   <button
                     type="button"
@@ -360,7 +552,7 @@ Yours faithfully,
                     className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                       activeTab === 'online'
                         ? 'bg-[#00873E] text-white shadow-sm'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                     }`}
                   >
                     <Send className="w-3.5 h-3.5" />
@@ -369,31 +561,32 @@ Yours faithfully,
 
                   <button
                     type="button"
-                    onClick={() => setActiveTab('email')}
+                    onClick={() => setActiveTab('whatsapp')}
+                    className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                      activeTab === 'whatsapp'
+                        ? 'bg-[#00873E] text-white shadow-sm'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                    <span>Apply via WhatsApp</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('email');
+                      window.location.href = mailtoLink;
+                    }}
                     className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                       activeTab === 'email'
                         ? 'bg-[#00873E] text-white shadow-sm'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                     }`}
                   >
                     <Mail className="w-3.5 h-3.5" />
-                    <span>Apply via Email (Pre-Filled Draft)</span>
+                    <span>Apply via Email</span>
                   </button>
-
-                  {job.contact_phone && (
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('whatsapp')}
-                      className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-                        activeTab === 'whatsapp'
-                          ? 'bg-[#00873E] text-white shadow-sm'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
-                      }`}
-                    >
-                      <Phone className="w-3.5 h-3.5" />
-                      <span>WhatsApp / Call Inquiry</span>
-                    </button>
-                  )}
                 </div>
 
                 {/* TAB 1: Online Form */}
@@ -406,7 +599,7 @@ Yours faithfully,
                       </div>
                     )}
 
-                    <form onSubmit={handleOnlineSubmit} className="space-y-5">
+                    <form onSubmit={handleOnlineSubmit} className="space-y-6">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <div>
                           <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
@@ -506,6 +699,145 @@ Yours faithfully,
                         </div>
                       </div>
 
+                      {/* Document Uploads: Up to 3 Documents (Max 5MB each) */}
+                      <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-4">
+                        <div>
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-1.5">
+                            <Upload className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Upload Candidate Documents (Max 3 Documents • Up to 5MB Each)</span>
+                          </h3>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                            Directly attach your CV and certificates (PDF, Word, or image).
+                          </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {/* Slot 1: CV */}
+                          <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 space-y-2.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                                1. Curriculum Vitae (CV) *
+                              </span>
+                              {cvFile && (
+                                <button
+                                  type="button"
+                                  onClick={() => setCvFile(null)}
+                                  className="text-slate-400 hover:text-red-500 p-0.5"
+                                  title="Remove CV"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+
+                            {cvFile ? (
+                              <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-xs">
+                                <FileCheck className="w-4 h-4 shrink-0" />
+                                <span className="truncate font-semibold">{cvFile.name}</span>
+                              </div>
+                            ) : (
+                              <label className="flex flex-col items-center justify-center p-4 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl cursor-pointer hover:border-emerald-500 transition-colors text-center">
+                                <FileText className="w-5 h-5 text-slate-400 mb-1" />
+                                <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                                  Upload CV
+                                </span>
+                                <span className="text-[10px] text-slate-400">PDF, DOC, DOCX up to 5MB</span>
+                                <input
+                                  type="file"
+                                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp"
+                                  className="hidden"
+                                  onChange={(e) => handleFileSelect(e.target.files?.[0], setCvFile, 'Curriculum Vitae')}
+                                />
+                              </label>
+                            )}
+                          </div>
+
+                          {/* Slot 2: Cover Letter */}
+                          <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 space-y-2.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                                2. Application Letter
+                              </span>
+                              {coverLetterFile && (
+                                <button
+                                  type="button"
+                                  onClick={() => setCoverLetterFile(null)}
+                                  className="text-slate-400 hover:text-red-500 p-0.5"
+                                  title="Remove Application Letter"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+
+                            {coverLetterFile ? (
+                              <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-xs">
+                                <FileCheck className="w-4 h-4 shrink-0" />
+                                <span className="truncate font-semibold">{coverLetterFile.name}</span>
+                              </div>
+                            ) : (
+                              <label className="flex flex-col items-center justify-center p-4 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl cursor-pointer hover:border-emerald-500 transition-colors text-center">
+                                <FileText className="w-5 h-5 text-slate-400 mb-1" />
+                                <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                                  Upload Letter (Optional)
+                                </span>
+                                <span className="text-[10px] text-slate-400">PDF, DOC, DOCX up to 5MB</span>
+                                <input
+                                  type="file"
+                                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp"
+                                  className="hidden"
+                                  onChange={(e) =>
+                                    handleFileSelect(e.target.files?.[0], setCoverLetterFile, 'Application Letter')
+                                  }
+                                />
+                              </label>
+                            )}
+                          </div>
+
+                          {/* Slot 3: Academic Certificates */}
+                          <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 space-y-2.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                                3. Academic Certificates
+                              </span>
+                              {certsFile && (
+                                <button
+                                  type="button"
+                                  onClick={() => setCertsFile(null)}
+                                  className="text-slate-400 hover:text-red-500 p-0.5"
+                                  title="Remove Certificates"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+
+                            {certsFile ? (
+                              <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-xs">
+                                <FileCheck className="w-4 h-4 shrink-0" />
+                                <span className="truncate font-semibold">{certsFile.name}</span>
+                              </div>
+                            ) : (
+                              <label className="flex flex-col items-center justify-center p-4 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl cursor-pointer hover:border-emerald-500 transition-colors text-center">
+                                <FileText className="w-5 h-5 text-slate-400 mb-1" />
+                                <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                                  Certificates (Optional)
+                                </span>
+                                <span className="text-[10px] text-slate-400">PDF, DOC, Images up to 5MB</span>
+                                <input
+                                  type="file"
+                                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp"
+                                  className="hidden"
+                                  onChange={(e) =>
+                                    handleFileSelect(e.target.files?.[0], setCertsFile, 'Academic Certificates')
+                                  }
+                                />
+                              </label>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
                       <div>
                         <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
                           Cover Letter &amp; Statement of Suitability *
@@ -534,120 +866,52 @@ Yours faithfully,
                   </div>
                 )}
 
-                {/* TAB 2: Apply via Email with Pre-Filled Draft */}
+                {/* TAB 2: Apply via WhatsApp */}
+                {activeTab === 'whatsapp' && (
+                  <div className="space-y-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 p-6 sm:p-8 border border-slate-200 dark:border-slate-700 text-center max-w-lg mx-auto">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-950 text-[#00873E] dark:text-emerald-400 mx-auto flex items-center justify-center">
+                      <Phone className="w-6 h-6" />
+                    </div>
+                    <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                      Apply via WhatsApp
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                      Send your application letter, Curriculum Vitae, and academic credentials directly to our recruitment office on WhatsApp.
+                    </p>
+                    <div className="pt-2">
+                      <a
+                        href={whatsappLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white text-xs sm:text-sm font-bold shadow-md transition-all active:scale-[0.98]"
+                      >
+                        <Phone className="w-4 h-4" />
+                        <span>Chat &amp; Apply via WhatsApp</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 3: Apply via Email */}
                 {activeTab === 'email' && (
-                  <div className="space-y-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 p-6 border border-slate-200 dark:border-slate-700">
-                    <div>
-                      <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 block">
-                        Pre-Configured Email Application
-                      </span>
-                      <h3 className="text-lg font-black text-slate-900 dark:text-white mt-1">
-                        Send Your Application Directly via Email
-                      </h3>
-                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1">
-                        Click the button below to launch your email client with the destination address, job subject line, and structured template pre-filled for you.
-                      </p>
+                  <div className="space-y-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 p-6 sm:p-8 border border-slate-200 dark:border-slate-700 text-center max-w-lg mx-auto">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-950 text-[#00873E] dark:text-emerald-400 mx-auto flex items-center justify-center">
+                      <Mail className="w-6 h-6" />
                     </div>
-
-                    <div className="space-y-3 p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs">
-                      <div className="flex flex-wrap items-center justify-between gap-1 pb-2 border-b border-slate-100 dark:border-slate-800">
-                        <span className="font-bold text-slate-500 uppercase">To Recipient:</span>
-                        <strong className="text-emerald-700 dark:text-emerald-400 font-mono text-sm">{targetEmail}</strong>
-                      </div>
-
-                      <div className="flex flex-wrap items-center justify-between gap-1 pb-2 border-b border-slate-100 dark:border-slate-800">
-                        <span className="font-bold text-slate-500 uppercase">Subject Line:</span>
-                        <span className="font-semibold text-slate-800 dark:text-slate-200">{emailSubject}</span>
-                      </div>
-
-                      <div>
-                        <span className="font-bold text-slate-500 uppercase block mb-1">Pre-filled Draft Body Preview:</span>
-                        <pre className="p-3 rounded-lg bg-slate-100 dark:bg-slate-950 font-sans text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
-                          {emailDraftBody}
-                        </pre>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-3 pt-2">
+                    <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                      Apply via Email
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                      Your email client has been launched with the application recipient and position title. If it did not open automatically, click below.
+                    </p>
+                    <div className="pt-2">
                       <a
                         href={mailtoLink}
                         className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#00873E] hover:bg-[#007033] text-white text-xs sm:text-sm font-bold shadow-md transition-all active:scale-[0.98]"
                       >
                         <Mail className="w-4 h-4" />
-                        <span>Open Email App with Pre-Filled Draft</span>
-                      </a>
-
-                      <button
-                        type="button"
-                        onClick={handleCopyEmailDraft}
-                        className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold hover:bg-white dark:hover:bg-slate-900 transition-colors"
-                      >
-                        {copiedDraft ? (
-                          <>
-                            <Check className="w-4 h-4 text-emerald-600" />
-                            <span className="text-emerald-600">Draft Details Copied!</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-4 h-4" />
-                            <span>Copy Email &amp; Draft Template</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      * Remember to attach your CV, certified academic transcripts, and nursing certificates before hitting send in your email client.
-                    </p>
-                  </div>
-                )}
-
-                {/* TAB 3: Call / WhatsApp Direct Inquiry */}
-                {activeTab === 'whatsapp' && job.contact_phone && (
-                  <div className="space-y-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 p-6 border border-slate-200 dark:border-slate-700">
-                    <div>
-                      <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 block">
-                        Telephone &amp; WhatsApp Inquiries
-                      </span>
-                      <h3 className="text-lg font-black text-slate-900 dark:text-white mt-1">
-                        Connect with the Recruitment Desk
-                      </h3>
-                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1">
-                        You can send your inquiry or credentials directly to the designated recruitment phone number for this role:
-                      </p>
-                    </div>
-
-                    <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-[#00873E] flex items-center justify-center shrink-0">
-                        <Phone className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <span className="text-xs text-slate-500 font-medium">Recruitment Contact:</span>
-                        <h4 className="text-lg font-black text-slate-900 dark:text-white font-mono">
-                          {job.contact_phone}
-                        </h4>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-3 pt-2">
-                      <a
-                        href={`https://wa.me/${cleanPhone}?text=Hello%20RCSN%20Recruitment,%20I%20am%20inquiring%20about%20the%20${encodeURIComponent(
-                          job.title
-                        )}%20vacancy.`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white text-xs sm:text-sm font-bold shadow-md transition-all active:scale-[0.98]"
-                      >
-                        <MessageSquare className="w-4 h-4 fill-current" />
-                        <span>Chat on WhatsApp</span>
-                      </a>
-
-                      <a
-                        href={`tel:${job.contact_phone}`}
-                        className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-900 hover:bg-black text-white text-xs sm:text-sm font-bold shadow-md transition-colors"
-                      >
-                        <Phone className="w-4 h-4" />
-                        <span>Call Office Directly</span>
+                        <span>Open Email App</span>
                       </a>
                     </div>
                   </div>
