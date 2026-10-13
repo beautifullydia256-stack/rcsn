@@ -14,18 +14,39 @@ interface UIState {
   toggleTheme: () => void;
 }
 
+const getInitialTheme = (): 'light' | 'dark' => {
+  if (typeof window === 'undefined') return 'light';
+  try {
+    const direct = localStorage.getItem('pwezacore-theme');
+    if (direct === 'dark' || direct === 'light') return direct;
+    const rawUi = localStorage.getItem('pwezacore-ui-storage');
+    if (rawUi) {
+      const parsed = JSON.parse(rawUi);
+      if (parsed?.state?.theme === 'dark' || parsed?.state?.theme === 'light') {
+        return parsed.state.theme;
+      }
+    }
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
+  } catch {}
+  return 'light';
+};
+
 export const useUIStore = create<UIState>()(
   persist(
     (set) => ({
       sidebarOpen: true,
-      theme: 'light',
+      theme: getInitialTheme(),
       sidebarCollapsed: false,
       activeModal: null,
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
       setTheme: (theme) => {
         if (typeof window !== 'undefined') {
-          document.documentElement.classList.remove('light', 'dark');
-          document.documentElement.classList.add(theme);
+          const root = document.documentElement;
+          root.classList.remove('light', 'dark');
+          root.classList.add(theme);
+          root.setAttribute('data-theme', theme);
+          root.style.backgroundColor = theme === 'dark' ? '#05080f' : '#F5F5F5';
+          root.style.colorScheme = theme;
           localStorage.setItem('pwezacore-theme', theme);
         }
         set({ theme });
@@ -37,8 +58,12 @@ export const useUIStore = create<UIState>()(
         set((state) => {
           const next = state.theme === 'light' ? 'dark' : 'light';
           if (typeof window !== 'undefined') {
-            document.documentElement.classList.remove('light', 'dark');
-            document.documentElement.classList.add(next);
+            const root = document.documentElement;
+            root.classList.remove('light', 'dark');
+            root.classList.add(next);
+            root.setAttribute('data-theme', next);
+            root.style.backgroundColor = next === 'dark' ? '#05080f' : '#F5F5F5';
+            root.style.colorScheme = next;
             localStorage.setItem('pwezacore-theme', next);
           }
           return { theme: next };

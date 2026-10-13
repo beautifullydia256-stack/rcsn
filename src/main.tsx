@@ -9,11 +9,26 @@ import { isDesktopApp } from './lib/isDesktopApp';
 const Router = isDesktopApp ? HashRouter : BrowserRouter;
 
 // Apply persisted theme before React mounts to avoid flashes/inconsistency.
-const savedTheme = localStorage.getItem('pwezacore-theme');
-const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+let savedTheme = localStorage.getItem('pwezacore-theme');
+if (!savedTheme) {
+  try {
+    const rawUi = localStorage.getItem('pwezacore-ui-storage');
+    if (rawUi) {
+      const parsed = JSON.parse(rawUi);
+      if (parsed?.state?.theme === 'dark' || parsed?.state?.theme === 'light') {
+        savedTheme = parsed.state.theme;
+      }
+    }
+  } catch {}
+}
+const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 const effectiveTheme = savedTheme === 'dark' || (!savedTheme && prefersDark) ? 'dark' : 'light';
-document.documentElement.classList.remove('light', 'dark');
-document.documentElement.classList.add(effectiveTheme);
+const root = document.documentElement;
+root.classList.remove('light', 'dark');
+root.classList.add(effectiveTheme);
+root.setAttribute('data-theme', effectiveTheme);
+root.style.backgroundColor = effectiveTheme === 'dark' ? '#05080f' : '#F5F5F5';
+root.style.colorScheme = effectiveTheme;
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

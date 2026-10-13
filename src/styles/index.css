@@ -48,16 +48,26 @@ body {
 
 /* Dark mode (html.dark): higher-contrast text + native form theming — Issue 14 */
 html.dark,
+html[data-theme='dark'],
 .dark {
   color-scheme: dark;
+  background-color: #05080f;
   --pw-t1: #f8fafc;
   --pw-t2: #94a3b8;
   --pw-t3: #475569;
   --foreground: #f1f5f9;
   --muted-foreground: #94a3b8;
-  --background: #070B09;
-  --muted: #0D1512;
+  --background: #05080f;
+  --muted: #0b1120;
   --border: rgba(255, 255, 255, 0.12);
+}
+
+html.dark body,
+html[data-theme='dark'] body,
+body.dark {
+  background-color: #05080f !important;
+  background-image: none !important;
+  color: #f1f5f9 !important;
 }
 
 html.dark select,
