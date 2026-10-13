@@ -338,7 +338,19 @@ export default function NotificationsPage() {
       if (emailsRes.data && Array.isArray(emailsRes.data)) {
         emailsRes.data.forEach((em) => {
           const isRead = !!em.is_read;
-          const sender = em.from_name ? `${em.from_name} <${em.from_email}>` : em.from_email;
+          let sender = (em.from_email || '').trim();
+          const cleanName = (em.from_name || '')
+            .replace(/<[^>]*>/g, '')
+            .replace(/[()]/g, '')
+            .trim();
+          if (
+            cleanName &&
+            cleanName.toLowerCase() !== sender.toLowerCase() &&
+            !cleanName.toLowerCase().includes(sender.toLowerCase())
+          ) {
+            sender = `${cleanName} • ${sender}`;
+          }
+
           const preview = em.body_text
             ? em.body_text.replace(/\s+/g, ' ').trim().slice(0, 160)
             : 'Inbound institutional correspondence received on school domain.';
@@ -353,7 +365,7 @@ export default function NotificationsPage() {
             createdAt: em.created_at,
             targetUrl: `/dashboard/admin/emails?open=${em.id}`,
             badge: isRead ? 'Read' : 'New Inbound Email',
-            referenceNo: em.to_email,
+            referenceNo: null,
             metadata: { email_id: em.id, from_email: em.from_email, to_email: em.to_email },
           });
         });
