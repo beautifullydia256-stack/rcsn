@@ -64,6 +64,18 @@ export async function checkPin(userId: string, pin: string): Promise<'correct' |
 
 export function clearPin(): void {
   Object.values(K).forEach((k) => localStorage.removeItem(k));
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i);
+      if (key && key.startsWith(SESSION_UNLOCKED_PREFIX)) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((k) => sessionStorage.removeItem(k));
+  } catch {
+    // ignore
+  }
 }
 
 export function touchLastActive(): void {
@@ -73,3 +85,26 @@ export function touchLastActive(): void {
 export function getLastActive(): number {
   return parseInt(localStorage.getItem(K.active) ?? '0', 10);
 }
+
+const SESSION_UNLOCKED_PREFIX = 'pwezacore-pin-unlocked-';
+
+export function isSessionUnlocked(userId: string): boolean {
+  try {
+    return sessionStorage.getItem(`${SESSION_UNLOCKED_PREFIX}${userId}`) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function setSessionUnlocked(userId: string, unlocked: boolean): void {
+  try {
+    if (unlocked) {
+      sessionStorage.setItem(`${SESSION_UNLOCKED_PREFIX}${userId}`, 'true');
+    } else {
+      sessionStorage.removeItem(`${SESSION_UNLOCKED_PREFIX}${userId}`);
+    }
+  } catch {
+    // ignore
+  }
+}
+

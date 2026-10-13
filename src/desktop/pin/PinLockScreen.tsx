@@ -75,41 +75,43 @@ export default function PinLockScreen({ userName, failCount, lockedOut, onAttemp
   }, [onSignOut]);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-between items-center py-8 sm:py-12 px-4 sm:px-6 overflow-y-auto selection:bg-[#00873E] selection:text-white">
-      {/* Full-screen natural wallpaper background */}
+    <div className="fixed inset-0 z-50 flex flex-col justify-between items-center py-6 sm:py-10 px-4 sm:px-6 overflow-y-auto selection:bg-[#00873E] selection:text-white">
+      {/* 100% Crisp, natural, unblurred background */}
       <GlassBackground />
 
-      {/* Top Header: Avatar, Welcome Title, Passcode subtitle - NO CARD BOX */}
+      {/* Top Header: Avatar, Welcome, Passcode subtitle - NO CARD BOX */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, ease: 'easeOut' }}
-        className="relative z-10 flex flex-col items-center w-full max-w-sm pt-2 sm:pt-4"
+        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+        className="relative z-10 flex flex-col items-center w-full max-w-sm pt-2"
       >
-        {/* 3D Liquid Glass Avatar circle */}
-        <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-full bg-white/20 backdrop-blur-2xl border-[1.5px] border-white/50 border-t-white/85 border-l-white/60 shadow-[0_10px_28px_rgba(0,0,0,0.35),inset_0_2px_3px_rgba(255,255,255,0.75),inset_0_-2px_3px_rgba(0,0,0,0.25)] flex items-center justify-center mb-3.5 relative overflow-hidden">
-          {/* Specular sheen curve */}
-          <span className="absolute top-1 left-2 right-2 h-[38%] rounded-t-full bg-gradient-to-b from-white/45 via-white/10 to-transparent pointer-events-none" />
-          <span className="text-white text-3xl sm:text-4xl font-bold select-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
+        {/* Avatar Circle: Pure neutral dark liquid glass */}
+        <div
+          style={{ width: '74px', height: '74px', minWidth: '74px', minHeight: '74px', maxWidth: '74px', maxHeight: '74px', borderRadius: '9999px' }}
+          className="relative overflow-hidden rounded-full bg-slate-950/65 dark:bg-black/75 backdrop-blur-md border border-white/25 border-t-white/55 border-l-white/35 border-b-white/15 shadow-[0_15px_35px_rgba(0,0,0,0.4),inset_0_1.5px_2px_rgba(255,255,255,0.45),inset_0_-1px_1px_rgba(255,255,255,0.1)] flex items-center justify-center mb-3"
+        >
+          <span className="absolute top-0 left-2 right-2 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 to-transparent pointer-events-none" />
+          <span className="text-white text-2xl sm:text-3xl font-black select-none drop-shadow-sm">
             {lastName.charAt(0).toUpperCase()}
           </span>
         </div>
 
-        <h2 className="text-white text-2xl sm:text-3xl font-bold mb-1 tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] text-center">
+        <h2 className="text-white text-xl sm:text-2xl font-bold mb-0.5 tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.8)] text-center">
           Welcome back, {lastName}
         </h2>
-        <p className="text-white/85 text-xs sm:text-sm font-medium drop-shadow-[0_1px_3px_rgba(0,0,0,0.6)] text-center">
+        <p className="text-white/85 text-xs sm:text-sm font-medium drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)] text-center">
           Enter your PIN to continue
         </p>
 
         {attemptsLeft < PIN_MAX_FAILS && attemptsLeft > 0 && !error && !lockedOut && (
-          <p className="text-amber-300 text-xs font-semibold mt-1 drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]">
+          <p className="text-amber-300 text-xs font-semibold mt-1 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
             {attemptsLeft} attempt{attemptsLeft !== 1 ? 's' : ''} remaining
           </p>
         )}
       </motion.div>
 
-      {/* Middle: 3D Liquid Glass Keypad floating directly on the wallpaper - NO CARD BOX */}
+      {/* Middle: NativeModal Liquid Glass Keypad directly on background - NO CARD BOX */}
       <div className="relative z-10 w-full flex flex-col items-center my-auto py-2">
         <AnimatePresence mode="wait">
           {lockedOut ? (
@@ -117,10 +119,10 @@ export default function PinLockScreen({ userName, failCount, lockedOut, onAttemp
               key="locked-out"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col items-center gap-4 py-8"
+              className="flex flex-col items-center gap-3 py-6"
             >
-              <div className="w-16 h-16 bg-red-500/25 border-[1.5px] border-red-400/50 backdrop-blur-xl rounded-full flex items-center justify-center shadow-lg">
-                <svg className="w-8 h-8 text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="w-14 h-14 bg-red-500/30 border border-red-400/50 backdrop-blur-md rounded-full flex items-center justify-center shadow-lg">
+                <svg className="w-7 h-7 text-red-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -129,7 +131,7 @@ export default function PinLockScreen({ userName, failCount, lockedOut, onAttemp
                   />
                 </svg>
               </div>
-              <p className="text-red-200 text-sm text-center font-semibold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+              <p className="text-red-200 text-sm text-center font-semibold drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
                 Too many failed attempts.<br />Signing you out…
               </p>
             </motion.div>
@@ -148,13 +150,13 @@ export default function PinLockScreen({ userName, failCount, lockedOut, onAttemp
         </AnimatePresence>
       </div>
 
-      {/* Bottom: Sign out / switch account button */}
+      {/* Bottom Action Pill */}
       {!lockedOut && (
         <div className="relative z-10 pb-2">
           <button
             onClick={handleSignOut}
             disabled={signingOut}
-            className="text-xs sm:text-sm font-medium text-white/85 hover:text-white transition-all py-2.5 px-6 rounded-full bg-white/10 hover:bg-white/20 active:bg-white/30 backdrop-blur-xl border border-white/25 shadow-md drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)] select-none"
+            className="text-xs sm:text-sm font-semibold text-white/80 hover:text-white transition-all py-2 px-5 rounded-full bg-slate-950/45 hover:bg-slate-950/65 active:scale-95 backdrop-blur-md border border-white/25 shadow-lg drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)] select-none"
           >
             {signingOut ? 'Signing out…' : 'Sign in with a different account'}
           </button>

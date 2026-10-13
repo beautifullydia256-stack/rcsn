@@ -66,21 +66,24 @@ export default function PinSetupScreen({ userName, onComplete, onSkipForNow }: P
   const lastName = getGreetingLastName(userName, 'User');
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-between items-center py-8 sm:py-12 px-4 sm:px-6 overflow-y-auto selection:bg-[#00873E] selection:text-white">
-      {/* Full-screen natural wallpaper background */}
+    <div className="fixed inset-0 z-50 flex flex-col justify-between items-center py-6 sm:py-10 px-4 sm:px-6 overflow-y-auto selection:bg-[#00873E] selection:text-white">
+      {/* 100% Crisp, natural, unblurred background */}
       <GlassBackground />
 
-      {/* Top Header: Lock Icon Badge, Title, Step indicators - NO CARD BOX */}
+      {/* Top Header: Lock Badge, Title, Step indicators - NO CARD BOX */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, ease: 'easeOut' }}
-        className="relative z-10 flex flex-col items-center w-full max-w-sm pt-2 sm:pt-4"
+        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+        className="relative z-10 flex flex-col items-center w-full max-w-sm pt-2"
       >
-        {/* 3D Liquid Glass Lock Badge */}
-        <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-full bg-white/20 backdrop-blur-2xl border-[1.5px] border-white/50 border-t-white/85 border-l-white/60 shadow-[0_10px_28px_rgba(0,0,0,0.35),inset_0_2px_3px_rgba(255,255,255,0.75),inset_0_-2px_3px_rgba(0,0,0,0.25)] flex items-center justify-center mb-3 relative overflow-hidden">
-          <span className="absolute top-1 left-2 right-2 h-[38%] rounded-t-full bg-gradient-to-b from-white/45 via-white/10 to-transparent pointer-events-none" />
-          <svg className="w-9 h-9 sm:w-10 sm:h-10 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        {/* Lock Badge: Pure neutral dark liquid glass */}
+        <div
+          style={{ width: '74px', height: '74px', minWidth: '74px', minHeight: '74px', maxWidth: '74px', maxHeight: '74px', borderRadius: '9999px' }}
+          className="relative overflow-hidden rounded-full bg-slate-950/65 dark:bg-black/75 backdrop-blur-md border border-white/25 border-t-white/55 border-l-white/35 border-b-white/15 shadow-[0_15px_35px_rgba(0,0,0,0.4),inset_0_1.5px_2px_rgba(255,255,255,0.45),inset_0_-1px_1px_rgba(255,255,255,0.1)] flex items-center justify-center mb-3"
+        >
+          <span className="absolute top-0 left-2 right-2 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 to-transparent pointer-events-none" />
+          <svg className="w-8 h-8 sm:w-9 sm:h-9 text-white drop-shadow-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -90,13 +93,13 @@ export default function PinSetupScreen({ userName, onComplete, onSkipForNow }: P
           </svg>
         </div>
 
-        <h2 className="text-white text-2xl sm:text-3xl font-bold mb-1 tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] text-center">
+        <h2 className="text-white text-xl sm:text-2xl font-bold mb-0.5 tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.8)] text-center">
           Secure your account
         </h2>
-        <p className="text-white/85 text-xs sm:text-sm font-medium drop-shadow-[0_1px_3px_rgba(0,0,0,0.6)] text-center mb-0.5">
+        <p className="text-white/85 text-xs sm:text-sm font-medium drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)] text-center mb-0.5">
           Hi {lastName} — create a 4-digit PIN
         </p>
-        <p className="text-white/70 text-[11px] sm:text-xs text-center drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)] mb-3">
+        <p className="text-white/70 text-[11px] sm:text-xs text-center drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)] mb-2.5">
           You'll use this to unlock the app quickly
         </p>
 
@@ -126,7 +129,7 @@ export default function PinSetupScreen({ userName, onComplete, onSkipForNow }: P
         )}
       </motion.div>
 
-      {/* Middle: 3D Liquid Glass Keypad directly on wallpaper - NO CARD BOX */}
+      {/* Middle: NativeModal Liquid Glass Keypad directly on background */}
       <div className="relative z-10 w-full flex flex-col items-center my-auto py-2">
         <PinPad
           digits={digits}
@@ -138,11 +141,11 @@ export default function PinSetupScreen({ userName, onComplete, onSkipForNow }: P
         />
       </div>
 
-      {/* Bottom: Skip button */}
+      {/* Bottom: Skip Action */}
       <div className="relative z-10 pb-2">
         <button
           onClick={onSkipForNow}
-          className="text-xs sm:text-sm font-medium text-white/80 hover:text-white transition-all py-2.5 px-6 rounded-full bg-white/10 hover:bg-white/20 active:bg-white/30 backdrop-blur-xl border border-white/25 shadow-md drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)] select-none"
+          className="text-xs sm:text-sm font-semibold text-white/80 hover:text-white transition-all py-2 px-5 rounded-full bg-slate-950/45 hover:bg-slate-950/65 active:scale-95 backdrop-blur-md border border-white/25 shadow-lg drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)] select-none"
         >
           Set up later (online login only)
         </button>

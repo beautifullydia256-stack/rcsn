@@ -43,7 +43,7 @@ export function PinDots({
   return (
     <motion.div
       key={shakeKey}
-      className="flex gap-4 sm:gap-5 justify-center my-4 sm:my-5"
+      className="flex gap-4 sm:gap-5 justify-center my-3 sm:my-4"
       animate={shakeKey ? { x: [0, -12, 12, -10, 10, -6, 6, 0] } : {}}
       transition={{ duration: 0.4, ease: 'easeInOut' }}
     >
@@ -52,16 +52,26 @@ export function PinDots({
           key={i}
           animate={i < filled ? { scale: [0.85, 1.25, 1] } : { scale: 1 }}
           transition={{ duration: 0.18 }}
-          className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border-[1.5px] transition-all duration-200 ${
+          className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border border-white/50 transition-all duration-200 ${
             i < filled
-              ? 'bg-white border-white shadow-[0_0_14px_rgba(255,255,255,1),inset_0_1px_2px_rgba(255,255,255,1)]'
-              : 'bg-white/10 backdrop-blur-sm border-white/80 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.4),0_2px_6px_rgba(0,0,0,0.3)]'
+              ? 'bg-white border-white shadow-[0_0_12px_rgba(255,255,255,1),inset_0_1px_2px_rgba(255,255,255,1)]'
+              : 'bg-black/50 backdrop-blur-sm shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.3)]'
           }`}
         />
       ))}
     </motion.div>
   );
 }
+
+const BUTTON_DIMENSION_STYLE: React.CSSProperties = {
+  width: '74px',
+  height: '74px',
+  minWidth: '74px',
+  minHeight: '74px',
+  maxWidth: '74px',
+  maxHeight: '74px',
+  borderRadius: '9999px',
+};
 
 export default function PinPad({
   digits,
@@ -94,11 +104,16 @@ export default function PinPad({
   }, []);
 
   return (
-    <div className="flex flex-col items-center w-full">
+    <motion.div
+      initial={{ opacity: 0, scale: 0.96, y: 16 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+      className="flex flex-col items-center w-full"
+    >
       <PinDots filled={digits.length} shakeKey={shakeKey} />
 
-      {/* Error message slot */}
-      <div className="h-6 mb-3 flex items-center justify-center">
+      {/* Error message slot with fixed height */}
+      <div className="h-6 mb-2 flex items-center justify-center">
         <AnimatePresence mode="wait">
           {error && (
             <motion.p
@@ -114,14 +129,26 @@ export default function PinPad({
         </AnimatePresence>
       </div>
 
-      {/* iPhone 3D Liquid Glass Keypad Grid - Big circular buttons with generous spacing */}
-      <div className="grid grid-cols-3 gap-x-6 sm:gap-x-8 gap-y-4 sm:gap-y-5 justify-items-center w-full max-w-[19.5rem] sm:max-w-[22rem] mx-auto">
+      {/* Keypad Grid: Pure neutral dark liquid glass - ZERO greenish hue */}
+      <div
+        className="mx-auto"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 74px)',
+          columnGap: '22px',
+          rowGap: '16px',
+          justifyContent: 'center',
+          justifyItems: 'center',
+          alignItems: 'center',
+        }}
+      >
         {KEYS.map((item, idx) => {
           if (item.type === 'blank') {
             return (
               <div
                 key={`blank-${idx}`}
-                className="w-20 h-20 min-w-20 min-h-20 sm:w-[5.25rem] sm:h-[5.25rem] sm:min-w-[5.25rem] sm:min-h-[5.25rem] aspect-square flex-shrink-0 pointer-events-none"
+                style={BUTTON_DIMENSION_STYLE}
+                className="pointer-events-none"
                 aria-hidden
               />
             );
@@ -133,6 +160,7 @@ export default function PinPad({
               <button
                 key="backspace"
                 type="button"
+                style={BUTTON_DIMENSION_STYLE}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={(e) => {
                   e.preventDefault();
@@ -144,26 +172,25 @@ export default function PinPad({
                 disabled={isBackDisabled}
                 aria-label="Delete last digit"
                 className={`
-                  relative group flex-shrink-0 aspect-square rounded-full
-                  w-20 h-20 min-w-20 min-h-20 sm:w-[5.25rem] sm:h-[5.25rem] sm:min-w-[5.25rem] sm:min-h-[5.25rem]
+                  relative overflow-hidden flex-shrink-0 rounded-full
                   flex items-center justify-center
                   transition-all duration-150 ease-out select-none touch-manipulation
-                  ${isBackDisabled ? 'opacity-25 cursor-default' : 'cursor-pointer active:scale-[0.92]'}
-                  bg-white/[0.18] hover:bg-white/[0.28] active:bg-white/[0.50]
-                  backdrop-blur-2xl backdrop-saturate-[180%]
-                  border-[1.5px] border-white/40 border-t-white/80 border-l-white/60 border-b-white/20
-                  shadow-[0_10px_25px_rgba(0,0,0,0.32),inset_0_2px_3px_rgba(255,255,255,0.7),inset_0_-2px_3px_rgba(0,0,0,0.25)]
-                  active:shadow-[0_3px_10px_rgba(0,0,0,0.45),inset_0_2.5px_4px_rgba(255,255,255,0.95)]
+                  ${isBackDisabled ? 'opacity-20 cursor-default' : 'cursor-pointer active:scale-95 active:bg-black/85'}
+                  bg-slate-950/65 dark:bg-black/75
+                  backdrop-blur-md
+                  border border-white/25 border-t-white/55 border-l-white/35 border-b-white/15
+                  shadow-[0_15px_35px_rgba(0,0,0,0.4),inset_0_1.5px_2px_rgba(255,255,255,0.45),inset_0_-1px_1px_rgba(255,255,255,0.1)]
+                  text-white
                 `}
               >
-                {/* 3D Liquid Glass Specular Top Highlight */}
+                {/* Top Specular Sheen (iOS Liquid Edge) */}
                 <span
-                  className="absolute top-1 left-2.5 right-2.5 h-[38%] rounded-t-full bg-gradient-to-b from-white/40 via-white/10 to-transparent pointer-events-none"
+                  className="absolute top-0 left-2 right-2 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 to-transparent pointer-events-none"
                   aria-hidden
                 />
 
                 <svg
-                  className="w-7 h-7 sm:w-8 sm:h-8 text-white drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.6)]"
+                  className="w-6 h-6 text-white/90 drop-shadow-sm"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -179,7 +206,7 @@ export default function PinPad({
             );
           }
 
-          // Digit button: big, perfectly circular, 3D liquid glass
+          // Digit button: Pure neutral dark glass with white numbers only
           const isNumDisabled = digits.length >= 4;
           const isBtnDisabled = disabled || isNumDisabled;
 
@@ -187,6 +214,7 @@ export default function PinPad({
             <button
               key={item.key}
               type="button"
+              style={BUTTON_DIMENSION_STYLE}
               onMouseDown={(e) => e.preventDefault()}
               onClick={(e) => {
                 e.preventDefault();
@@ -198,36 +226,35 @@ export default function PinPad({
               disabled={isBtnDisabled}
               aria-label={`Digit ${item.key}`}
               className={`
-                relative group flex-shrink-0 aspect-square rounded-full
-                w-20 h-20 min-w-20 min-h-20 sm:w-[5.25rem] sm:h-[5.25rem] sm:min-w-[5.25rem] sm:min-h-[5.25rem]
+                relative overflow-hidden flex-shrink-0 rounded-full
                 flex flex-col items-center justify-center
                 transition-all duration-150 ease-out select-none touch-manipulation
-                ${isBtnDisabled ? 'opacity-35 cursor-not-allowed' : 'cursor-pointer active:scale-[0.92]'}
-                bg-white/[0.22] hover:bg-white/[0.32] active:bg-white/[0.55]
-                backdrop-blur-2xl backdrop-saturate-[180%]
-                border-[1.5px] border-white/45 border-t-white/85 border-l-white/60 border-b-white/25
-                shadow-[0_10px_25px_rgba(0,0,0,0.32),inset_0_2px_3px_rgba(255,255,255,0.75),inset_0_-2px_3px_rgba(0,0,0,0.25)]
-                active:shadow-[0_3px_10px_rgba(0,0,0,0.45),inset_0_2.5px_4px_rgba(255,255,255,0.95)]
+                ${isBtnDisabled ? 'opacity-35 cursor-not-allowed' : 'cursor-pointer active:scale-95 active:bg-black/85'}
+                bg-slate-950/65 dark:bg-black/75
+                backdrop-blur-md
+                border border-white/25 border-t-white/55 border-l-white/35 border-b-white/15
+                shadow-[0_15px_35px_rgba(0,0,0,0.4),inset_0_1.5px_2px_rgba(255,255,255,0.45),inset_0_-1px_1px_rgba(255,255,255,0.1)]
+                text-white
               `}
             >
-              {/* 3D Liquid Glass Specular Top Highlight */}
+              {/* Top Specular Sheen (iOS Liquid Edge) */}
               <span
-                className="absolute top-1 left-2.5 right-2.5 h-[38%] rounded-t-full bg-gradient-to-b from-white/45 via-white/10 to-transparent pointer-events-none"
+                className="absolute top-0 left-2 right-2 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 to-transparent pointer-events-none"
                 aria-hidden
               />
 
               {/* Main Digit */}
               <span
-                className={`text-3xl sm:text-4xl font-normal text-white drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.6)] leading-none select-none ${
+                className={`text-2xl font-bold text-white tracking-tight leading-none drop-shadow-sm select-none ${
                   item.sub ? 'mt-0.5' : ''
                 }`}
               >
                 {item.key}
               </span>
 
-              {/* iOS Sub-letters */}
+              {/* Sub-letters */}
               {item.sub ? (
-                <span className="text-[10px] sm:text-[11px] font-bold tracking-[0.24em] text-white/90 uppercase mt-1 leading-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)] pl-[0.24em] select-none">
+                <span className="text-[9px] font-bold tracking-[0.2em] text-white/70 uppercase mt-0.5 leading-none pl-[0.2em] select-none">
                   {item.sub}
                 </span>
               ) : null}
@@ -235,6 +262,6 @@ export default function PinPad({
           );
         })}
       </div>
-    </div>
+    </motion.div>
   );
 }

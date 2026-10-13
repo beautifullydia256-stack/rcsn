@@ -7,11 +7,11 @@ import {
   clearPin,
   savePin,
   touchLastActive,
-  getLastActive,
   getFailCount,
   getStoredDisplayName,
-  LOCK_AFTER_MS,
   PIN_MAX_FAILS,
+  isSessionUnlocked,
+  setSessionUnlocked,
 } from './pinStorage';
 
 export type PinPhase = 'loading' | 'no-session' | 'setup' | 'locked' | 'unlocked';
@@ -21,21 +21,7 @@ export interface PinUser {
   userName: string;
 }
 
-const CHECK_MS = 60_000; // check inactivity every 60 s
-
-// ── Cold-start detection ──────────────────────────────────────────────────────
-// sessionStorage is cleared every time the Electron window closes.
-// If the flag is missing it's a fresh cold start → always require PIN.
-function isColdStart(): boolean {
-  return !sessionStorage.getItem('pweza-app-started');
-}
-function markAppStarted(): void {
-  sessionStorage.setItem('pweza-app-started', '1');
-}
-
-// ── User name helper ──────────────────────────────────────────────────────────
-// Prefers users.name from DB (set via the create-user-account API) over
-// auth metadata, which doesn't always contain the full name.
+// User name helper
 function extractName(user: { user_metadata?: Record<string, unknown>; email?: string | null }): string {
   return (
     (user.user_metadata?.full_name as string | undefined) ??
@@ -78,41 +64,28 @@ export function usePinLock() {
   }, []);
 
   // ── Core: determine phase from a known user id + name ──────────────────────
+  // Strict PIN rule:
+  // - If no PIN is set (first-time login, or after sign in again / forgot PIN) -> 'setup'
+  // - If PIN is set -> ALWAYS 'locked'. Must enter PIN to unlock.
+  // - Never auto-unlocks or bypasses without entering the PIN.
   const resolvePhaseForUser = useCallback(
-    (userId: string, userName: string, isLoginEvent = false) => {
+    (userId: string, userName: string) => {
       if (!mountedRef.current) return;
       setPinUser({ userId, userName });
 
       if (!isPinSet(userId)) {
-        // No PIN set yet — show setup screen
         safe('setup');
         return;
       }
 
-      if (isLoginEvent) {
-        // User just completed the login form → count as active, skip lock
-        touchLastActive();
-        markAppStarted();
+      // If user has already entered their PIN during this active session, keep them unlocked!
+      if (isSessionUnlocked(userId)) {
         safe('unlocked');
         return;
       }
 
-      // Cold start (Electron window was closed and re-opened) → always lock
-      if (isColdStart()) {
-        markAppStarted();
-        if (mountedRef.current) setFailCount(getFailCount());
-        safe('locked');
-        return;
-      }
-
-      // Already running in the same session — use inactivity timer
-      const elapsed = Date.now() - getLastActive();
-      if (getLastActive() === 0 || elapsed >= LOCK_AFTER_MS) {
-        if (mountedRef.current) setFailCount(getFailCount());
-        safe('locked');
-      } else {
-        safe('unlocked');
-      }
+      if (mountedRef.current) setFailCount(getFailCount());
+      safe('locked');
     },
     [safe],
   );
@@ -130,8 +103,6 @@ export function usePinLock() {
         if (cancelled) return;
 
         if (!error && session?.user) {
-          // Prefer the name from the users table — it's the authoritative display name.
-          // Fall back to auth metadata, then email if the DB query fails (e.g. offline).
           const dbName = await fetchProfileName(session.user.id);
           if (cancelled) return;
           const displayName = dbName || extractName(session.user);
@@ -139,14 +110,11 @@ export function usePinLock() {
           return;
         }
       } catch {
-        // getSession can throw when offline with an expired JWT refresh attempt
+        // getSession can throw when offline
       }
 
       if (cancelled) return;
 
-      // Offline / getSession failed — fall back to persisted authStore.
-      // Use the name saved in pinStorage (stored when PIN was first set) as
-      // it's more reliable than falling back to the email address.
       const stored = useAuthStore.getState();
       if (stored.user) {
         const savedName = getStoredDisplayName();
@@ -164,8 +132,6 @@ export function usePinLock() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Auth-state listener — catches SIGNED_IN after the login form submits ──
-  // Without this, if the user was on /login (no session yet) when the component
-  // mounted, phase is 'no-session' forever and the PIN setup screen is never shown.
   useEffect(() => {
     const {
       data: { subscription },
@@ -174,12 +140,17 @@ export function usePinLock() {
 
       if (event === 'SIGNED_IN' && session?.user) {
         const u = session.user;
+        // If already unlocked in this active session, do not re-lock
+        if (isSessionUnlocked(u.id)) {
+          return;
+        }
         void fetchProfileName(u.id).then((dbName) => {
           if (!mountedRef.current) return;
-          resolvePhaseForUser(u.id, dbName || extractName(u), true);
+          resolvePhaseForUser(u.id, dbName || extractName(u));
         });
       } else if (event === 'SIGNED_OUT') {
         if (mountedRef.current) {
+          if (pinUser) setSessionUnlocked(pinUser.userId, false);
           setPinUser(null);
           safe('no-session');
         }
@@ -187,7 +158,7 @@ export function usePinLock() {
     });
 
     return () => subscription.unsubscribe();
-  }, [resolvePhaseForUser, safe]);
+  }, [resolvePhaseForUser, safe, pinUser]);
 
   // ── Activity tracking (only while unlocked) ───────────────────────────────
   useEffect(() => {
@@ -199,38 +170,14 @@ export function usePinLock() {
     return () => evts.forEach((e) => document.removeEventListener(e, handler, { capture: true }));
   }, [phase]);
 
-  // ── Periodic inactivity check ─────────────────────────────────────────────
-  useEffect(() => {
-    if (phase !== 'unlocked') return;
-    const id = setInterval(() => {
-      if (Date.now() - getLastActive() >= LOCK_AFTER_MS && mountedRef.current) {
-        setFailCount(0);
-        setPhase('locked');
-      }
-    }, CHECK_MS);
-    return () => clearInterval(id);
-  }, [phase]);
-
-  // ── Visibility change (returning to the app after 30+ min away) ───────────
-  useEffect(() => {
-    if (phase !== 'unlocked') return;
-    const onVis = () => {
-      if (!document.hidden && Date.now() - getLastActive() >= LOCK_AFTER_MS && mountedRef.current) {
-        setFailCount(0);
-        setPhase('locked');
-      }
-    };
-    document.addEventListener('visibilitychange', onVis);
-    return () => document.removeEventListener('visibilitychange', onVis);
-  }, [phase]);
-
-  // ── Actions ───────────────────────────────────────────────────────────────
+  // ── Actions ────────────────────────────────────────────────────────────────
 
   const setupPin = useCallback(
     async (pin: string) => {
       if (!pinUser) return;
       await savePin(pinUser.userId, pin, pinUser.userName);
       touchLastActive();
+      setSessionUnlocked(pinUser.userId, true);
       safe('unlocked');
     },
     [pinUser, safe],
@@ -257,6 +204,7 @@ export function usePinLock() {
 
       if (result === 'correct') {
         touchLastActive();
+        setSessionUnlocked(pinUser.userId, true);
         setFailCount(0);
         setLockedOut(false);
         safe('unlocked');
@@ -281,18 +229,17 @@ export function usePinLock() {
   );
 
   const skipPinSetup = useCallback(() => {
-    // User deferred PIN setup — unlock for this session without saving a PIN.
-    // On the next cold start, isPinSet() is still false → setup screen shows again.
     touchLastActive();
-    markAppStarted();
+    if (pinUser) setSessionUnlocked(pinUser.userId, true);
     safe('unlocked');
-  }, [safe]);
+  }, [pinUser, safe]);
 
   const signOutAndClear = useCallback(async () => {
+    if (pinUser) setSessionUnlocked(pinUser.userId, false);
     clearPin();
     await supabase.auth.signOut();
     safe('no-session');
-  }, [safe]);
+  }, [pinUser, safe]);
 
   return { phase, pinUser, failCount, lockedOut, setupPin, skipPinSetup, changePin, attemptUnlock, signOutAndClear };
 }
