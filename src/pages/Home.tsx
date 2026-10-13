@@ -27,6 +27,7 @@ import AdmissionsModal from '@/components/website/AdmissionsModal';
 import VideoAdvertModal from '@/components/website/VideoAdvertModal';
 import SeoHead from '@/components/website/SeoHead';
 import { submitContactInquiry } from '@/services/schoolPublicService';
+import { parseJobDescription } from '@/lib/parseJobDescription';
 
 export default function Home() {
   const [admissionsOpen, setAdmissionsOpen] = useState(false);
@@ -1055,9 +1056,35 @@ export default function Home() {
                         <span>{job.location || 'RCSN Main Campus, Rakai'}</span>
                       </div>
 
-                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 line-clamp-3 leading-relaxed">
-                        {job.description || 'Join our committed faculty and clinical training staff at Rakai Community School of Nursing.'}
-                      </p>
+                      {(() => {
+                        const parsed = parseJobDescription(job.description);
+                        if (parsed.isStructured) {
+                          return (
+                            <div className="space-y-1.5 text-xs pt-1 border-t border-slate-100 dark:border-slate-800">
+                              {parsed.reportsTo && (
+                                <div className="flex items-baseline gap-1.5">
+                                  <span className="font-bold text-slate-800 dark:text-slate-200">Reports To:</span>
+                                  <span className="text-slate-600 dark:text-slate-300 font-medium">{parsed.reportsTo}</span>
+                                </div>
+                              )}
+                              {parsed.jobPurpose && (
+                                <div className="space-y-0.5">
+                                  <span className="font-bold text-slate-800 dark:text-slate-200 block">Purpose:</span>
+                                  <p className="text-slate-600 dark:text-slate-300 line-clamp-2 leading-relaxed">
+                                    {parsed.jobPurpose}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 line-clamp-3 leading-relaxed">
+                            {job.description || 'Join our committed faculty and clinical training staff at Rakai Community School of Nursing.'}
+                          </p>
+                        );
+                      })()}
                     </div>
 
                     <div className="pt-5 mt-5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">

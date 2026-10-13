@@ -27,6 +27,7 @@ import { supabase } from '@/lib/supabase';
 import RcsnNavbar from '@/components/website/RcsnNavbar';
 import RcsnFooter from '@/components/website/RcsnFooter';
 import SeoHead from '@/components/website/SeoHead';
+import { parseJobDescription } from '@/lib/parseJobDescription';
 
 interface JobDetails {
   job_id: string;
@@ -511,16 +512,76 @@ ${fullName.trim() || '[Your Full Name]'}`;
                   </div>
                 )}
 
-                {job.description && (
-                  <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-                      Description &amp; Candidate Requirements
-                    </h3>
-                    <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed">
-                      {job.description}
-                    </p>
-                  </div>
-                )}
+                {job.description && (() => {
+                  const parsed = parseJobDescription(job.description);
+                  if (parsed.isStructured) {
+                    return (
+                      <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-4">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                          Role Overview &amp; Requirements
+                        </h3>
+
+                        <div className="space-y-2 text-xs sm:text-sm">
+                          <div className="flex flex-wrap items-baseline gap-2">
+                            <span className="font-bold text-slate-900 dark:text-white shrink-0">JOB TITLE:</span>
+                            <span className="text-slate-800 dark:text-slate-200 font-semibold">{parsed.jobTitle || job.title}</span>
+                          </div>
+
+                          {parsed.reportsTo && (
+                            <div className="flex flex-wrap items-baseline gap-2">
+                              <span className="font-bold text-slate-900 dark:text-white shrink-0">REPORTS TO:</span>
+                              <span className="text-slate-800 dark:text-slate-200 font-medium">{parsed.reportsTo}</span>
+                            </div>
+                          )}
+
+                          {parsed.jobPurpose && (
+                            <div className="pt-1 space-y-1">
+                              <span className="block font-bold text-slate-900 dark:text-white">JOB PURPOSE</span>
+                              <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{parsed.jobPurpose}</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {parsed.duties && parsed.duties.length > 0 && (
+                          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+                            <span className="block font-bold text-xs uppercase tracking-wider text-slate-900 dark:text-white">
+                              Key Duties &amp; Responsibilities:
+                            </span>
+                            <ul className="list-disc pl-5 space-y-1.5 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                              {parsed.duties.map((duty, idx) => (
+                                <li key={idx}>{duty}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {parsed.qualifications && parsed.qualifications.length > 0 && (
+                          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+                            <span className="block font-bold text-xs uppercase tracking-wider text-slate-900 dark:text-white">
+                              Qualifications &amp; Requirements:
+                            </span>
+                            <ul className="list-disc pl-5 space-y-1.5 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                              {parsed.qualifications.map((q, idx) => (
+                                <li key={idx}>{q}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+                        Description &amp; Candidate Requirements
+                      </h3>
+                      <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed">
+                        {job.description}
+                      </p>
+                    </div>
+                  );
+                })()}
 
                 {job.submission_address && (
                   <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 flex items-start gap-2.5">

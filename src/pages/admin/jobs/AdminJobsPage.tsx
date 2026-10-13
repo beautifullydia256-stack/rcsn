@@ -30,6 +30,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { getTokens, SORA, INTER } from '@/styles/posThemeTokens';
+import { parseJobDescription } from '@/lib/parseJobDescription';
 
 interface JobItem {
   job_id: string;
@@ -669,9 +670,32 @@ export default function AdminJobsPage() {
                     </div>
 
                     {/* Description preview */}
-                    <p className="line-clamp-3 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
-                      {j.description || 'No detailed job description provided.'}
-                    </p>
+                    {(() => {
+                      const parsed = parseJobDescription(j.description);
+                      if (parsed.isStructured) {
+                        return (
+                          <div className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
+                            {parsed.reportsTo && (
+                              <div className="flex items-baseline gap-1.5">
+                                <span className="font-bold text-slate-900 dark:text-white">Reports To:</span>
+                                <span>{parsed.reportsTo}</span>
+                              </div>
+                            )}
+                            {parsed.jobPurpose && (
+                              <div className="space-y-0.5">
+                                <span className="font-bold text-slate-900 dark:text-white block">Job Purpose:</span>
+                                <p className="line-clamp-2 leading-relaxed text-slate-600 dark:text-slate-300">{parsed.jobPurpose}</p>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+                      return (
+                        <p className="line-clamp-3 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+                          {j.description || 'No detailed job description provided.'}
+                        </p>
+                      );
+                    })()}
 
                     {/* Contact Channels Preview */}
                     {(j.contact_email || j.contact_phone) && (

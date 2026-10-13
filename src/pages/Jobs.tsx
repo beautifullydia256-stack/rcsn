@@ -17,6 +17,7 @@ import { supabase } from '@/lib/supabase';
 import RcsnNavbar from '@/components/website/RcsnNavbar';
 import RcsnFooter from '@/components/website/RcsnFooter';
 import SeoHead from '@/components/website/SeoHead';
+import { parseJobDescription } from '@/lib/parseJobDescription';
 
 interface Job {
   job_id: string;
@@ -172,9 +173,49 @@ export default function Jobs() {
                         )}
                       </div>
 
-                      <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed line-clamp-3">
-                        {job.description || 'Join our clinical instructors and educators shaping healthcare practice in Uganda.'}
-                      </p>
+                      {/* Structured or fallback description */}
+                      {(() => {
+                        const parsed = parseJobDescription(job.description);
+                        if (parsed.isStructured) {
+                          return (
+                            <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                              {/* Job Title line */}
+                              <div className="flex flex-wrap items-baseline gap-2 text-xs sm:text-sm">
+                                <span className="font-bold text-slate-900 dark:text-white shrink-0">JOB TITLE:</span>
+                                <span className="font-medium text-slate-800 dark:text-slate-200">
+                                  {parsed.jobTitle || job.title}
+                                </span>
+                              </div>
+
+                              {/* Reports To line */}
+                              {parsed.reportsTo && (
+                                <div className="flex flex-wrap items-baseline gap-2 text-xs sm:text-sm">
+                                  <span className="font-bold text-slate-900 dark:text-white shrink-0">REPORTS TO:</span>
+                                  <span className="font-medium text-slate-800 dark:text-slate-200">
+                                    {parsed.reportsTo}
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* Job Purpose line / paragraph */}
+                              {parsed.jobPurpose && (
+                                <div className="text-xs sm:text-sm pt-0.5 space-y-0.5">
+                                  <span className="block font-bold text-slate-900 dark:text-white">JOB PURPOSE</span>
+                                  <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+                                    {parsed.jobPurpose}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed line-clamp-3">
+                            {job.description || 'Join our clinical instructors and educators shaping healthcare practice in Uganda.'}
+                          </p>
+                        );
+                      })()}
                     </div>
 
                     <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-3 shrink-0 pt-4 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-slate-800">
