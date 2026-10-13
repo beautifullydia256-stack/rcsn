@@ -259,7 +259,7 @@ export default function NotificationsPage() {
 
       const targetSchoolId = schoolId || '';
 
-      const [inAppRes, jobsRes, admissionsRes, leavesRes, chatConv] = await Promise.all([
+      const [inAppRes, jobsRes, admissionsRes, leavesRes, chatConv, emailsRes] = await Promise.all([
         supabase
           .from('user_in_app_notifications')
           .select('id, title, body, category, read_at, created_at, metadata')
@@ -291,9 +291,40 @@ export default function NotificationsPage() {
               .limit(50)
           : Promise.resolve({ data: [], error: null }),
         fetchMyConversations().catch(() => []),
+        supabase
+          .from('institutional_emails')
+          .select('id, direction, from_email, from_name, to_email, subject, body_text, body_html, is_read, created_at, metadata')
+          .eq('direction', 'inbound')
+          .order('created_at', { ascending: false })
+          .limit(50),
       ]);
 
       const items: UnifiedNotification[] = [];
+
+      // 0. Inbound Official Emails
+      if (emailsRes.data && Array.isArray(emailsRes.data)) {
+        emailsRes.data.forEach((em) => {
+          const isRead = !!em.is_read;
+          const sender = em.from_name ? `${em.from_name} <${em.from_email}>` : em.from_email;
+          const preview = em.body_text
+            ? em.body_text.replace(/\s+/g, ' ').trim().slice(0, 160)
+            : 'Inbound institutional correspondence received on school domain.';
+
+          items.push({
+            id: `email_${em.id}`,
+            source: 'email',
+            title: `Official Email: ${em.subject || '(No Subject)'}`,
+            body: `From: ${sender} • To: ${em.to_email}. ${preview}`,
+            category: 'Official Email',
+            isRead,
+            createdAt: em.created_at,
+            targetUrl: `/dashboard/admin/emails?open=${em.id}`,
+            badge: isRead ? 'Read' : 'New Inbound Email',
+            referenceNo: em.to_email,
+            metadata: { email_id: em.id, from_email: em.from_email, to_email: em.to_email },
+          });
+        });
+      }
 
       // 1. Job Applications
       if (jobsRes.data && Array.isArray(jobsRes.data)) {
@@ -434,6 +465,7 @@ export default function NotificationsPage() {
     return unifiedNotifications.filter((n) => {
       // Category filter
       if (categoryFilter === 'unread' && n.isRead) return false;
+      if (categoryFilter === 'email' && n.source !== 'email') return false;
       if (categoryFilter === 'job' && n.source !== 'job') return false;
       if (categoryFilter === 'chat' && n.source !== 'chat') return false;
       if (categoryFilter === 'admission' && n.source !== 'admission') return false;
@@ -460,12 +492,13 @@ export default function NotificationsPage() {
   const counts = useMemo(() => {
     const total = unifiedNotifications.length;
     const unread = unifiedNotifications.filter((n) => !n.isRead).length;
+    const email = unifiedNotifications.filter((n) => n.source === 'email').length;
     const job = unifiedNotifications.filter((n) => n.source === 'job').length;
     const chat = unifiedNotifications.filter((n) => n.source === 'chat').length;
     const admission = unifiedNotifications.filter((n) => n.source === 'admission').length;
     const approval = unifiedNotifications.filter((n) => n.source === 'leave').length;
     const system = unifiedNotifications.filter((n) => n.source === 'system').length;
-    return { total, unread, job, chat, admission, approval, system };
+    return { total, unread, email, job, chat, admission, approval, system };
   }, [unifiedNotifications]);
 
   // Click Handler: Immediately Mark as Read/Reviewed & Navigate to Destination
@@ -473,7 +506,13 @@ export default function NotificationsPage() {
     try {
       // If unread, mark read in database
       if (!notif.isRead) {
-        if (notif.source === 'job' && notif.metadata?.applicant_id) {
+        if (notif.source === 'email') {
+          const emailId = (notif.metadata?.email_id as string) || notif.id.replace('email_', '');
+          await supabase
+            .from('institutional_emails')
+            .update({ is_read: true })
+            .eq('id', emailId);
+        } else if (notif.source === 'job' && notif.metadata?.applicant_id) {
           await supabase
             .from('hr_job_applications')
             .update({ status: 'reviewed' })
@@ -491,6 +530,7 @@ export default function NotificationsPage() {
           (prev) => (prev || []).map((item) => (item.id === notif.id ? { ...item, isRead: true } : item))
         );
         void queryClient.invalidateQueries({ queryKey: ['system-alerts-count'] });
+        void queryClient.invalidateQueries({ queryKey: ['institutional-emails'] });
       }
 
       // Navigate directly to target page
@@ -526,8 +566,16 @@ export default function NotificationsPage() {
           .eq('status', 'new');
       }
 
+      // Mark all unread inbound institutional emails as read
+      await supabase
+        .from('institutional_emails')
+        .update({ is_read: true })
+        .eq('direction', 'inbound')
+        .eq('is_read', false);
+
       await refetchNotifications();
       void queryClient.invalidateQueries({ queryKey: ['system-alerts-count'] });
+      void queryClient.invalidateQueries({ queryKey: ['institutional-emails'] });
     } finally {
       setMarkingAll(false);
     }
@@ -726,6 +774,7 @@ export default function NotificationsPage() {
                     {[
                       { id: 'all' as const, label: 'All Alerts', count: counts.total },
                       { id: 'unread' as const, label: 'Pending Only', count: counts.unread },
+                      { id: 'email' as const, label: 'Official Emails', count: counts.email },
                       { id: 'job' as const, label: 'Job Applications', count: counts.job },
                       { id: 'chat' as const, label: 'Chat Messages', count: counts.chat },
                       { id: 'admission' as const, label: 'Admissions', count: counts.admission },
@@ -799,7 +848,7 @@ export default function NotificationsPage() {
                     <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-sm mx-auto">
                       {hideSeen || categoryFilter === 'unread'
                         ? 'There are no pending alerts in this category.'
-                        : 'No alerts match your filter. When new job applications, chat messages, or admissions arrive, they will appear right here.'}
+                        : 'No alerts match your filter. When new official emails, job applications, chat messages, or admissions arrive, they will appear right here.'}
                     </p>
                   </div>
                 ) : (
