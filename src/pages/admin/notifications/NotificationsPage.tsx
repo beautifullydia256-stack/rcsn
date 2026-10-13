@@ -21,6 +21,7 @@ import {
   Filter,
   CheckCircle2,
   ExternalLink,
+  Mail,
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { registerApiUrl } from '../../../lib/registerApiOrigin';
@@ -62,7 +63,7 @@ export async function fetchInAppNotificationsInbox(userId: string): Promise<InAp
 
 export type UnifiedNotification = {
   id: string;
-  source: 'job' | 'admission' | 'chat' | 'leave' | 'system';
+  source: 'job' | 'admission' | 'chat' | 'leave' | 'system' | 'email';
   title: string;
   body: string | null;
   category: string;
@@ -101,7 +102,7 @@ export async function fetchNotificationHistory(filter: HistoryFilter): Promise<N
 }
 
 type TabId = 'inbox' | 'tools' | 'history';
-type AlertCategoryFilter = 'all' | 'unread' | 'job' | 'chat' | 'admission' | 'approval' | 'system';
+type AlertCategoryFilter = 'all' | 'unread' | 'email' | 'job' | 'chat' | 'admission' | 'approval' | 'system';
 type BroadcastType = 'finance' | 'general';
 type Channel = 'sms' | 'whatsapp';
 type AudienceGroup = 'parents' | 'teachers' | 'students';
@@ -130,6 +131,13 @@ function formatTimeAgo(iso: string): string {
 
 function getNotificationStyle(source: UnifiedNotification['source']) {
   switch (source) {
+    case 'email':
+      return {
+        Icon: Mail,
+        bgLight: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+        bgDark: 'dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30',
+        actionLabel: 'Open Inbound Email',
+      };
     case 'job':
       return {
         Icon: Briefcase,

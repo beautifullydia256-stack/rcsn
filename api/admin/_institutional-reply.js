@@ -16,15 +16,64 @@ function getSupabase() {
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 }
 
+function sendJson(res, status, data) {
+  if (typeof res.status === 'function' && typeof res.json === 'function') {
+    return res.status(status).json(data);
+  }
+  res.statusCode = status;
+  if (!res.headersSent) {
+    res.setHeader('Content-Type', 'application/json');
+  }
+  return res.end(JSON.stringify(data));
+}
+
+function getResendApiKey() {
+  if (process.env.RESEND_API_KEY && process.env.RESEND_API_KEY.trim()) {
+    return process.env.RESEND_API_KEY.trim();
+  }
+  if (process.env.VITE_RESEND_API_KEY && process.env.VITE_RESEND_API_KEY.trim()) {
+    return process.env.VITE_RESEND_API_KEY.trim();
+  }
+  if (process.env.NEXT_PUBLIC_RESEND_API_KEY && process.env.NEXT_PUBLIC_RESEND_API_KEY.trim()) {
+    return process.env.NEXT_PUBLIC_RESEND_API_KEY.trim();
+  }
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const candidates = [
+      path.resolve(process.cwd(), '.env.local'),
+      path.resolve(process.cwd(), '.env'),
+      path.resolve(__dirname, '../../.env.local'),
+      path.resolve(__dirname, '../../.env'),
+    ];
+    for (const f of candidates) {
+      if (fs.existsSync(f)) {
+        const lines = fs.readFileSync(f, 'utf8').split('\n');
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed.startsWith('RESEND_API_KEY=')) {
+            const val = trimmed.split('=')[1].replace(/^["']|["']$/g, '').trim();
+            if (val) {
+              process.env.RESEND_API_KEY = val;
+              return val;
+            }
+          }
+        }
+      }
+    }
+  } catch (_) {}
+  return null;
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return sendJson(res, 405, { error: 'Method not allowed' });
   }
 
   const authHeader = req.headers.authorization || '';
   const token = authHeader.replace(/^Bearer\s+/i, '').trim();
   if (!token) {
-    return res.status(401).json({ error: 'Unauthorized: missing authorization token' });
+    return sendJson(res, 401, { error: 'Unauthorized: missing authorization token' });
   }
 
   const supabase = getSupabase();
@@ -32,21 +81,18 @@ module.exports = async function handler(req, res) {
   // Verify caller identity
   const { data: userData, error: userError } = await supabase.auth.getUser(token);
   if (userError || !userData?.user) {
-    return res.status(401).json({ error: 'Unauthorized: invalid token' });
+    return sendJson(res, 401, { error: 'Unauthorized: invalid token' });
   }
 
   const { inReplyToId, toEmail, subject, textBody, htmlBody, fromAddress } = req.body || {};
 
   if (!toEmail || !subject || (!textBody && !htmlBody)) {
-    return res.status(400).json({ error: 'Missing required fields: toEmail, subject, and body' });
+    return sendJson(res, 400, { error: 'Missing required fields: toEmail, subject, and body' });
   }
 
-  const resendApiKey =
-    process.env.RESEND_API_KEY?.trim() ||
-    process.env.VITE_RESEND_API_KEY?.trim() ||
-    process.env.NEXT_PUBLIC_RESEND_API_KEY?.trim();
+  const resendApiKey = getResendApiKey();
   if (!resendApiKey) {
-    return res.status(500).json({ error: 'RESEND_API_KEY is not configured on the server environment' });
+    return sendJson(res, 500, { error: 'RESEND_API_KEY is not configured on the server environment' });
   }
 
   const selectedFrom = (fromAddress || 'info@rcsn.ac.ug').toLowerCase().trim();
@@ -76,7 +122,7 @@ module.exports = async function handler(req, res) {
     const resendJson = await resendRes.json();
     if (!resendRes.ok) {
       console.error('[institutional-reply] Resend error:', resendJson);
-      return res.status(resendRes.status || 500).json({
+      return sendJson(res, resendRes.status || 500, {
         error: resendJson.message || 'Failed to dispatch email via Resend',
         details: resendJson,
       });
@@ -86,6 +132,7 @@ module.exports = async function handler(req, res) {
     const { data: insertedReply, error: insertError } = await supabase
       .from('institutional_emails')
       .insert({
+        school_id: userData.user.user_metadata?.school_id || 'e1b10000-0000-4000-a000-000000000001',
         resend_id: resendJson.id || null,
         direction: 'outbound',
         from_email: validDomainFrom,
@@ -117,7 +164,7 @@ module.exports = async function handler(req, res) {
         .eq('id', inReplyToId);
     }
 
-    return res.status(200).json({
+    return sendJson(res, 200, {
       success: true,
       message: 'Reply sent successfully',
       resendId: resendJson.id,
@@ -125,6 +172,6 @@ module.exports = async function handler(req, res) {
     });
   } catch (err) {
     console.error('[institutional-reply] Exception:', err);
-    return res.status(500).json({ error: err.message || 'Internal server error' });
+    return sendJson(res, 500, { error: err.message || 'Internal server error' });
   }
 };

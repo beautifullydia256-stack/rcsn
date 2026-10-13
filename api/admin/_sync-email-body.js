@@ -25,13 +25,48 @@ function getSupabase() {
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 }
 
+function getResendApiKey() {
+  if (process.env.RESEND_API_KEY && process.env.RESEND_API_KEY.trim()) {
+    return process.env.RESEND_API_KEY.trim();
+  }
+  if (process.env.VITE_RESEND_API_KEY && process.env.VITE_RESEND_API_KEY.trim()) {
+    return process.env.VITE_RESEND_API_KEY.trim();
+  }
+  if (process.env.NEXT_PUBLIC_RESEND_API_KEY && process.env.NEXT_PUBLIC_RESEND_API_KEY.trim()) {
+    return process.env.NEXT_PUBLIC_RESEND_API_KEY.trim();
+  }
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const candidates = [
+      path.resolve(process.cwd(), '.env.local'),
+      path.resolve(process.cwd(), '.env'),
+      path.resolve(__dirname, '../../.env.local'),
+      path.resolve(__dirname, '../../.env'),
+    ];
+    for (const f of candidates) {
+      if (fs.existsSync(f)) {
+        const lines = fs.readFileSync(f, 'utf8').split('\n');
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed.startsWith('RESEND_API_KEY=')) {
+            const val = trimmed.split('=')[1].replace(/^["']|["']$/g, '').trim();
+            if (val) {
+              process.env.RESEND_API_KEY = val;
+              return val;
+            }
+          }
+        }
+      }
+    }
+  } catch (_) {}
+  return null;
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
 
-  const resendApiKey =
-    process.env.RESEND_API_KEY?.trim() ||
-    process.env.VITE_RESEND_API_KEY?.trim() ||
-    process.env.NEXT_PUBLIC_RESEND_API_KEY?.trim();
+  const resendApiKey = getResendApiKey();
 
   if (!resendApiKey) {
     return sendJson(res, 200, {
@@ -92,17 +127,22 @@ module.exports = async function handler(req, res) {
           const text = detail.text || '';
           const html = detail.html || (text ? `<p>${text.replace(/\n/g, '<br/>')}</p>` : '');
 
-          if (text || html) {
+          if (text || html || detail.attachments?.length) {
+            const attachments = detail.attachments || row.metadata?.attachments || [];
             await supabase
               .from('institutional_emails')
               .update({
                 body_text: text,
                 body_html: html,
                 subject: detail.subject || row.subject || undefined,
+                metadata: {
+                  ...(row.metadata || {}),
+                  attachments: attachments,
+                },
               })
               .eq('id', row.id);
 
-            updated.push({ id: row.id, resend_id: row.resend_id, textLen: text.length });
+            updated.push({ id: row.id, resend_id: row.resend_id, textLen: text.length, attachmentCount: attachments.length });
           }
         } else {
           const errText = await fetchRes.text();

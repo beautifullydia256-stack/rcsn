@@ -537,7 +537,15 @@ export default function AdminLayout() {
               <SubItem to="/dashboard/admin/accounts/invite" label="Send invitations" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/admin/permissions" label="Access &amp; permissions" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>
-            <NavItem to="/dashboard/admin/emails" icon={<Mail className="w-4 h-4" />} label="Official Emails" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem
+              to="/dashboard/admin/emails"
+              icon={<Mail className="w-4 h-4" />}
+              label="Official Emails"
+              badge={systemAlerts.emailsUnread > 0 ? (systemAlerts.emailsUnread > 99 ? '99+' : systemAlerts.emailsUnread) : undefined}
+              badgeColor="rose"
+              onClick={closeSidebar}
+              onPrefetch={onPrefetchNav}
+            />
             <NavItem to="/dashboard/admin/gate-passes" icon={<ShieldCheck className="w-4 h-4 text-emerald-400" />} label="Gate Passes &amp; Exits" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/academic-registrar" icon={<UserCheck className="w-4 h-4" />} label="Academic Registrar Portal" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/headed-paper" icon={<FileText className="w-4 h-4" />} label="Headed Paper" onClick={closeSidebar} onPrefetch={onPrefetchNav} />

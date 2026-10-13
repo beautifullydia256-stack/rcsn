@@ -9,6 +9,7 @@ export interface SystemAlertCounts {
   leaves: number;
   inAppNotifs: number;
   chatUnread: number;
+  emailsUnread: number;
   refetch: () => void;
 }
 
@@ -19,6 +20,7 @@ export interface SystemAlertCounts {
  * 3. Pending staff leave requests (hr_leave_requests where status = 'pending')
  * 4. Unread system in-app notifications (user_in_app_notifications where read_at is null)
  * 5. Unread school direct messages (school_chat_messages)
+ * 6. Unread inbound institutional emails (institutional_emails where direction = 'inbound' and is_read = false)
  */
 export function useSystemAlertsCount(
   userId: string | null | undefined,
@@ -29,9 +31,9 @@ export function useSystemAlertsCount(
   const { data: dbCounts, refetch } = useQuery({
     queryKey: ['system-alerts-count', userId, schoolId],
     queryFn: async () => {
-      if (!schoolId) return { jobApps: 0, admissions: 0, leaves: 0, inAppNotifs: 0 };
+      if (!schoolId) return { jobApps: 0, admissions: 0, leaves: 0, inAppNotifs: 0, emailsUnread: 0 };
 
-      const [jobsRes, admRes, leaveRes, inAppRes] = await Promise.all([
+      const [jobsRes, admRes, leaveRes, inAppRes, emailsRes] = await Promise.all([
         supabase
           .from('hr_job_applications')
           .select('id', { count: 'exact', head: true })
@@ -54,6 +56,11 @@ export function useSystemAlertsCount(
               .eq('user_id', userId)
               .is('read_at', null)
           : Promise.resolve({ count: 0, error: null }),
+        supabase
+          .from('institutional_emails')
+          .select('id', { count: 'exact', head: true })
+          .eq('direction', 'inbound')
+          .eq('is_read', false),
       ]);
 
       return {
@@ -61,6 +68,7 @@ export function useSystemAlertsCount(
         admissions: admRes.count || 0,
         leaves: leaveRes.count || 0,
         inAppNotifs: inAppRes.count || 0,
+        emailsUnread: emailsRes.count || 0,
       };
     },
     enabled: !!schoolId,
@@ -71,8 +79,9 @@ export function useSystemAlertsCount(
   const admissions = dbCounts?.admissions || 0;
   const leaves = dbCounts?.leaves || 0;
   const inAppNotifs = dbCounts?.inAppNotifs || 0;
+  const emailsUnread = dbCounts?.emailsUnread || 0;
 
-  const total = jobApps + admissions + leaves + inAppNotifs + chatUnread;
+  const total = jobApps + admissions + leaves + inAppNotifs + chatUnread + emailsUnread;
 
   return {
     total,
@@ -81,6 +90,7 @@ export function useSystemAlertsCount(
     leaves,
     inAppNotifs,
     chatUnread,
+    emailsUnread,
     refetch,
   };
 }

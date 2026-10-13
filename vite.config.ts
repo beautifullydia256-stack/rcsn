@@ -1,6 +1,12 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import dotenv from 'dotenv';
+
+try {
+  dotenv.config();
+  dotenv.config({ path: '.env.local' });
+} catch (_) {}
 
 /** Web (Vercel): do not set VITE_DESKTOP_MODE — BrowserRouter + base '/'. Desktop: VITE_DESKTOP_MODE=true + HashRouter + base './'. */
 const desktop = process.env.VITE_DESKTOP_MODE === 'true';
@@ -10,6 +16,32 @@ function admissionsDevEmailPlugin() {
     name: 'admissions-dev-email-plugin',
     configureServer(server: any) {
       server.middlewares.use(async (req: any, res: any, next: any) => {
+        // Decorate res with Express/Vercel helper methods if missing in raw Node http server
+        if (typeof res.status !== 'function') {
+          res.status = function (code: number) {
+            res.statusCode = code;
+            return res;
+          };
+        }
+        if (typeof res.json !== 'function') {
+          res.json = function (payload: any) {
+            if (!res.headersSent) {
+              res.setHeader('Content-Type', 'application/json');
+            }
+            res.end(JSON.stringify(payload));
+            return res;
+          };
+        }
+        if (typeof res.send !== 'function') {
+          res.send = function (payload: any) {
+            if (!res.headersSent) {
+              res.setHeader('Content-Type', 'text/plain');
+            }
+            res.end(typeof payload === 'object' ? JSON.stringify(payload) : String(payload));
+            return res;
+          };
+        }
+
         if (req.url && req.url.startsWith('/api/admissions/send-email') && req.method === 'POST') {
           const chunks: any[] = [];
           req.on('data', (c: any) => chunks.push(c));
@@ -27,6 +59,27 @@ function admissionsDevEmailPlugin() {
           });
           return;
         }
+        if (req.url && req.url.startsWith('/api/misc')) {
+          const chunks: any[] = [];
+          req.on('data', (c: any) => chunks.push(c));
+          req.on('end', async () => {
+            try {
+              const bodyStr = Buffer.concat(chunks).toString();
+              delete require.cache[path.resolve(__dirname, './api/misc.js')];
+              // eslint-disable-next-line @typescript-eslint/no-var-requires
+              const handler = require(path.resolve(__dirname, './api/misc.js'));
+              req.body = bodyStr ? JSON.parse(bodyStr || '{}') : {};
+              const parsedUrl = new URL(req.url, 'http://localhost:3000');
+              req.query = Object.fromEntries(parsedUrl.searchParams.entries());
+              await handler(req, res);
+            } catch (err) {
+              res.writeHead(500, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ success: false, error: String(err) }));
+            }
+          });
+          return;
+        }
+
         next();
       });
     },
