@@ -333,12 +333,12 @@ export default function LoginPage() {
 
   return (
     <div className="h-screen min-h-screen w-full bg-slate-950 text-slate-100 flex items-center justify-center p-3 sm:p-4 overflow-y-auto sm:overflow-hidden relative selection:bg-[#00873E] selection:text-white">
-      {/* Background Campus Image - Crisp, Sharp, 100% Clear & Natural (Zero blur, zero black darkening) */}
+      {/* Background Campus Image - Softened with a very gentle subtle blur */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
         <img
           src="/images/rcsn/rcsn-campus-gardens.webp"
           alt="RCSN Campus Grounds"
-          className="w-full h-full object-cover object-center"
+          className="w-full h-full object-cover object-center scale-[1.03] filter blur-[2.5px] transition-all"
         />
       </div>
 
