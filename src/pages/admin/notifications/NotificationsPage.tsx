@@ -129,6 +129,39 @@ function formatTimeAgo(iso: string): string {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
+const SEEN_ALERTS_KEY = 'rcsn_admin_seen_alert_ids';
+
+function getStoredSeenAlertIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(SEEN_ALERTS_KEY);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    return new Set(Array.isArray(arr) ? arr : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function persistSeenAlertId(id: string) {
+  try {
+    const set = getStoredSeenAlertIds();
+    set.add(id);
+    localStorage.setItem(SEEN_ALERTS_KEY, JSON.stringify(Array.from(set)));
+  } catch {
+    // ignore
+  }
+}
+
+function persistMultipleSeenAlertIds(ids: string[]) {
+  try {
+    const set = getStoredSeenAlertIds();
+    ids.forEach((id) => set.add(id));
+    localStorage.setItem(SEEN_ALERTS_KEY, JSON.stringify(Array.from(set)));
+  } catch {
+    // ignore
+  }
+}
+
 function getNotificationStyle(source: UnifiedNotification['source']) {
   switch (source) {
     case 'email':
@@ -187,7 +220,7 @@ export default function NotificationsPage() {
   const [tab, setTab] = useState<TabId>('inbox');
   const [categoryFilter, setCategoryFilter] = useState<AlertCategoryFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [hideSeen, setHideSeen] = useState(false);
+  const [showSeen, setShowSeen] = useState(false);
   const [markingAll, setMarkingAll] = useState(false);
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('failed');
 
@@ -439,6 +472,14 @@ export default function NotificationsPage() {
         });
       }
 
+      // Sync with locally seen alert IDs
+      const seenSet = getStoredSeenAlertIds();
+      items.forEach((item) => {
+        if (seenSet.has(item.id)) {
+          item.isRead = true;
+        }
+      });
+
       // Sort by newest first
       items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       return items;
@@ -463,6 +504,9 @@ export default function NotificationsPage() {
   // Filter and Search Calculations
   const filteredNotifications = useMemo(() => {
     return unifiedNotifications.filter((n) => {
+      // By default, leave only those ones that have not yet been clicked in!
+      if (!showSeen && n.isRead) return false;
+
       // Category filter
       if (categoryFilter === 'unread' && n.isRead) return false;
       if (categoryFilter === 'email' && n.source !== 'email') return false;
@@ -471,9 +515,6 @@ export default function NotificationsPage() {
       if (categoryFilter === 'admission' && n.source !== 'admission') return false;
       if (categoryFilter === 'approval' && n.source !== 'leave') return false;
       if (categoryFilter === 'system' && n.source !== 'system') return false;
-
-      // Hide seen toggle
-      if (hideSeen && n.isRead) return false;
 
       // Search query
       if (searchQuery.trim()) {
@@ -487,24 +528,33 @@ export default function NotificationsPage() {
 
       return true;
     });
-  }, [unifiedNotifications, categoryFilter, hideSeen, searchQuery]);
+  }, [unifiedNotifications, categoryFilter, showSeen, searchQuery]);
 
   const counts = useMemo(() => {
-    const total = unifiedNotifications.length;
     const unread = unifiedNotifications.filter((n) => !n.isRead).length;
-    const email = unifiedNotifications.filter((n) => n.source === 'email').length;
-    const job = unifiedNotifications.filter((n) => n.source === 'job').length;
-    const chat = unifiedNotifications.filter((n) => n.source === 'chat').length;
-    const admission = unifiedNotifications.filter((n) => n.source === 'admission').length;
-    const approval = unifiedNotifications.filter((n) => n.source === 'leave').length;
-    const system = unifiedNotifications.filter((n) => n.source === 'system').length;
+    const total = showSeen ? unifiedNotifications.length : unread;
+    const email = unifiedNotifications.filter((n) => n.source === 'email' && (showSeen || !n.isRead)).length;
+    const job = unifiedNotifications.filter((n) => n.source === 'job' && (showSeen || !n.isRead)).length;
+    const chat = unifiedNotifications.filter((n) => n.source === 'chat' && (showSeen || !n.isRead)).length;
+    const admission = unifiedNotifications.filter((n) => n.source === 'admission' && (showSeen || !n.isRead)).length;
+    const approval = unifiedNotifications.filter((n) => n.source === 'leave' && (showSeen || !n.isRead)).length;
+    const system = unifiedNotifications.filter((n) => n.source === 'system' && (showSeen || !n.isRead)).length;
     return { total, unread, email, job, chat, admission, approval, system };
-  }, [unifiedNotifications]);
+  }, [unifiedNotifications, showSeen]);
 
-  // Click Handler: Immediately Mark as Read/Reviewed & Navigate to Destination
+  // Click Handler: Immediately Mark as Read/Reviewed, Persist Seen & Remove from New Alerts
   const handleNotificationClick = async (notif: UnifiedNotification) => {
     try {
-      // If unread, mark read in database
+      // 1. Immediately store ID in persistent storage
+      persistSeenAlertId(notif.id);
+
+      // 2. Optimistically update React Query cache so it disappears immediately from active new alerts
+      queryClient.setQueryData<UnifiedNotification[]>(
+        ['admin_unified_alerts_feed', user?.id, schoolId],
+        (prev) => (prev || []).map((item) => (item.id === notif.id ? { ...item, isRead: true } : item))
+      );
+
+      // 3. If unread, mark read in database
       if (!notif.isRead) {
         if (notif.source === 'email') {
           const emailId = (notif.metadata?.email_id as string) || notif.id.replace('email_', '');
@@ -522,18 +572,19 @@ export default function NotificationsPage() {
             .from('user_in_app_notifications')
             .update({ read_at: new Date().toISOString() })
             .eq('id', notif.id);
+        } else if (notif.source === 'admission' && notif.metadata?.application_id) {
+          await supabase
+            .from('admission_applications')
+            .update({ status: 'under_review' })
+            .eq('id', notif.metadata.application_id as string)
+            .in('status', ['new', 'submitted', 'pending']);
         }
 
-        // Optimistically update React Query cache
-        queryClient.setQueryData<UnifiedNotification[]>(
-          ['admin_unified_alerts_feed', user?.id, schoolId],
-          (prev) => (prev || []).map((item) => (item.id === notif.id ? { ...item, isRead: true } : item))
-        );
         void queryClient.invalidateQueries({ queryKey: ['system-alerts-count'] });
         void queryClient.invalidateQueries({ queryKey: ['institutional-emails'] });
       }
 
-      // Navigate directly to target page
+      // 4. Navigate directly to target page
       if (notif.targetUrl) {
         navigate(notif.targetUrl);
       }
@@ -549,6 +600,9 @@ export default function NotificationsPage() {
     setMarkingAll(true);
     try {
       const readAt = new Date().toISOString();
+
+      // Persist all current notification IDs to local seen storage
+      persistMultipleSeenAlertIds(unifiedNotifications.map((n) => n.id));
 
       // Mark all in-app notifications
       await supabase
@@ -572,6 +626,15 @@ export default function NotificationsPage() {
         .update({ is_read: true })
         .eq('direction', 'inbound')
         .eq('is_read', false);
+
+      // Mark pending admissions as under_review
+      if (schoolId) {
+        await supabase
+          .from('admission_applications')
+          .update({ status: 'under_review' })
+          .eq('school_id', schoolId)
+          .in('status', ['new', 'submitted', 'pending']);
+      }
 
       await refetchNotifications();
       void queryClient.invalidateQueries({ queryKey: ['system-alerts-count'] });
@@ -772,8 +835,7 @@ export default function NotificationsPage() {
                   {/* Category Pills */}
                   <div className="flex flex-wrap gap-1.5">
                     {[
-                      { id: 'all' as const, label: 'All Alerts', count: counts.total },
-                      { id: 'unread' as const, label: 'Pending Only', count: counts.unread },
+                      { id: 'all' as const, label: showSeen ? 'All Alerts' : 'New Alerts', count: counts.total },
                       { id: 'email' as const, label: 'Official Emails', count: counts.email },
                       { id: 'job' as const, label: 'Job Applications', count: counts.job },
                       { id: 'chat' as const, label: 'Chat Messages', count: counts.chat },
@@ -802,16 +864,16 @@ export default function NotificationsPage() {
                     })}
                   </div>
 
-                  {/* Actions & Hide Seen Toggle */}
+                  {/* Actions & Show Seen Toggle */}
                   <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
                     <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-700 dark:text-slate-300">
                       <input
                         type="checkbox"
-                        checked={hideSeen}
-                        onChange={(e) => setHideSeen(e.target.checked)}
+                        checked={showSeen}
+                        onChange={(e) => setShowSeen(e.target.checked)}
                         className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                       />
-                      <span>Hide seen / reviewed alerts</span>
+                      <span>Show previously opened alerts</span>
                     </label>
 
                     {counts.unread > 0 && (
@@ -822,7 +884,7 @@ export default function NotificationsPage() {
                         className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-300 dark:hover:bg-emerald-500/25 border border-emerald-300 dark:border-emerald-500/30 px-3.5 py-2 text-xs font-bold transition-all disabled:opacity-50"
                       >
                         <CheckCheck className="h-4 w-4" />
-                        <span>{markingAll ? 'Updating...' : 'Mark all as seen / reviewed'}</span>
+                        <span>{markingAll ? 'Updating...' : 'Clear all from new alerts'}</span>
                       </button>
                     )}
                   </div>
@@ -846,10 +908,20 @@ export default function NotificationsPage() {
                       All Caught Up!
                     </h3>
                     <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-sm mx-auto">
-                      {hideSeen || categoryFilter === 'unread'
-                        ? 'There are no pending alerts in this category.'
-                        : 'No alerts match your filter. When new official emails, job applications, chat messages, or admissions arrive, they will appear right here.'}
+                      {!showSeen
+                        ? 'All new alerts have been opened and cleared. When new official emails, job applications, or chat messages arrive, they will appear right here.'
+                        : 'No alerts match your filter.'}
                     </p>
+                    {!showSeen && unifiedNotifications.some((n) => n.isRead) && (
+                      <button
+                        type="button"
+                        onClick={() => setShowSeen(true)}
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline pt-1"
+                      >
+                        <span>View previously opened alerts ({unifiedNotifications.filter((n) => n.isRead).length})</span>
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <ul className="space-y-2.5">
