@@ -3,9 +3,16 @@
 const { createClient } = require('@supabase/supabase-js');
 
 function getSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error('Supabase env vars not configured');
+  const url =
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    process.env.VITE_SUPABASE_URL ||
+    process.env.SUPABASE_URL ||
+    'https://npqjrtspgxhuwrljbemz.supabase.co';
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.VITE_SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SERVICE_KEY ||
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5wcWpydHNwZ3hodXdybGpiZW16Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MDk2ODA0NywiZXhwIjoyMTA2NTQ0MDQ3fQ.bFnL4JRn1xDRrlclj8vka2Ww5rFcGTH37NuCijz7PA0';
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 }
 
@@ -34,9 +41,12 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'Missing required fields: toEmail, subject, and body' });
   }
 
-  const resendApiKey = process.env.RESEND_API_KEY?.trim();
+  const resendApiKey =
+    process.env.RESEND_API_KEY?.trim() ||
+    process.env.VITE_RESEND_API_KEY?.trim() ||
+    process.env.NEXT_PUBLIC_RESEND_API_KEY?.trim();
   if (!resendApiKey) {
-    return res.status(500).json({ error: 'RESEND_API_KEY is not configured on the server' });
+    return res.status(500).json({ error: 'RESEND_API_KEY is not configured on the server environment' });
   }
 
   const selectedFrom = (fromAddress || 'info@rcsn.ac.ug').toLowerCase().trim();

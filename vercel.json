@@ -21,6 +21,8 @@
     { "source": "/api/admin/notify-role-change",             "destination": "/api/admin?action=notify-role-change" },
     { "source": "/api/admin/sync-student-balances",          "destination": "/api/admin?action=sync-student-balances" },
     { "source": "/api/admin/broadcast",                      "destination": "/api/admin?action=broadcast" },
+    { "source": "/api/admin/sync-email-body",                "destination": "/api/misc?action=sync-email-body" },
+    { "source": "/api/admin/delete-email",                   "destination": "/api/misc?action=delete-email" },
     { "source": "/api/notifications/send",                   "destination": "/api/misc?action=notifications-send" },
     { "source": "/api/admissions/send-email",                "destination": "/api/misc?action=admissions-send-email" },
     { "source": "/api/register/school",                      "destination": "/api/misc?action=register-school" },

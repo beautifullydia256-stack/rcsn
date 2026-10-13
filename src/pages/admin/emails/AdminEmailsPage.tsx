@@ -13,6 +13,9 @@ import {
   ArrowLeft,
   X,
   Plus,
+  Trash2,
+  Edit3,
+  Save,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
@@ -106,6 +109,16 @@ export default function AdminEmailsPage() {
   const [composeBody, setComposeBody] = useState('');
   const [composeFrom, setComposeFrom] = useState('info@rcsn.ac.ug');
   const [syncingBody, setSyncingBody] = useState(false);
+  const [syncNotice, setSyncNotice] = useState<string | null>(null);
+
+  // Deletion State
+  const [deletingEmailId, setDeletingEmailId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<InstitutionalEmail | null>(null);
+
+  // Manual Body Note State (Fallback if body is missing from provider)
+  const [editingBody, setEditingBody] = useState(false);
+  const [manualBodyText, setManualBodyText] = useState('');
+  const [savingBody, setSavingBody] = useState(false);
 
   // Fetch Emails
   const { data: emails = [], isLoading, isFetching, refetch } = useQuery<InstitutionalEmail[]>({
@@ -180,24 +193,95 @@ export default function AdminEmailsPage() {
   const syncEmailBody = async (emailId: string) => {
     try {
       setSyncingBody(true);
+      setSyncNotice(null);
       const res = await fetch(registerApiUrl('/api/misc?action=sync-email-body'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: emailId }),
       });
-      if (res.ok) {
-        await queryClient.invalidateQueries({ queryKey: ['institutional-emails'] });
+      const json = await res.json().catch(() => ({}));
+      if (json.restrictedKey) {
+        setSyncNotice(
+          json.message ||
+            'Resend API key is configured with Send-Only permissions. Inbound email bodies require a Full Access key in Resend dashboard.'
+        );
+      } else if (!res.ok || json.error) {
+        setSyncNotice(json.error || 'Unable to retrieve email body from provider');
       }
-    } catch (err) {
+      await queryClient.invalidateQueries({ queryKey: ['institutional-emails'] });
+    } catch (err: any) {
       console.warn('Sync email body failed:', err);
+      setSyncNotice(err.message || 'Network error fetching email body');
     } finally {
       setSyncingBody(false);
+    }
+  };
+
+  // Delete Email Handler
+  const handleDeleteEmail = async (email: InstitutionalEmail) => {
+    try {
+      setDeletingEmailId(email.id);
+
+      // 1. Backend API delete call
+      const res = await fetch(registerApiUrl('/api/misc?action=delete-email'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: email.id }),
+      });
+
+      // 2. Direct client supabase deletion fallback
+      if (!res.ok) {
+        const { error: sbErr } = await supabase
+          .from('institutional_emails')
+          .delete()
+          .eq('id', email.id);
+        if (sbErr) throw sbErr;
+      }
+
+      if (selectedEmailId === email.id) {
+        setSelectedEmailId(null);
+      }
+      setShowDeleteConfirm(null);
+      await queryClient.invalidateQueries({ queryKey: ['institutional-emails'] });
+    } catch (err: any) {
+      console.error('Delete email failed:', err);
+      alert(err.message || 'Failed to delete email');
+    } finally {
+      setDeletingEmailId(null);
+    }
+  };
+
+  // Save manual body / note for messages with missing body
+  const handleSaveManualBody = async () => {
+    if (!activeEmail || !manualBodyText.trim()) return;
+    try {
+      setSavingBody(true);
+      const text = manualBodyText.trim();
+      const { error } = await supabase
+        .from('institutional_emails')
+        .update({
+          body_text: text,
+          body_html: `<p>${text.replace(/\n/g, '<br/>')}</p>`,
+        })
+        .eq('id', activeEmail.id);
+
+      if (error) throw error;
+      setEditingBody(false);
+      setManualBodyText('');
+      await queryClient.invalidateQueries({ queryKey: ['institutional-emails'] });
+    } catch (err: any) {
+      alert(err.message || 'Failed to save email note');
+    } finally {
+      setSavingBody(false);
     }
   };
 
   const handleSelectEmail = (item: InstitutionalEmail) => {
     setSelectedEmailId(item.id);
     setShowReplyComposer(false);
+    setEditingBody(false);
+    setManualBodyText('');
+    setSyncNotice(null);
     if (!item.is_read && item.direction === 'inbound') {
       markAsReadMutation.mutate(item.id);
     }
@@ -426,7 +510,7 @@ export default function AdminEmailsPage() {
         {/* ========================================================================= */}
         {activeEmail ? (
           <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden animate-in fade-in duration-150">
-            {/* Top Toolbar with Back to Inbox button */}
+            {/* Top Toolbar with Back to Inbox button & Delete Action */}
             <div className="p-3.5 sm:p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90 flex items-center justify-between gap-3">
               <button
                 type="button"
@@ -438,7 +522,7 @@ export default function AdminEmailsPage() {
               </button>
 
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 hidden sm:inline">
                   {formatEmailDate(activeEmail.created_at)}
                 </span>
                 {(!activeEmail.body_text && !activeEmail.body_html && activeEmail.resend_id) && (
@@ -446,12 +530,21 @@ export default function AdminEmailsPage() {
                     type="button"
                     onClick={() => syncEmailBody(activeEmail.id)}
                     disabled={syncingBody}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600/20 text-emerald-400 text-xs font-semibold hover:bg-emerald-600/30 transition disabled:opacity-50"
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600/20 text-emerald-400 text-xs font-semibold hover:bg-emerald-600/30 transition disabled:opacity-50"
                   >
                     <RefreshCw className={`w-3 h-3 ${syncingBody ? 'animate-spin' : ''}`} />
-                    <span>{syncingBody ? 'Loading Body...' : 'Reload Body'}</span>
+                    <span>{syncingBody ? 'Loading...' : 'Reload Body'}</span>
                   </button>
                 )}
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(activeEmail)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 text-xs font-bold transition border border-rose-200 dark:border-rose-800"
+                  title="Delete this email"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete</span>
+                </button>
               </div>
             </div>
 
@@ -506,17 +599,89 @@ export default function AdminEmailsPage() {
                   {activeEmail.body_text}
                 </p>
               ) : (
-                <div className="py-10 text-center text-slate-400 space-y-3">
-                  <p className="text-sm font-semibold">Message body is loading or empty.</p>
-                  {activeEmail.resend_id && (
-                    <button
-                      type="button"
-                      onClick={() => syncEmailBody(activeEmail.id)}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-md"
-                    >
-                      <RefreshCw className="w-3.5 h-3.5" />
-                      <span>Fetch Email Body</span>
-                    </button>
+                <div className="py-8 px-4 max-w-xl mx-auto text-center space-y-4 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/60">
+                  <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto">
+                    <Mail className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                      Message body is loading or empty.
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                      This inbound email metadata was stored. Note that inbound body retrieval requires a Resend API key configured with <strong>Full Access</strong> permissions.
+                    </p>
+                  </div>
+
+                  {syncNotice && (
+                    <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs text-left leading-relaxed">
+                      {syncNotice}
+                    </div>
+                  )}
+
+                  {editingBody ? (
+                    <div className="text-left space-y-2 pt-2">
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                        Enter or paste email body / note:
+                      </label>
+                      <textarea
+                        rows={4}
+                        value={manualBodyText}
+                        onChange={(e) => setManualBodyText(e.target.value)}
+                        placeholder="Type message content or notes..."
+                        className="w-full p-3 rounded-xl bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-white font-sans focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                      <div className="flex items-center gap-2 justify-end">
+                        <button
+                          type="button"
+                          onClick={() => setEditingBody(false)}
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-200"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSaveManualBody}
+                          disabled={savingBody || !manualBodyText.trim()}
+                          className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition disabled:opacity-50"
+                        >
+                          <Save className="w-3.5 h-3.5" />
+                          <span>{savingBody ? 'Saving...' : 'Save Content'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                      {activeEmail.resend_id && (
+                        <button
+                          type="button"
+                          onClick={() => syncEmailBody(activeEmail.id)}
+                          disabled={syncingBody}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-md disabled:opacity-50"
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 ${syncingBody ? 'animate-spin' : ''}`} />
+                          <span>{syncingBody ? 'Fetching...' : 'Fetch Email Body'}</span>
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setManualBodyText('');
+                          setEditingBody(true);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold transition"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Add / Paste Note</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowDeleteConfirm(activeEmail)}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 text-xs font-bold transition border border-rose-200 dark:border-rose-800"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete Email</span>
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
@@ -548,21 +713,32 @@ export default function AdminEmailsPage() {
             {/* Bottom Actions / Reply Section */}
             <div className="p-4 sm:p-6 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80">
               {!showReplyComposer ? (
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowReplyComposer(true)}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-md transition-all active:scale-[0.98]"
+                    >
+                      <Reply className="w-4 h-4" />
+                      <span>Reply</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedEmailId(null)}
+                      className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                    >
+                      <span>Back to Inbox</span>
+                    </button>
+                  </div>
+
                   <button
                     type="button"
-                    onClick={() => setShowReplyComposer(true)}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-md transition-all active:scale-[0.98]"
+                    onClick={() => setShowDeleteConfirm(activeEmail)}
+                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 font-bold text-xs transition border border-rose-200 dark:border-rose-800"
                   >
-                    <Reply className="w-4 h-4" />
-                    <span>Reply</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedEmailId(null)}
-                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                  >
-                    <span>Back to Inbox</span>
+                    <Trash2 className="w-4 h-4" />
+                    <span>Delete Email</span>
                   </button>
                 </div>
               ) : (
@@ -684,7 +860,7 @@ export default function AdminEmailsPage() {
 
                       {/* Email Row Content */}
                       <div className="flex-1 min-w-0">
-                        {/* Top Row: Sender Name (left) & Date (right) */}
+                        {/* Top Row: Sender Name (left) & Date / Actions (right) */}
                         <div className="flex items-center justify-between gap-2">
                           <span
                             className={`text-sm truncate ${
@@ -695,15 +871,28 @@ export default function AdminEmailsPage() {
                           >
                             {senderDisplay}
                           </span>
-                          <span
-                            className={`text-xs shrink-0 font-medium ${
-                              isUnread
-                                ? 'text-emerald-700 dark:text-emerald-400 font-bold'
-                                : 'text-slate-500 dark:text-slate-400'
-                            }`}
-                          >
-                            {formatEmailDate(item.created_at)}
-                          </span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span
+                              className={`text-xs font-medium ${
+                                isUnread
+                                  ? 'text-emerald-700 dark:text-emerald-400 font-bold'
+                                  : 'text-slate-500 dark:text-slate-400'
+                              }`}
+                            >
+                              {formatEmailDate(item.created_at)}
+                            </span>
+                            <button
+                              type="button"
+                              title="Delete email"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowDeleteConfirm(item);
+                              }}
+                              className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
 
                         {/* Middle Row: Subject Line */}
@@ -844,6 +1033,61 @@ export default function AdminEmailsPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
+            <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-4 animate-in zoom-in-95 duration-150">
+              <div className="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div className="text-center space-y-1.5">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Delete Email?</h3>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Are you sure you want to delete this email from{' '}
+                  <strong className="text-slate-800 dark:text-slate-200">
+                    {showDeleteConfirm.from_name || showDeleteConfirm.from_email}
+                  </strong>{' '}
+                  with subject{' '}
+                  <strong className="text-slate-800 dark:text-slate-200">
+                    "{showDeleteConfirm.subject || '(No Subject)'}"
+                  </strong>?
+                </p>
+                <p className="text-xs text-rose-600 dark:text-rose-400 font-medium pt-1">
+                  This action will permanently remove it from the institution's mailbox.
+                </p>
+              </div>
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(null)}
+                  disabled={deletingEmailId !== null}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 font-semibold text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteEmail(showDeleteConfirm)}
+                  disabled={deletingEmailId !== null}
+                  className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 font-bold text-xs text-white shadow-lg transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+                >
+                  {deletingEmailId ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete Permanently</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}
