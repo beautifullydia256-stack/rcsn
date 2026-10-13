@@ -52,10 +52,10 @@ export function PinDots({
           key={i}
           animate={i < filled ? { scale: [0.85, 1.25, 1] } : { scale: 1 }}
           transition={{ duration: 0.18 }}
-          className={`w-4 h-4 sm:w-4.5 sm:h-4.5 rounded-full border-[1.5px] transition-all duration-200 ${
+          className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border-[1.5px] transition-all duration-200 ${
             i < filled
-              ? 'bg-white border-white shadow-[0_0_14px_rgba(255,255,255,0.9),inset_0_1px_2px_rgba(255,255,255,1)]'
-              : 'bg-white/10 backdrop-blur-md border-white/50 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.3)]'
+              ? 'bg-white border-white shadow-[0_0_14px_rgba(255,255,255,1),inset_0_1px_2px_rgba(255,255,255,1)]'
+              : 'bg-white/10 backdrop-blur-sm border-white/80 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.4),0_2px_6px_rgba(0,0,0,0.3)]'
           }`}
         />
       ))}
@@ -86,7 +86,7 @@ export default function PinPad({
   const triggerHaptic = useCallback(() => {
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       try {
-        navigator.vibrate(12);
+        navigator.vibrate(14);
       } catch {
         // Ignored if device doesn't allow haptics
       }
@@ -97,8 +97,8 @@ export default function PinPad({
     <div className="flex flex-col items-center w-full">
       <PinDots filled={digits.length} shakeKey={shakeKey} />
 
-      {/* Error message slot with stable height */}
-      <div className="h-6 mb-2 flex items-center justify-center">
+      {/* Error message slot */}
+      <div className="h-6 mb-3 flex items-center justify-center">
         <AnimatePresence mode="wait">
           {error && (
             <motion.p
@@ -106,7 +106,7 @@ export default function PinPad({
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="text-red-300 text-xs sm:text-sm font-semibold text-center drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]"
+              className="text-red-300 text-xs sm:text-sm font-semibold text-center drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
             >
               {error}
             </motion.p>
@@ -114,14 +114,14 @@ export default function PinPad({
         </AnimatePresence>
       </div>
 
-      {/* iPhone Liquid Glass Keypad Grid */}
-      <div className="grid grid-cols-3 gap-x-4 sm:gap-x-6 gap-y-3.5 sm:gap-y-4 justify-items-center">
+      {/* iPhone 3D Liquid Glass Keypad Grid - Big circular buttons with generous spacing */}
+      <div className="grid grid-cols-3 gap-x-6 sm:gap-x-8 gap-y-4 sm:gap-y-5 justify-items-center w-full max-w-[19.5rem] sm:max-w-[22rem] mx-auto">
         {KEYS.map((item, idx) => {
           if (item.type === 'blank') {
             return (
               <div
                 key={`blank-${idx}`}
-                className="w-[4.65rem] h-[4.65rem] sm:w-[5.25rem] sm:h-[5.25rem] pointer-events-none"
+                className="w-20 h-20 min-w-20 min-h-20 sm:w-[5.25rem] sm:h-[5.25rem] sm:min-w-[5.25rem] sm:min-h-[5.25rem] aspect-square flex-shrink-0 pointer-events-none"
                 aria-hidden
               />
             );
@@ -144,26 +144,26 @@ export default function PinPad({
                 disabled={isBackDisabled}
                 aria-label="Delete last digit"
                 className={`
-                  relative group
-                  w-[4.65rem] h-[4.65rem] sm:w-[5.25rem] sm:h-[5.25rem]
-                  rounded-full flex items-center justify-center
+                  relative group flex-shrink-0 aspect-square rounded-full
+                  w-20 h-20 min-w-20 min-h-20 sm:w-[5.25rem] sm:h-[5.25rem] sm:min-w-[5.25rem] sm:min-h-[5.25rem]
+                  flex items-center justify-center
                   transition-all duration-150 ease-out select-none touch-manipulation
-                  ${isBackDisabled ? 'opacity-25 cursor-default' : 'cursor-pointer active:scale-95'}
-                  bg-white/[0.12] hover:bg-white/[0.22] active:bg-white/[0.38]
+                  ${isBackDisabled ? 'opacity-25 cursor-default' : 'cursor-pointer active:scale-[0.92]'}
+                  bg-white/[0.18] hover:bg-white/[0.28] active:bg-white/[0.50]
                   backdrop-blur-2xl backdrop-saturate-[180%]
-                  border border-white/30 border-t-white/55 border-l-white/40 border-b-white/15
-                  shadow-[0_6px_16px_rgba(0,0,0,0.25),inset_0_1.5px_2px_rgba(255,255,255,0.45),inset_0_-1px_1.5px_rgba(0,0,0,0.2)]
-                  active:shadow-[0_2px_8px_rgba(0,0,0,0.35),inset_0_2px_4px_rgba(255,255,255,0.7)]
+                  border-[1.5px] border-white/40 border-t-white/80 border-l-white/60 border-b-white/20
+                  shadow-[0_10px_25px_rgba(0,0,0,0.32),inset_0_2px_3px_rgba(255,255,255,0.7),inset_0_-2px_3px_rgba(0,0,0,0.25)]
+                  active:shadow-[0_3px_10px_rgba(0,0,0,0.45),inset_0_2.5px_4px_rgba(255,255,255,0.95)]
                 `}
               >
-                {/* Liquid Glass Top Curved Specular Rim Highlight */}
+                {/* 3D Liquid Glass Specular Top Highlight */}
                 <span
-                  className="absolute top-1 left-2.5 right-2.5 h-[36%] rounded-t-full bg-gradient-to-b from-white/25 via-white/5 to-transparent pointer-events-none"
+                  className="absolute top-1 left-2.5 right-2.5 h-[38%] rounded-t-full bg-gradient-to-b from-white/40 via-white/10 to-transparent pointer-events-none"
                   aria-hidden
                 />
 
                 <svg
-                  className="w-7 h-7 sm:w-8 sm:h-8 text-white/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]"
+                  className="w-7 h-7 sm:w-8 sm:h-8 text-white drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.6)]"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -179,7 +179,7 @@ export default function PinPad({
             );
           }
 
-          // Digit button
+          // Digit button: big, perfectly circular, 3D liquid glass
           const isNumDisabled = digits.length >= 4;
           const isBtnDisabled = disabled || isNumDisabled;
 
@@ -198,27 +198,27 @@ export default function PinPad({
               disabled={isBtnDisabled}
               aria-label={`Digit ${item.key}`}
               className={`
-                relative group
-                w-[4.65rem] h-[4.65rem] sm:w-[5.25rem] sm:h-[5.25rem]
-                rounded-full flex flex-col items-center justify-center
+                relative group flex-shrink-0 aspect-square rounded-full
+                w-20 h-20 min-w-20 min-h-20 sm:w-[5.25rem] sm:h-[5.25rem] sm:min-w-[5.25rem] sm:min-h-[5.25rem]
+                flex flex-col items-center justify-center
                 transition-all duration-150 ease-out select-none touch-manipulation
-                ${isBtnDisabled ? 'opacity-35 cursor-not-allowed' : 'cursor-pointer active:scale-95'}
-                bg-white/[0.16] hover:bg-white/[0.26] active:bg-white/[0.44]
+                ${isBtnDisabled ? 'opacity-35 cursor-not-allowed' : 'cursor-pointer active:scale-[0.92]'}
+                bg-white/[0.22] hover:bg-white/[0.32] active:bg-white/[0.55]
                 backdrop-blur-2xl backdrop-saturate-[180%]
-                border border-white/35 border-t-white/65 border-l-white/45 border-b-white/20
-                shadow-[0_8px_20px_rgba(0,0,0,0.25),inset_0_1.5px_2px_rgba(255,255,255,0.6),inset_0_-1.5px_2px_rgba(0,0,0,0.2)]
-                active:shadow-[0_2px_8px_rgba(0,0,0,0.35),inset_0_2px_4px_rgba(255,255,255,0.9)]
+                border-[1.5px] border-white/45 border-t-white/85 border-l-white/60 border-b-white/25
+                shadow-[0_10px_25px_rgba(0,0,0,0.32),inset_0_2px_3px_rgba(255,255,255,0.75),inset_0_-2px_3px_rgba(0,0,0,0.25)]
+                active:shadow-[0_3px_10px_rgba(0,0,0,0.45),inset_0_2.5px_4px_rgba(255,255,255,0.95)]
               `}
             >
-              {/* Liquid Glass Top Curved Specular Rim Highlight */}
+              {/* 3D Liquid Glass Specular Top Highlight */}
               <span
-                className="absolute top-1 left-2.5 right-2.5 h-[36%] rounded-t-full bg-gradient-to-b from-white/35 via-white/10 to-transparent pointer-events-none"
+                className="absolute top-1 left-2.5 right-2.5 h-[38%] rounded-t-full bg-gradient-to-b from-white/45 via-white/10 to-transparent pointer-events-none"
                 aria-hidden
               />
 
               {/* Main Digit */}
               <span
-                className={`text-3xl sm:text-4xl font-light text-white tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)] leading-none ${
+                className={`text-3xl sm:text-4xl font-normal text-white drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.6)] leading-none select-none ${
                   item.sub ? 'mt-0.5' : ''
                 }`}
               >
@@ -227,7 +227,7 @@ export default function PinPad({
 
               {/* iOS Sub-letters */}
               {item.sub ? (
-                <span className="text-[10px] sm:text-[11px] font-bold tracking-[0.24em] text-white/80 uppercase mt-1 leading-none drop-shadow-[0_1px_1px_rgba(0,0,0,0.3)] pl-[0.24em]">
+                <span className="text-[10px] sm:text-[11px] font-bold tracking-[0.24em] text-white/90 uppercase mt-1 leading-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)] pl-[0.24em] select-none">
                   {item.sub}
                 </span>
               ) : null}
