@@ -75,26 +75,36 @@ export default function PinLockScreen({ userName, failCount, lockedOut, onAttemp
   }, [onSignOut]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto selection:bg-[#00873E] selection:text-white">
       <GlassBackground />
 
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 16 }}
+        initial={{ opacity: 0, scale: 0.96, y: 14 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.25, ease: 'easeOut' }}
-        className="relative z-10 bg-white/10 backdrop-blur-2xl border border-white/20 rounded-2xl shadow-2xl p-8 w-80 flex flex-col items-center"
+        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+        className="relative z-10 w-full max-w-[23rem] sm:max-w-[26rem] px-5 py-6 sm:px-8 sm:py-8 rounded-[32px] sm:rounded-[38px]
+          bg-slate-950/45 sm:bg-slate-950/50
+          backdrop-blur-2xl backdrop-saturate-[160%]
+          border border-white/30 border-t-white/60 border-l-white/40 border-b-white/20
+          shadow-[0_24px_60px_rgba(0,0,0,0.5),inset_0_1.5px_2px_rgba(255,255,255,0.5),inset_0_-1px_1px_rgba(255,255,255,0.15)]
+          flex flex-col items-center my-auto overflow-hidden"
       >
-        {/* User avatar */}
-        <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mb-4">
-          <span className="text-white text-2xl font-bold select-none">
+        {/* Top Liquid Glass Specular Sheen (iOS Liquid Edge) */}
+        <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 to-transparent pointer-events-none" />
+        {/* Diagonal ambient light glow */}
+        <div className="absolute -top-20 -left-20 w-44 h-44 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+
+        {/* User avatar / profile badge in Liquid Glass */}
+        <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-full bg-white/15 backdrop-blur-xl border border-white/35 border-t-white/60 shadow-[0_8px_20px_rgba(0,0,0,0.25),inset_0_1.5px_2px_rgba(255,255,255,0.5)] flex items-center justify-center mb-3">
+          <span className="text-white text-2xl sm:text-3xl font-bold select-none drop-shadow-sm">
             {lastName.charAt(0).toUpperCase()}
           </span>
         </div>
 
-        <h2 className="text-white text-lg font-bold mb-0.5">
+        <h2 className="text-white text-xl sm:text-2xl font-bold mb-0.5 tracking-tight drop-shadow-sm text-center">
           Welcome back, {lastName}
         </h2>
-        <p className="text-white/50 text-xs mb-5">Enter your PIN to continue</p>
+        <p className="text-white/60 text-xs sm:text-sm mb-1 text-center">Enter your PIN to continue</p>
 
         <AnimatePresence mode="wait">
           {lockedOut ? (
@@ -102,9 +112,9 @@ export default function PinLockScreen({ userName, failCount, lockedOut, onAttemp
               key="locked-out"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col items-center gap-4 py-4"
+              className="flex flex-col items-center gap-4 py-6"
             >
-              <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
+              <div className="w-14 h-14 bg-red-500/20 border border-red-400/40 rounded-full flex items-center justify-center shadow-inner">
                 <svg className="w-7 h-7 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path
                     strokeLinecap="round"
@@ -121,7 +131,7 @@ export default function PinLockScreen({ userName, failCount, lockedOut, onAttemp
           ) : (
             <motion.div key="pin-entry" className="flex flex-col items-center w-full">
               {attemptsLeft < PIN_MAX_FAILS && attemptsLeft > 0 && !error && (
-                <p className="text-amber-300/80 text-xs mb-1">
+                <p className="text-amber-300/90 text-xs font-semibold mb-1 drop-shadow-sm">
                   {attemptsLeft} attempt{attemptsLeft !== 1 ? 's' : ''} remaining
                 </p>
               )}
@@ -141,7 +151,7 @@ export default function PinLockScreen({ userName, failCount, lockedOut, onAttemp
           <button
             onClick={handleSignOut}
             disabled={signingOut}
-            className="mt-5 text-xs text-white/30 hover:text-white/60 transition-colors disabled:opacity-40"
+            className="mt-6 text-xs sm:text-sm font-medium text-white/60 hover:text-white transition-all duration-200 disabled:opacity-40 py-2 px-4 rounded-full hover:bg-white/10 active:bg-white/20 select-none"
           >
             {signingOut ? 'Signing out…' : 'Sign in with a different account'}
           </button>

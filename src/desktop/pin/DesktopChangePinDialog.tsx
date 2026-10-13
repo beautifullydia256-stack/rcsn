@@ -91,10 +91,10 @@ export default function DesktopChangePinDialog({ onChangePin, onClose }: Props) 
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95 }}
         transition={{ duration: 0.25, ease: 'easeOut' }}
-        className="relative bg-slate-950/45 dark:bg-black/55 backdrop-blur-md backdrop-saturate-[150%] border border-white/30 rounded-[28px] shadow-2xl p-8 w-88 flex flex-col items-center overflow-hidden"
+        className="relative bg-slate-950/50 dark:bg-black/60 backdrop-blur-2xl backdrop-saturate-[160%] border border-white/30 border-t-white/60 border-l-white/40 border-b-white/20 rounded-[32px] shadow-2xl px-6 py-7 sm:px-8 sm:py-8 w-full max-w-[23rem] sm:max-w-[26rem] flex flex-col items-center overflow-hidden"
       >
         {/* Specular highlights & ambient glow */}
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none" />
+        <div className="absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 to-transparent pointer-events-none" />
         <div className="absolute -top-16 -right-16 w-36 h-36 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
 
         {/* Close */}
