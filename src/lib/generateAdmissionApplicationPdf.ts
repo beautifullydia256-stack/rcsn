@@ -24,8 +24,9 @@ async function loadImageAsDataUrl(url: string): Promise<string> {
 }
 
 /**
- * Generates and triggers download of a high-quality, professional
- * Admission Application Confirmation & Payment Receipt PDF.
+ * Generates an official, formal institutional Admission Application Form PDF
+ * styled like a classic, professional Microsoft Word document (black & white,
+ * standard bordered tables, left school badge, top-right passport photo, clean sign-off).
  */
 export async function generateAdmissionApplicationPdf(app: AdmissionApplication): Promise<void> {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -34,100 +35,73 @@ export async function generateAdmissionApplicationPdf(app: AdmissionApplication)
   const margin = 14;
   const contentW = W - margin * 2;
 
-  // 1. Top Green Banner
-  doc.setFillColor(0, 135, 62); // RCSN Emerald
-  doc.rect(0, 0, W, 36, 'F');
+  // 1. INSTITUTIONAL LETTERHEAD (Formal, No Colored Banners)
+  let y = 12;
 
-  // Gold accent strip below green banner
-  doc.setFillColor(217, 119, 6);
-  doc.rect(0, 36, W, 2.5, 'F');
-
-  // Try loading logo
+  // School Badge / Logo on Left
+  const logoW = 22;
+  const logoH = 22;
   try {
     const logoData = await loadImageAsDataUrl('/images/rcsn/logo.png');
     if (logoData) {
-      doc.addImage(logoData, 'PNG', margin, 5, 26, 26);
+      doc.addImage(logoData, 'PNG', margin, y, logoW, logoH);
     }
   } catch {
     // skip logo if unavailable
   }
 
-  // Header Typography
-  doc.setTextColor(255, 255, 255);
+  // School Name and Institutional Details on Left beside badge
+  const headerTextX = margin + logoW + 4;
+  doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(15);
-  doc.text('RAKAI COMMUNITY SCHOOL OF NURSING', margin + 30, 13);
-
-  doc.setFont('helvetica', 'italic');
-  doc.setFontSize(8);
-  doc.setTextColor(220, 252, 231);
-  doc.text('"Training Qualified Nurses & Midwives to Serve for Better Health"', margin + 30, 18);
+  doc.setFontSize(14);
+  doc.text('RAKAI COMMUNITY SCHOOL OF NURSING', headerTextX, y + 5);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
-  doc.setTextColor(240, 253, 244);
-  doc.text('MoES Reg: ME\\VOC\\071  |  UNMC Accredited  |  UHPAB Center U151', margin + 30, 23);
-  doc.text('P.O. Box 279, Kalisizo / Rakai District, Uganda  |  Tel: +256 782 856 203 / +256 701 445 611', margin + 30, 27.5);
-  doc.text('Official Email: info@rcsn.ac.ug  |  Website: https://www.rcsn.ac.ug', margin + 30, 32);
+  doc.setTextColor(30, 30, 30);
+  doc.text('Ministry of Education & Sports Reg: ME/VOC/071  |  UNMC Accredited', headerTextX, y + 10);
+  doc.text('Uganda Health Professional Assessment Board (UHPAB) Examination Center: U151', headerTextX, y + 14);
+  doc.text('P.O. Box 279, Kalisizo / Rakai District, Uganda  |  Tel: +256 782 856 203 / +256 701 445 611', headerTextX, y + 18);
+  doc.text('Email: info@rcsn.ac.ug  |  Website: www.rcsn.ac.ug', headerTextX, y + 22);
 
-  // 2. Document Title Box
-  let y = 44;
-  doc.setFillColor(248, 250, 252);
-  doc.setDrawColor(226, 232, 240);
-  doc.roundedRect(margin, y, contentW, 14, 2, 2, 'FD');
+  // Horizontal separating rule (clean formal black line)
+  y = 37;
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.6);
+  doc.line(margin, y, W - margin, y);
 
-  doc.setTextColor(15, 23, 42);
+  // 2. DOCUMENT TITLE (Centered & Formal)
+  y += 6;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
-  doc.text('OFFICIAL ADMISSION APPLICATION & PAYMENT ACKNOWLEDGEMENT', W / 2, y + 6.5, { align: 'center' });
+  doc.setTextColor(0, 0, 0);
+  doc.text('OFFICIAL ADMISSION APPLICATION FORM', W / 2, y, { align: 'center' });
 
+  y += 4.5;
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
-  doc.setTextColor(100, 116, 139);
-  doc.text('2026 / 2027 ACADEMIC YEAR ADMISSION CYCLE', W / 2, y + 11, { align: 'center' });
-
-  // 3. Application Reference & Payment Summary Card
-  y = 62;
-  doc.setFillColor(240, 253, 244); // light emerald
-  doc.setDrawColor(187, 247, 208);
-  doc.roundedRect(margin, y, contentW, 25, 2, 2, 'FD');
-
-  doc.setTextColor(22, 101, 52);
-  doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
-  doc.text('APPLICATION REFERENCE NUMBER:', margin + 6, y + 6);
+  doc.text(`ACADEMIC YEAR ADMISSION CYCLE: ${app.intake || '2026 / 2027'}`, W / 2, y, { align: 'center' });
 
-  doc.setFontSize(12);
-  doc.setTextColor(0, 135, 62);
-  doc.text(app.id, margin + 6, y + 12);
+  // 3. CANDIDATE PASSPORT PHOTO & PERSONAL PARTICULARS
+  y += 5;
+  const photoW = 28;
+  const photoH = 32;
+  const photoX = W - margin - photoW;
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
-  doc.setTextColor(71, 85, 105);
-  doc.text(`Submitted On: ${new Date(app.submittedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`, margin + 6, y + 17);
-  doc.text(`Candidate Index No: ${app.indexNumber || 'N/A'}`, margin + 6, y + 21);
-
-  // Right side of summary card (Payment Badge)
-  doc.setFillColor(220, 252, 231);
-  doc.setDrawColor(134, 239, 172);
-  doc.roundedRect(W - margin - 72, y + 4, 66, 17, 1.5, 1.5, 'FD');
-
-  doc.setTextColor(21, 128, 61);
+  // Header 1: Candidate Personal Particulars
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7);
-  doc.text('APPLICATION FEE STATUS', W - margin - 39, y + 8, { align: 'center' });
+  doc.setFontSize(8.5);
+  doc.setTextColor(0, 0, 0);
+  doc.text('1. CANDIDATE PERSONAL PARTICULARS', margin, y);
 
-  doc.setFontSize(10);
-  doc.setTextColor(0, 135, 62);
-  doc.text('UGX 50,000 PAID', W - margin - 39, y + 12.5, { align: 'center' });
+  const photoY = y + 2.5;
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.5);
-  doc.setTextColor(71, 85, 105);
-  doc.text(`${app.paymentMethod || 'Mobile Money'} (Verified)`, W - margin - 39, y + 16.5, { align: 'center' });
-  doc.text(`Txn Ref: ${app.paymentReference || 'CONFIRMED'}`, W - margin - 39, y + 19.5, { align: 'center' });
+  // Clean standard passport photo frame with thin black border
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.3);
+  doc.rect(photoX, photoY, photoW, photoH);
 
-  // Try loading candidate passport photo
   let passportData = '';
   if (app.passportPhotoUrl) {
     try {
@@ -137,107 +111,114 @@ export async function generateAdmissionApplicationPdf(app: AdmissionApplication)
     }
   }
 
-  // 4. Section 1: Candidate Particulars
-  y = 92;
-  doc.setTextColor(15, 23, 42);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.text('1. CANDIDATE PERSONAL PARTICULARS', margin, y);
-
-  // Render Passport Photo Frame on the right
-  const photoW = 26;
-  const photoH = 31;
-  const photoX = W - margin - photoW;
-  const photoY = y + 2.5;
-
-  doc.setFillColor(248, 250, 252);
-  doc.setDrawColor(203, 213, 225);
-  doc.roundedRect(photoX, photoY, photoW, photoH, 1, 1, 'FD');
-
   if (passportData) {
     try {
-      doc.addImage(passportData, 'JPEG', photoX + 1, photoY + 1, photoW - 2, photoH - 2);
+      doc.addImage(passportData, 'JPEG', photoX + 0.5, photoY + 0.5, photoW - 1, photoH - 1);
     } catch {
-      doc.setFontSize(6.5);
-      doc.setTextColor(148, 163, 184);
+      doc.setFontSize(7);
+      doc.setTextColor(80, 80, 80);
       doc.text('PASSPORT PHOTO', photoX + photoW / 2, photoY + photoH / 2, { align: 'center' });
     }
   } else {
-    doc.setFontSize(6.5);
-    doc.setTextColor(148, 163, 184);
+    doc.setFontSize(7);
+    doc.setTextColor(80, 80, 80);
     doc.text('PASSPORT', photoX + photoW / 2, photoY + photoH / 2 - 2, { align: 'center' });
     doc.text('PHOTO', photoX + photoW / 2, photoY + photoH / 2 + 3, { align: 'center' });
   }
 
-  doc.setFontSize(5.5);
-  doc.setTextColor(100, 116, 139);
-  doc.text('Official Photo', photoX + photoW / 2, photoY + photoH + 3.5, { align: 'center' });
+  // Label strictly "PASSPORT PHOTO"
+  doc.setFontSize(6.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(0, 0, 0);
+  doc.text('PASSPORT PHOTO', photoX + photoW / 2, photoY + photoH + 3.5, { align: 'center' });
+
+  // Table 1: Candidate Personal Particulars (Standard Normal Grid Table)
+  const submittedDateFormatted = new Date(app.submittedAt).toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
 
   autoTable(doc, {
-    startY: y + 2.5,
+    startY: photoY,
     margin: { left: margin, right: margin + photoW + 4 },
-    theme: 'plain',
-    styles: { fontSize: 8, cellPadding: 2, textColor: [51, 65, 85] },
+    theme: 'grid',
+    styles: {
+      font: 'helvetica',
+      fontSize: 8,
+      cellPadding: 1.6,
+      textColor: [0, 0, 0],
+      lineColor: [0, 0, 0],
+      lineWidth: 0.2,
+    },
     columnStyles: {
-      0: { fontStyle: 'bold', textColor: [15, 23, 42], cellWidth: 32 },
-      1: { cellWidth: 43 },
-      2: { fontStyle: 'bold', textColor: [15, 23, 42], cellWidth: 32 },
-      3: { cellWidth: 43 },
+      0: { fontStyle: 'bold', cellWidth: 33 },
+      1: { cellWidth: 42 },
+      2: { fontStyle: 'bold', cellWidth: 33 },
+      3: { cellWidth: 42 },
     },
     body: [
-      ['Full Name:', app.fullName.toUpperCase(), 'Gender:', app.gender],
-      ['Date of Birth:', app.dateOfBirth || 'Not specified', 'Candidate Contact:', app.phone],
-      ['Email Address:', app.email || 'N/A', 'National ID / NIN:', app.ninOrId || 'Provided at registration'],
-      ['Sponsor / Guardian:', app.guardianName, 'Sponsor Telephone:', app.guardianPhone],
+      ['Application ID:', app.id, 'Date Submitted:', submittedDateFormatted],
+      ['Full Name:', app.fullName.toUpperCase(), 'Gender:', app.gender || 'Not specified'],
+      ['Date of Birth:', app.dateOfBirth || 'Not specified', 'Candidate Tel:', app.phone],
+      ['Email Address:', app.email || 'N/A', 'National ID / NIN:', app.ninOrId || 'N/A'],
+      ['Next of Kin / Sponsor:', app.guardianName || 'N/A', 'Sponsor Tel:', app.guardianPhone || 'N/A'],
     ],
   });
 
-  // 5. Section 2: Programme Applied For
+  // Calculate safe Y offset taking into account both Table 1 and Passport Photo
   // @ts-ignore
-  y = doc.lastAutoTable.finalY + 6;
-  doc.setTextColor(15, 23, 42);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.text('2. PROGRAMME CHOICES & INTAKE', margin, y);
+  const table1EndY = doc.lastAutoTable.finalY;
+  const photoEndY = photoY + photoH + 5;
+  y = Math.max(table1EndY, photoEndY) + 3.5;
 
-  const programsList = app.programs && app.programs.length > 0 ? app.programs : [app.program || 'Certificate in Nursing'];
-  const programRows = programsList.map((prog, idx) => [`Choice ${idx + 1}:`, prog, idx === 0 ? 'Intake Session:' : '', idx === 0 ? app.intake : '']);
+  // 4. Section 2: Programme Choices & Intake
+  const programsList =
+    app.programs && app.programs.length > 0 ? app.programs : [app.program || 'Certificate in Nursing'];
+
+  const programBodyRows = programsList.map((prog, idx) => [
+    `Course Choice ${idx + 1}:`,
+    prog,
+    idx === 0 ? 'Intake Session:' : '',
+    idx === 0 ? app.intake : '',
+  ]);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(0, 0, 0);
+  doc.text('2. PROGRAMME CHOICES & ADMISSION DETAILS', margin, y);
+  y += 2;
 
   autoTable(doc, {
-    startY: y + 2.5,
+    startY: y,
     margin: { left: margin, right: margin },
-    theme: 'plain',
-    styles: { fontSize: 8, cellPadding: 2, textColor: [51, 65, 85] },
-    columnStyles: {
-      0: { fontStyle: 'bold', textColor: [0, 135, 62], cellWidth: 42 },
-      1: { cellWidth: 65, fontStyle: 'bold', textColor: [15, 23, 42] },
-      2: { fontStyle: 'bold', textColor: [15, 23, 42], cellWidth: 35 },
-      3: { cellWidth: 40 },
+    theme: 'grid',
+    styles: {
+      font: 'helvetica',
+      fontSize: 8,
+      cellPadding: 1.6,
+      textColor: [0, 0, 0],
+      lineColor: [0, 0, 0],
+      lineWidth: 0.2,
     },
-    body: programRows,
+    columnStyles: {
+      0: { fontStyle: 'bold', cellWidth: 38 },
+      1: { cellWidth: 63 },
+      2: { fontStyle: 'bold', cellWidth: 35 },
+      3: { cellWidth: 46 },
+    },
+    body: programBodyRows,
   });
 
-  // 6. Section 3: Academic Qualifications (UCE Curriculum)
+  // 5. Section 3: Academic Qualifications & Subject Passes
   // @ts-ignore
-  y = doc.lastAutoTable.finalY + 6;
-  doc.setTextColor(15, 23, 42);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.text('3. ACADEMIC QUALIFICATIONS (O-LEVEL / UCE)', margin, y);
-
-  const prevSchoolText = `Previous School: ${app.previousSchool || 'Secondary School'}  |  UNEB Index: ${app.indexNumber}`;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
-  doc.setTextColor(100, 116, 139);
-  doc.text(prevSchoolText, margin, y + 4.5);
-
+  y = doc.lastAutoTable.finalY + 3.5;
   const subjectGrades = app.subjectGrades || [];
-  // Build a 4-column table for subject grades
-  const tableRows: string[][] = [];
+  const subjectRows: string[][] = [];
   for (let i = 0; i < subjectGrades.length; i += 2) {
     const s1 = subjectGrades[i];
     const s2 = subjectGrades[i + 1];
-    tableRows.push([
+    subjectRows.push([
       s1 ? s1.subject : '',
       s1 ? s1.grade : '',
       s2 ? s2.subject : '',
@@ -245,91 +226,210 @@ export async function generateAdmissionApplicationPdf(app: AdmissionApplication)
     ]);
   }
 
-  if (tableRows.length === 0) {
-    tableRows.push(['Submitted Qualifications Summary:', app.qualificationsSummary, '', '']);
+  if (subjectRows.length === 0) {
+    subjectRows.push(['Summary of Qualifications:', app.qualificationsSummary || 'Refer to attached result slip', '', '']);
   }
 
+  const schoolDetails = app.previousSchool
+    ? ` (Previous Institution: ${app.previousSchool.toUpperCase()}${app.indexNumber ? ` | Index: ${app.indexNumber}` : ''})`
+    : '';
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(0, 0, 0);
+  doc.text(`3. ACADEMIC QUALIFICATIONS${schoolDetails}`, margin, y);
+  y += 2;
+
   autoTable(doc, {
-    startY: y + 6.5,
+    startY: y,
     margin: { left: margin, right: margin },
+    theme: 'grid',
+    styles: {
+      font: 'helvetica',
+      fontSize: 8,
+      cellPadding: 1.6,
+      textColor: [0, 0, 0],
+      lineColor: [0, 0, 0],
+      lineWidth: 0.2,
+    },
     head: [['Subject', 'Grade', 'Subject', 'Grade']],
     headStyles: {
-      fillColor: [15, 23, 42],
-      textColor: [255, 255, 255],
+      fillColor: [242, 242, 242],
+      textColor: [0, 0, 0],
       fontStyle: 'bold',
-      fontSize: 7.5,
-      cellPadding: 2,
+      lineColor: [0, 0, 0],
+      lineWidth: 0.2,
+      halign: 'left',
     },
-    styles: { fontSize: 7.5, cellPadding: 2, textColor: [30, 41, 59] },
     columnStyles: {
       0: { cellWidth: 55 },
-      1: { cellWidth: 36, fontStyle: 'bold', textColor: [0, 135, 62] },
+      1: { cellWidth: 36, fontStyle: 'bold', halign: 'center' },
       2: { cellWidth: 55 },
-      3: { cellWidth: 36, fontStyle: 'bold', textColor: [0, 135, 62] },
+      3: { cellWidth: 36, fontStyle: 'bold', halign: 'center' },
     },
-    body: tableRows,
+    body: subjectRows,
   });
 
-  // Attached Document Note
+  // 6. Section 4: Application Processing Fee & Payment Record
   // @ts-ignore
-  y = doc.lastAutoTable.finalY + 4;
-  doc.setFillColor(241, 245, 249);
-  doc.roundedRect(margin, y, contentW, 8, 1, 1, 'F');
+  y = doc.lastAutoTable.finalY + 3.5;
+
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7);
-  doc.setTextColor(51, 65, 85);
-  doc.text('Attached Academic Documents:', margin + 4, y + 5);
+  doc.setFontSize(8.5);
+  doc.setTextColor(0, 0, 0);
+  doc.text('4. APPLICATION PROCESSING FEE & PAYMENT CONFIRMATION', margin, y);
+  y += 2;
+
+  autoTable(doc, {
+    startY: y,
+    margin: { left: margin, right: margin },
+    theme: 'grid',
+    styles: {
+      font: 'helvetica',
+      fontSize: 8,
+      cellPadding: 1.6,
+      textColor: [0, 0, 0],
+      lineColor: [0, 0, 0],
+      lineWidth: 0.2,
+    },
+    columnStyles: {
+      0: { fontStyle: 'bold', cellWidth: 42 },
+      1: { cellWidth: 49 },
+      2: { fontStyle: 'bold', cellWidth: 42 },
+      3: { cellWidth: 49 },
+    },
+    body: [
+      [
+        'Application Fee Amount:',
+        'UGX 50,000 (PAID)',
+        'Payment Method:',
+        app.paymentMethod || 'Mobile Money',
+      ],
+      [
+        'Payment Status:',
+        'Verified & Received',
+        'Transaction / Receipt Ref:',
+        app.paymentReference || 'CONFIRMED',
+      ],
+    ],
+  });
+
+  // 7. Section 5: Attached Academic Documents
+  // @ts-ignore
+  y = doc.lastAutoTable.finalY + 3.5;
+  const attachedDocsList: string[][] = [];
+  if (app.attachedDocuments && app.attachedDocuments.length > 0) {
+    app.attachedDocuments.forEach((d, idx) => {
+      attachedDocsList.push([
+        `Document ${idx + 1}`,
+        d.name,
+        d.size || 'Attached file',
+        'Verified Upload',
+      ]);
+    });
+  } else if (app.attachedDocumentName) {
+    attachedDocsList.push([
+      'Document 1',
+      app.attachedDocumentName,
+      app.attachedDocumentSize || 'Attached file',
+      'Verified Upload',
+    ]);
+  } else {
+    attachedDocsList.push(['Document 1', 'Official Academic Credentials / Result Slip', 'Physical Copy', 'Verified Upload']);
+  }
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(0, 0, 0);
+  doc.text('5. ATTACHED CREDENTIALS & RESULT SLIPS', margin, y);
+  y += 2;
+
+  autoTable(doc, {
+    startY: y,
+    margin: { left: margin, right: margin },
+    theme: 'grid',
+    styles: {
+      font: 'helvetica',
+      fontSize: 8,
+      cellPadding: 1.6,
+      textColor: [0, 0, 0],
+      lineColor: [0, 0, 0],
+      lineWidth: 0.2,
+    },
+    head: [['No.', 'Document Name', 'File Size', 'Status']],
+    headStyles: {
+      fillColor: [242, 242, 242],
+      textColor: [0, 0, 0],
+      fontStyle: 'bold',
+      lineColor: [0, 0, 0],
+      lineWidth: 0.2,
+      halign: 'left',
+    },
+    columnStyles: {
+      0: { cellWidth: 25 },
+      1: { cellWidth: 85 },
+      2: { cellWidth: 36 },
+      3: { cellWidth: 36 },
+    },
+    body: attachedDocsList,
+  });
+
+  // 8. Section 6: Candidate Declaration & Institutional Sign-Off
+  // @ts-ignore
+  y = doc.lastAutoTable.finalY + 5;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(0, 0, 0);
+  doc.text('6. APPLICANT DECLARATION & OFFICIAL SIGN-OFF', margin, y);
+
+  y += 4;
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(0, 135, 62);
-  const docSummary = app.attachedDocuments && app.attachedDocuments.length > 0
-    ? `${app.attachedDocuments.length} File(s): ${app.attachedDocuments.map((d) => d.name).join(', ')}`
-    : (app.attachedDocumentName || 'Official Academic Documents Logged');
-  doc.text(`[VERIFIED ATTACHMENTS]: ${docSummary.length > 80 ? docSummary.slice(0, 77) + '...' : docSummary}`, margin + 55, y + 5);
+  doc.setFontSize(7.5);
+  doc.setTextColor(30, 30, 30);
+  const declarationText =
+    'I hereby declare that the particulars provided in this application form and the attached academic certificates are complete and true to the best of my knowledge and belief.';
+  doc.text(declarationText, margin, y, { maxWidth: contentW });
 
-  // 7. Important Admissions Next Steps & Interview Calling
-  y += 12;
-  doc.setFillColor(254, 243, 199); // light amber
-  doc.setDrawColor(251, 191, 36);
-  doc.roundedRect(margin, y, contentW, 20, 2, 2, 'FD');
+  y += 14;
+  // Signature Lines
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.3);
 
-  doc.setTextColor(180, 83, 9);
+  // Left: Applicant Signature
+  doc.line(margin, y, margin + 65, y);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.5);
-  doc.text('IMPORTANT NEXT STEPS FOR INTERVIEW & ADMISSION:', margin + 4, y + 5);
-
+  doc.setTextColor(0, 0, 0);
+  doc.text('Candidate / Applicant Signature', margin, y + 4);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.8);
-  doc.setTextColor(120, 53, 15);
-  doc.text('1. Print and keep this official document as your formal application and fee acknowledgment.', margin + 4, y + 9);
-  doc.text('2. Report with this slip, original UNEB result slips/certificates, National ID/Birth Certificate, and 3 passport photos.', margin + 4, y + 13);
-  doc.text('3. Oral interview dates will be communicated via SMS/Call to candidate contact: ' + app.phone, margin + 4, y + 17);
-
-  // 8. Official Sign-Off Block & Watermark
-  y += 24;
-  doc.setDrawColor(203, 213, 225);
-  doc.line(margin, y, margin + 70, y);
-  doc.line(W - margin - 70, y, W - margin, y);
-
-  doc.setFont('helvetica', 'bold');
   doc.setFontSize(7);
-  doc.setTextColor(15, 23, 42);
-  doc.text('CANDIDATE SIGNATURE', margin, y + 4);
-  doc.text('ACADEMIC REGISTRAR (RCSN)', W - margin, y + 4, { align: 'right' });
+  doc.text(`Date: ${new Date().toLocaleDateString('en-GB')}`, margin, y + 8);
 
+  // Right: Academic Registrar / Admissions Desk
+  doc.line(W - margin - 65, y, W - margin, y);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.text('Academic Registrar / Admissions Desk', W - margin - 65, y + 4);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.5);
-  doc.setTextColor(100, 116, 139);
-  doc.text('Date: ' + new Date().toLocaleDateString('en-GB'), margin, y + 7.5);
-  doc.text('Officially endorsed with Institutional Seal', W - margin, y + 7.5, { align: 'right' });
+  doc.setFontSize(7);
+  doc.text('Official Stamp & Seal', W - margin - 65, y + 8);
 
-  // Bottom Security Footer
-  doc.setFillColor(15, 23, 42);
-  doc.rect(0, H - 9, W, 9, 'F');
-  doc.setTextColor(203, 213, 225);
+  // Bottom Footer
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.3);
+  doc.line(margin, H - 12, W - margin, H - 12);
+
   doc.setFontSize(6.5);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Official Document Ref: ${app.id} • Rakai Community School of Nursing Online Application System • Verified Authentic`, W / 2, H - 3.5, { align: 'center' });
+  doc.setTextColor(60, 60, 60);
+  doc.text(
+    `Rakai Community School of Nursing • Admission Application Form • Ref: ${app.id} • Generated: ${new Date().toLocaleDateString('en-GB')}`,
+    W / 2,
+    H - 8,
+    { align: 'center' }
+  );
 
-  // Trigger download
+  // Save PDF
   doc.save(`RCSN_Application_${app.id}.pdf`);
 }

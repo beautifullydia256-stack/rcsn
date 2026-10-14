@@ -13,6 +13,7 @@ import {
   Download,
   AlertCircle,
   Eye,
+  ArrowLeft,
   Check,
   X,
   XCircle,
@@ -31,7 +32,6 @@ import {
   Sparkles,
   ClipboardList,
   Camera,
-  UploadCloud,
   FileCheck,
   ExternalLink,
   Mail,
@@ -40,7 +40,6 @@ import {
 import {
   fetchApplications,
   updateApplication,
-  updateApplicationCredentials,
   matriculateApplicantToStudent,
   scheduleInterview,
   batchScheduleInterviews,
@@ -95,20 +94,13 @@ export default function AdmissionsManagementPage() {
   const [admitApp, setAdmitApp] = useState<AdmissionApplicationRecord | null>(null);
   const [matriculateApp, setMatriculateApp] = useState<AdmissionApplicationRecord | null>(null);
 
-  // Document Viewer & Dossier Upload States
-  const [previewDocModal, setPreviewDocModal] = useState<{
+  // Candidate Documents Modal State (Two-Tier: List Mode & Preview Mode)
+  const [candidateDocsModal, setCandidateDocsModal] = useState<{
     isOpen: boolean;
-    title: string;
-    url: string;
-    fileName: string;
-    isImage: boolean;
-    size?: string;
-    allDocs?: { name: string; url: string; size?: string; isImage: boolean }[];
-    activeIndex?: number;
+    app: AdmissionApplicationRecord;
+    docs: { name: string; url: string; size?: string; isImage: boolean }[];
+    selectedDocIndex: number | null; // null = List of documents, number = Previewing specific document
   } | null>(null);
-  const dossierPassportInputRef = useRef<HTMLInputElement | null>(null);
-  const dossierDocumentInputRef = useRef<HTMLInputElement | null>(null);
-  const [uploadingDossierCredential, setUploadingDossierCredential] = useState<'passport' | 'document' | null>(null);
 
   // Scheduling Form
   const [schedDate, setSchedDate] = useState('');
@@ -611,93 +603,7 @@ export default function AdmissionsManagementPage() {
     }
   };
 
-  // Dossier File Actions: Passport Photo & Verification Slip Uploads
-  const handleDossierPassportUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !inspectApp) return;
 
-    if (!file.type.startsWith('image/')) {
-      showNotification('Please select a valid image file (JPG, PNG, WebP) for the passport photo.', 'error');
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      showNotification('Passport photo size exceeds 5MB limit.', 'error');
-      return;
-    }
-
-    setUploadingDossierCredential('passport');
-    try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const base64Data = reader.result as string;
-        await updateApplicationCredentials(inspectApp.id, {
-          passport_photo_url: base64Data,
-        });
-
-        const updated = { ...inspectApp, passport_photo_url: base64Data };
-        setInspectApp(updated);
-        setApplications((prev) =>
-          prev.map((app) => (app.id === inspectApp.id ? updated : app))
-        );
-        showNotification('Candidate official passport photo updated and linked to profile.');
-        setUploadingDossierCredential(null);
-      };
-      reader.readAsDataURL(file);
-    } catch (err) {
-      console.error(err);
-      showNotification('Failed to update passport photo.', 'error');
-      setUploadingDossierCredential(null);
-    }
-  };
-
-  const handleDossierDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !inspectApp) return;
-
-    if (file.size > 15 * 1024 * 1024) {
-      showNotification('Document file size exceeds 15MB limit.', 'error');
-      return;
-    }
-
-    setUploadingDossierCredential('document');
-    try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const base64Data = reader.result as string;
-        const sizeFormatted =
-          file.size > 1024 * 1024
-            ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
-            : `${Math.round(file.size / 1024)} KB`;
-
-        await updateApplicationCredentials(inspectApp.id, {
-          attached_document_name: file.name,
-          attached_document_url: base64Data,
-          attached_document_data: base64Data,
-          attached_document_size: sizeFormatted,
-        });
-
-        const updated: AdmissionApplicationRecord = {
-          ...inspectApp,
-          attached_document_name: file.name,
-          attached_document_url: base64Data,
-          attached_document_data: base64Data,
-          attached_document_size: sizeFormatted,
-        };
-        setInspectApp(updated);
-        setApplications((prev) =>
-          prev.map((app) => (app.id === inspectApp.id ? updated : app))
-        );
-        showNotification('Candidate verification document attached successfully.');
-        setUploadingDossierCredential(null);
-      };
-      reader.readAsDataURL(file);
-    } catch (err) {
-      console.error(err);
-      showNotification('Failed to upload candidate document.', 'error');
-      setUploadingDossierCredential(null);
-    }
-  };
 
   const handleDownloadDocument = (docUrl?: string | null, docName?: string | null) => {
     if (!docUrl) {
@@ -749,23 +655,18 @@ export default function AdmissionsManagementPage() {
     return docs;
   };
 
-  const handleOpenDocViewer = (app: AdmissionApplicationRecord, initialDocIndex = 0) => {
+  const handleOpenCandidateDocs = (app: AdmissionApplicationRecord) => {
     const docs = getCandidateDocuments(app);
     if (docs.length === 0) {
       showNotification('No digital documents attached for this candidate.', 'error');
       return;
     }
 
-    const currentDoc = docs[initialDocIndex] || docs[0];
-    setPreviewDocModal({
+    setCandidateDocsModal({
       isOpen: true,
-      title: `${app.full_name} — Candidate Attached Credentials`,
-      url: currentDoc.url,
-      fileName: currentDoc.name,
-      isImage: currentDoc.isImage,
-      size: currentDoc.size,
-      allDocs: docs,
-      activeIndex: initialDocIndex,
+      app,
+      docs,
+      selectedDocIndex: null, // Always display the documents list (Tier 1) first
     });
   };
 
@@ -1321,9 +1222,9 @@ export default function AdmissionsManagementPage() {
                               {getCandidateDocuments(app).length > 0 && (
                                 <button
                                   type="button"
-                                  onClick={() => handleOpenDocViewer(app)}
+                                  onClick={() => handleOpenCandidateDocs(app)}
                                   className="p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all"
-                                  title={`View Candidate Document (${getCandidateDocuments(app).length} attached)`}
+                                  title={`View Candidate Documents (${getCandidateDocuments(app).length} uploaded)`}
                                 >
                                   <FileText className="w-3.5 h-3.5" />
                                 </button>
@@ -2155,8 +2056,8 @@ export default function AdmissionsManagementPage() {
               {/* CANDIDATE IDENTITY & COURSE APPLIED FOR */}
               <div className="p-5 sm:p-6 space-y-4 border-b border-slate-100 dark:border-slate-800/80">
                 <div className="flex flex-col sm:flex-row items-start gap-5">
-                  {/* Passport Photo Box (Official 3:4 Frame, NO Verified Tag) */}
-                  <div className="relative group shrink-0">
+                  {/* Passport Photo Box (Official 3:4 Frame - Candidate Submission) */}
+                  <div className="shrink-0">
                     <div className="w-24 h-32 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-center">
                       {inspectApp.passport_photo_url ? (
                         <img
@@ -2171,42 +2072,10 @@ export default function AdmissionsManagementPage() {
                         </div>
                       )}
                     </div>
-
-                    {/* Change / Upload Photo Overlay */}
-                    <button
-                      type="button"
-                      onClick={() => dossierPassportInputRef.current?.click()}
-                      disabled={uploadingDossierCredential === 'passport'}
-                      className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex flex-col items-center justify-center text-white text-[10px] font-bold gap-1 cursor-pointer"
-                      title="Update Passport Photo"
-                    >
-                      {uploadingDossierCredential === 'passport' ? (
-                        <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
-                      ) : (
-                        <>
-                          <Camera className="w-4 h-4 text-emerald-400" />
-                          <span>Update</span>
-                        </>
-                      )}
-                    </button>
-
-                    <input
-                      ref={dossierPassportInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleDossierPassportUpload}
-                    />
-
-                    <div className="mt-1.5 text-center">
-                      <button
-                        type="button"
-                        onClick={() => dossierPassportInputRef.current?.click()}
-                        className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline inline-flex items-center gap-1"
-                      >
-                        <Camera className="w-3 h-3" />
-                        <span>{inspectApp.passport_photo_url ? 'Change Photo' : 'Upload Photo'}</span>
-                      </button>
+                    <div className="mt-1 text-center">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                        Passport Photo
+                      </span>
                     </div>
                   </div>
 
@@ -2315,27 +2184,9 @@ export default function AdmissionsManagementPage() {
                     <FileText className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     <span>Result Slips & Attached Documents</span>
                   </h5>
-
-                  <button
-                    type="button"
-                    onClick={() => dossierDocumentInputRef.current?.click()}
-                    disabled={uploadingDossierCredential === 'document'}
-                    className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-emerald-500/30 bg-emerald-50 dark:bg-emerald-950/40 transition-colors"
-                  >
-                    {uploadingDossierCredential === 'document' ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <UploadCloud className="w-3.5 h-3.5" />
-                    )}
-                    <span>Attach Additional Document</span>
-                  </button>
-                  <input
-                    ref={dossierDocumentInputRef}
-                    type="file"
-                    accept="image/*,application/pdf"
-                    className="hidden"
-                    onChange={handleDossierDocumentUpload}
-                  />
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    Uploaded by Candidate
+                  </span>
                 </div>
 
                 {(inspectApp.attached_documents && inspectApp.attached_documents.length > 0) ? (
@@ -2366,9 +2217,9 @@ export default function AdmissionsManagementPage() {
                         <div className="flex items-center gap-2 shrink-0">
                           <button
                             type="button"
-                            onClick={() => handleOpenDocViewer(inspectApp, dIdx)}
+                            onClick={() => handleOpenCandidateDocs(inspectApp)}
                             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#00873E] hover:bg-[#007033] active:scale-95 text-white font-bold text-xs shadow-md transition-all"
-                            title="View and inspect attached document"
+                            title="View and inspect attached documents list"
                           >
                             <Eye className="w-4 h-4 text-white" />
                             <span>View Document</span>
@@ -2412,9 +2263,9 @@ export default function AdmissionsManagementPage() {
                     <div className="flex items-center gap-2 shrink-0">
                       <button
                         type="button"
-                        onClick={() => handleOpenDocViewer(inspectApp, 0)}
+                        onClick={() => handleOpenCandidateDocs(inspectApp)}
                         className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#00873E] hover:bg-[#007033] active:scale-95 text-white font-bold text-xs shadow-md transition-all"
-                        title="View and inspect attached document"
+                        title="View and inspect attached documents list"
                       >
                         <Eye className="w-4 h-4 text-white" />
                         <span>View Document</span>
@@ -2438,18 +2289,9 @@ export default function AdmissionsManagementPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="p-4 rounded-xl bg-slate-100/80 dark:bg-slate-800/40 border-2 border-dashed border-slate-300 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-2.5 text-slate-700 dark:text-slate-300 text-xs font-semibold">
-                      <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
-                      <span>No digital academic documents attached yet for this candidate.</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => dossierDocumentInputRef.current?.click()}
-                      className="px-4 py-2 rounded-xl bg-[#00873E] hover:bg-[#007033] text-white font-bold text-xs shadow-sm transition-all"
-                    >
-                      Upload Now
-                    </button>
+                  <div className="p-4 rounded-xl bg-slate-100/80 dark:bg-slate-800/40 border-2 border-dashed border-slate-300 dark:border-slate-700 flex items-center gap-2.5 text-slate-700 dark:text-slate-300 text-xs font-semibold">
+                    <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
+                    <span>No digital academic documents were attached by this applicant during submission.</span>
                   </div>
                 )}
               </div>
@@ -2564,15 +2406,6 @@ export default function AdmissionsManagementPage() {
                   </>
                 )}
 
-                <button
-                  type="button"
-                  onClick={() => setInspectApp(null)}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 font-bold text-xs border border-slate-300 dark:border-slate-700 transition-all shadow-sm active:scale-95"
-                  title="Close dossier (ESC)"
-                >
-                  <X className="w-3.5 h-3.5" />
-                  <span>Close Dossier</span>
-                </button>
               </div>
 
               {/* Vetting & Interview Decisions */}
@@ -2681,234 +2514,295 @@ export default function AdmissionsManagementPage() {
         )}
       </NativeModal>
 
-      {/* High-Resolution In-App Document Preview Modal */}
+      {/* Two-Tier Candidate Documents & Verification Modal (List Mode & Active Preview Mode) */}
       <NativeModal
-        isOpen={!!previewDocModal?.isOpen}
-        onClose={() => setPreviewDocModal(null)}
-        title={previewDocModal?.fileName || 'Candidate Document Preview'}
-        subtitle={previewDocModal?.title}
+        isOpen={!!candidateDocsModal?.isOpen}
+        onClose={() => setCandidateDocsModal(null)}
+        title={
+          candidateDocsModal?.selectedDocIndex !== null && candidateDocsModal?.selectedDocIndex !== undefined
+            ? candidateDocsModal.docs[candidateDocsModal.selectedDocIndex]?.name || 'Document Preview'
+            : `${candidateDocsModal?.app.full_name || 'Candidate'} — Uploaded Documents`
+        }
+        subtitle={
+          candidateDocsModal?.selectedDocIndex !== null && candidateDocsModal?.selectedDocIndex !== undefined
+            ? `Viewing file ${(candidateDocsModal.selectedDocIndex ?? 0) + 1} of ${candidateDocsModal.docs.length} • Click "Close Document" or "Back to Documents List" to choose another file`
+            : `Application ID: ${candidateDocsModal?.app.application_number} • Total ${candidateDocsModal?.docs.length || 0} attached credential(s)`
+        }
         icon={FileCheck}
-        size="2xl"
+        size={candidateDocsModal?.selectedDocIndex !== null ? '2xl' : 'lg'}
       >
-        {previewDocModal && (
-          <div className="space-y-4 text-white">
-            {/* Multiple Attached Documents Tab Switcher */}
-            {previewDocModal.allDocs && previewDocModal.allDocs.length > 1 && (
-              <div className="flex items-center gap-2 p-2 rounded-2xl bg-slate-900/90 border border-white/20 overflow-x-auto shadow-md">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 px-2 shrink-0">
-                  Attached Files ({previewDocModal.allDocs.length}):
-                </span>
-                {previewDocModal.allDocs.map((doc, idx) => {
-                  const isSelected =
-                    previewDocModal.activeIndex === idx ||
-                    previewDocModal.url === doc.url;
-                  return (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => {
-                        setPreviewDocModal((prev) =>
-                          prev
-                            ? {
-                                ...prev,
-                                fileName: doc.name,
-                                url: doc.url,
-                                isImage: doc.isImage,
-                                size: doc.size,
-                                activeIndex: idx,
-                              }
-                            : null
-                        );
-                      }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2 shrink-0 ${
-                        isSelected
-                          ? 'bg-[#00873E] text-white shadow-lg ring-2 ring-emerald-400/50'
-                          : 'bg-white/10 text-white/80 hover:bg-white/20 hover:text-white border border-white/15'
-                      }`}
-                    >
-                      <FileText className="w-3.5 h-3.5 text-emerald-300" />
-                      <span>{doc.name || `Document #${idx + 1}`}</span>
-                      {doc.size && <span className="text-[10px] opacity-75">({doc.size})</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Top Toolbar */}
-            <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-2xl bg-slate-900/90 border border-white/20 shadow-md">
-              <div className="flex items-center gap-2.5 text-xs min-w-0">
-                <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 font-bold flex items-center gap-1.5 shrink-0">
-                  <FileCheck className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Verified Attachment</span>
-                </span>
-                <span className="font-bold text-white text-xs truncate max-w-xs">{previewDocModal.fileName}</span>
-                {previewDocModal.size && (
-                  <span className="text-white/60 font-mono text-[11px] shrink-0">({previewDocModal.size})</span>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => handleDownloadDocument(previewDocModal.url, previewDocModal.fileName)}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-md transition-all active:scale-95"
-                  title="Download file to device"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Download File</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => window.open(previewDocModal.url, '_blank')}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/15 hover:bg-white/25 border border-white/25 text-white font-bold text-xs transition-all active:scale-95"
-                  title="Open in external browser tab"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span>Open in Tab</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPreviewDocModal(null)}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs shadow-md transition-all active:scale-95"
-                  title="Close document viewer (ESC)"
-                >
-                  <X className="w-4 h-4" />
-                  <span>Close Viewer</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Document Content View Area */}
-            <div className="w-full min-h-[460px] max-h-[68vh] bg-slate-950/90 rounded-2xl border-2 border-white/15 overflow-auto flex items-center justify-center p-3 shadow-inner">
-              {previewDocModal.isImage ? (
-                <img
-                  src={previewDocModal.url}
-                  alt={previewDocModal.fileName}
-                  className="max-w-full max-h-[64vh] object-contain rounded-lg shadow-2xl"
-                />
-              ) : previewDocModal.url.startsWith('data:application/pdf') || previewDocModal.url.endsWith('.pdf') ? (
-                <iframe
-                  src={previewDocModal.url}
-                  title={previewDocModal.fileName}
-                  className="w-full h-[64vh] rounded-lg border-0 bg-white"
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center p-12 text-center text-white/70 space-y-4">
-                  <FileText className="w-16 h-16 text-emerald-400" />
-                  <div>
-                    <h5 className="font-bold text-base text-white">{previewDocModal.fileName}</h5>
-                    <p className="text-xs text-white/50 mt-1">Preview not directly embeddable. Click below to view or download.</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleDownloadDocument(previewDocModal.url, previewDocModal.fileName)}
-                      className="px-4 py-2 rounded-xl bg-emerald-500 text-emerald-950 font-black text-xs hover:bg-emerald-400 transition-all shadow"
-                    >
-                      Download Document
-                    </button>
-                    <a
-                      href={previewDocModal.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs transition-all"
-                    >
-                      Open in New Tab
-                    </a>
-                  </div>
+        {candidateDocsModal && (
+          <div>
+            {/* TIER 1: DOCUMENTS LIST MODE (Displayed when no single document is actively open) */}
+            {candidateDocsModal.selectedDocIndex === null ? (
+              <div className="space-y-4">
+                <div className="p-4 rounded-2xl bg-white/10 border border-white/20 text-white">
+                  <h4 className="font-bold text-sm text-white flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-emerald-400" />
+                    <span>{candidateDocsModal.app.full_name}</span>
+                  </h4>
+                  <p className="text-xs text-white/70 mt-0.5">
+                    Select any document below to inspect or download. You can close any open document and return here to choose another.
+                  </p>
                 </div>
-              )}
-            </div>
 
-            {/* Bottom Controls & Easy-Close Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-slate-900/90 border border-white/20">
-              <div className="text-xs text-white/70">
-                {previewDocModal.allDocs && previewDocModal.allDocs.length > 1 ? (
-                  <div className="flex items-center gap-2">
-                    <span>
-                      Viewing {(previewDocModal.activeIndex ?? 0) + 1} of {previewDocModal.allDocs.length} attached document(s)
-                    </span>
-                    <div className="flex items-center gap-1 ml-2">
-                      <button
-                        type="button"
-                        disabled={(previewDocModal.activeIndex ?? 0) <= 0}
-                        onClick={() => {
-                          const prevIdx = (previewDocModal.activeIndex ?? 0) - 1;
-                          const prevDoc = previewDocModal.allDocs?.[prevIdx];
-                          if (prevDoc) {
-                            setPreviewDocModal((prev) =>
-                              prev
-                                ? {
-                                    ...prev,
-                                    fileName: prevDoc.name,
-                                    url: prevDoc.url,
-                                    isImage: prevDoc.isImage,
-                                    size: prevDoc.size,
-                                    activeIndex: prevIdx,
-                                  }
-                                : null
-                            );
-                          }
-                        }}
-                        className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-40 text-xs font-bold transition-all"
+                {/* List of uploaded documents */}
+                <div className="space-y-2.5">
+                  {candidateDocsModal.docs.length === 0 ? (
+                    <div className="p-8 text-center text-white/60 bg-white/5 rounded-2xl border border-white/10 space-y-2">
+                      <AlertCircle className="w-8 h-8 text-amber-400 mx-auto" />
+                      <p className="text-sm font-semibold">No digital documents attached for this candidate.</p>
+                    </div>
+                  ) : (
+                    candidateDocsModal.docs.map((doc, idx) => (
+                      <div
+                        key={idx}
+                        className="p-4 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 shadow-sm hover:border-emerald-500/50 transition-all text-slate-900 dark:text-white"
                       >
-                        ← Prev
-                      </button>
-                      <button
-                        type="button"
-                        disabled={
-                          (previewDocModal.activeIndex ?? 0) >=
-                          (previewDocModal.allDocs.length - 1)
-                        }
-                        onClick={() => {
-                          const nextIdx = (previewDocModal.activeIndex ?? 0) + 1;
-                          const nextDoc = previewDocModal.allDocs?.[nextIdx];
-                          if (nextDoc) {
-                            setPreviewDocModal((prev) =>
-                              prev
-                                ? {
-                                    ...prev,
-                                    fileName: nextDoc.name,
-                                    url: nextDoc.url,
-                                    isImage: nextDoc.isImage,
-                                    size: nextDoc.size,
-                                    activeIndex: nextIdx,
-                                  }
-                                : null
-                            );
+                        <div className="flex items-center gap-3.5 min-w-0">
+                          <div className="w-11 h-11 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 border-2 border-emerald-300 dark:border-emerald-700 flex items-center justify-center shrink-0 font-bold text-[#00873E] dark:text-emerald-400">
+                            <FileText className="w-5 h-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-bold text-slate-900 dark:text-white text-sm truncate max-w-sm sm:max-w-md">
+                              {doc.name || `Document #${idx + 1}`}
+                            </div>
+                            <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-1">
+                              <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono text-[10px] border border-slate-200 dark:border-slate-700">
+                                {doc.size || 'Attachment'}
+                              </span>
+                              <span>•</span>
+                              <span className="text-emerald-700 dark:text-emerald-400 font-bold">Document #{idx + 1}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setCandidateDocsModal((prev) =>
+                                prev ? { ...prev, selectedDocIndex: idx } : null
+                              )
+                            }
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#00873E] hover:bg-[#007033] active:scale-95 text-white font-bold text-xs shadow-md transition-all"
+                            title="Open and preview document"
+                          >
+                            <Eye className="w-4 h-4 text-white" />
+                            <span>View Document</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadDocument(doc.url, doc.name)}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-black dark:bg-slate-700 dark:hover:bg-slate-600 active:scale-95 text-white font-bold text-xs shadow-md border border-slate-800 dark:border-slate-600 transition-all"
+                            title="Download document file"
+                          >
+                            <Download className="w-4 h-4 text-emerald-400" />
+                            <span>Download</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* TIER 2: ACTIVE DOCUMENT VIEWER MODE */
+              (() => {
+                const currentDoc =
+                  candidateDocsModal.docs[candidateDocsModal.selectedDocIndex];
+                if (!currentDoc) return null;
+
+                return (
+                  <div className="space-y-4 text-white">
+                    {/* Top Control Bar with Back to List & Close Document */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-2xl bg-slate-900/90 border border-white/20 shadow-md">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCandidateDocsModal((prev) =>
+                              prev ? { ...prev, selectedDocIndex: null } : null
+                            )
                           }
-                        }}
-                        className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-40 text-xs font-bold transition-all"
-                      >
-                        Next →
-                      </button>
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold text-xs border border-white/20 shadow-sm transition-all"
+                          title="Return to the list of all documents"
+                        >
+                          <ArrowLeft className="w-4 h-4 text-emerald-400" />
+                          <span>Back to Documents List</span>
+                        </button>
+
+                        <span className="font-bold text-white text-xs truncate max-w-xs hidden sm:inline ml-1">
+                          {currentDoc.name}
+                        </span>
+                        {currentDoc.size && (
+                          <span className="text-white/60 font-mono text-[11px] hidden sm:inline">
+                            ({currentDoc.size})
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadDocument(currentDoc.url, currentDoc.name)}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow transition-all active:scale-95"
+                          title="Download file"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>Download</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => window.open(currentDoc.url, '_blank')}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/15 hover:bg-white/25 border border-white/25 text-white font-bold text-xs transition-all active:scale-95"
+                          title="Open in new browser tab"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>Open in Tab</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCandidateDocsModal((prev) =>
+                              prev ? { ...prev, selectedDocIndex: null } : null
+                            )
+                          }
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs shadow-md transition-all active:scale-95"
+                          title="Close this document and return to documents list"
+                        >
+                          <X className="w-4 h-4" />
+                          <span>Close Document</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Document Preview Viewport */}
+                    <div className="w-full min-h-[460px] max-h-[68vh] bg-slate-950/90 rounded-2xl border-2 border-white/15 overflow-auto flex items-center justify-center p-3 shadow-inner">
+                      {currentDoc.isImage ? (
+                        <img
+                          src={currentDoc.url}
+                          alt={currentDoc.name}
+                          className="max-w-full max-h-[64vh] object-contain rounded-lg shadow-2xl"
+                        />
+                      ) : currentDoc.url.startsWith('data:application/pdf') || currentDoc.url.endsWith('.pdf') ? (
+                        <iframe
+                          src={currentDoc.url}
+                          title={currentDoc.name}
+                          className="w-full h-[64vh] rounded-lg border-0 bg-white"
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center justify-center p-12 text-center text-white/70 space-y-4">
+                          <FileText className="w-16 h-16 text-emerald-400" />
+                          <div>
+                            <h5 className="font-bold text-base text-white">{currentDoc.name}</h5>
+                            <p className="text-xs text-white/50 mt-1">Preview not directly embeddable. Click below to view or download.</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadDocument(currentDoc.url, currentDoc.name)}
+                              className="px-4 py-2 rounded-xl bg-emerald-500 text-emerald-950 font-black text-xs hover:bg-emerald-400 transition-all shadow"
+                            >
+                              Download Document
+                            </button>
+                            <a
+                              href={currentDoc.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs transition-all"
+                            >
+                              Open in New Tab
+                            </a>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Bottom Control Bar */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-slate-900/90 border border-white/20">
+                      <div className="flex items-center gap-3 text-xs text-white/80">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCandidateDocsModal((prev) =>
+                              prev ? { ...prev, selectedDocIndex: null } : null
+                            )
+                          }
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-bold transition-all text-xs"
+                        >
+                          <ArrowLeft className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Back to Documents List</span>
+                        </button>
+                        <span>
+                          Document {(candidateDocsModal.selectedDocIndex ?? 0) + 1} of {candidateDocsModal.docs.length}
+                        </span>
+                        {candidateDocsModal.docs.length > 1 && (
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              disabled={(candidateDocsModal.selectedDocIndex ?? 0) <= 0}
+                              onClick={() => {
+                                const prevIdx =
+                                  (candidateDocsModal.selectedDocIndex ?? 0) - 1;
+                                setCandidateDocsModal((prev) =>
+                                  prev ? { ...prev, selectedDocIndex: prevIdx } : null
+                                );
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-40 text-xs font-bold transition-all"
+                            >
+                              ← Prev
+                            </button>
+                            <button
+                              type="button"
+                              disabled={
+                                (candidateDocsModal.selectedDocIndex ?? 0) >=
+                                (candidateDocsModal.docs.length - 1)
+                              }
+                              onClick={() => {
+                                const nextIdx =
+                                  (candidateDocsModal.selectedDocIndex ?? 0) + 1;
+                                setCandidateDocsModal((prev) =>
+                                  prev ? { ...prev, selectedDocIndex: nextIdx } : null
+                                );
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-40 text-xs font-bold transition-all"
+                            >
+                              Next →
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadDocument(currentDoc.url, currentDoc.name)}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow transition-all active:scale-95"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>Download</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCandidateDocsModal((prev) =>
+                              prev ? { ...prev, selectedDocIndex: null } : null
+                            )
+                          }
+                          className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs shadow transition-all active:scale-95"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          <span>Close Document</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
-                ) : (
-                  <span className="text-white/60">Press ESC or click Close Viewer to exit</span>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleDownloadDocument(previewDocModal.url, previewDocModal.fileName)}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow transition-all active:scale-95"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Download</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPreviewDocModal(null)}
-                  className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs shadow transition-all active:scale-95"
-                >
-                  <X className="w-3.5 h-3.5" />
-                  <span>Close Viewer</span>
-                </button>
-              </div>
-            </div>
+                );
+              })()
+            )}
           </div>
         )}
       </NativeModal>
