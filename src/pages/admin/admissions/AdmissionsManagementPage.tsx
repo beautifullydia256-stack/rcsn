@@ -36,6 +36,8 @@ import {
   ExternalLink,
   Mail,
   CalendarCheck,
+  ChevronDown,
+  Layers,
 } from 'lucide-react';
 import {
   fetchApplications,
@@ -674,7 +676,6 @@ export default function AdmissionsManagementPage() {
     <AdminPageWrapper
       eyebrow="ADMISSIONS & INTAKE"
       title="Candidate Admissions & Matriculation Desk"
-      subtitle="Vet UNEB science credentials, schedule candidate oral interviews, record interview scores, issue official admission letters, and execute 1-click student matriculation."
     >
       <div className="space-y-6">
         {/* Toast Notification */}
@@ -696,22 +697,24 @@ export default function AdmissionsManagementPage() {
           </div>
         )}
 
-        {/* View Mode Switcher */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80">
-          <div className="flex items-center gap-1.5">
+        {/* Page Selection: Two Distinct Buttons */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2.5 sm:p-3 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 shadow-sm">
+          {/* Two Page Buttons */}
+          <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto">
+            {/* Button 1: Applications Pipeline */}
             <button
               type="button"
               onClick={() => setViewMode('pipeline')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              className={`flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm active:scale-95 ${
                 viewMode === 'pipeline'
-                  ? 'bg-emerald-600 text-white shadow-md'
-                  : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-white/80 dark:hover:bg-slate-700/60'
+                  ? 'bg-[#00873E] hover:bg-[#007033] text-white shadow-md ring-2 ring-emerald-500/25'
+                  : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
               }`}
             >
-              <Users className="w-4 h-4" />
-              <span>Applications Pipeline</span>
+              <Users className="w-4 h-4 shrink-0" />
+              <span className="truncate">Applications Pipeline</span>
               <span
-                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                className={`ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-black ${
                   viewMode === 'pipeline'
                     ? 'bg-white/20 text-white'
                     : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200'
@@ -721,19 +724,20 @@ export default function AdmissionsManagementPage() {
               </span>
             </button>
 
+            {/* Button 2: Interview Results */}
             <button
               type="button"
               onClick={() => setViewMode('scoring')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              className={`flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm active:scale-95 ${
                 viewMode === 'scoring'
-                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md'
-                  : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-white/80 dark:hover:bg-slate-700/60'
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:brightness-105 text-white shadow-md ring-2 ring-emerald-500/25'
+                  : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
               }`}
             >
-              <Award className="w-4 h-4 text-amber-500 dark:text-amber-300" />
-              <span>Interview Results</span>
+              <Award className="w-4 h-4 shrink-0 text-amber-500 dark:text-amber-300" />
+              <span className="truncate">Interview Results</span>
               <span
-                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                className={`ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-black ${
                   viewMode === 'scoring'
                     ? 'bg-white/20 text-white'
                     : 'bg-amber-500/20 text-amber-800 dark:text-amber-300'
@@ -744,17 +748,18 @@ export default function AdmissionsManagementPage() {
             </button>
           </div>
 
-          <div className="flex items-center gap-2 px-2">
-            <span className="text-[11px] text-slate-600 dark:text-slate-400 font-semibold hidden md:inline">
+          {/* Right Status Indicator & Refresh */}
+          <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold truncate hidden md:inline">
               {viewMode === 'pipeline'
-                ? 'Select multiple candidates for bulk interview invitation or enrollment'
-                : `Interview scoring & evaluation (Pass threshold: ${passMarkThreshold}%)`}
+                ? `${filteredApplications.length} candidate(s) listed`
+                : `${scoringCandidates.length} awaiting evaluation`}
             </span>
             <button
               type="button"
               onClick={loadData}
               disabled={loading}
-              className="p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 shadow-sm transition-colors"
+              className="p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 shadow-sm transition-colors shrink-0"
               title="Refresh application records"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -913,8 +918,30 @@ export default function AdmissionsManagementPage() {
             {/* Filters & Search Toolbar */}
             <div className={`${adminCardClass} space-y-4`}>
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                {/* Sub-tabs */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
+                {/* Mobile Stage Filter Dropdown */}
+                <div className="sm:hidden w-full space-y-1">
+                  <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+                    Filter by Stage:
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={activeTab}
+                      onChange={(e) => setActiveTab(e.target.value as typeof activeTab)}
+                      className="w-full pl-3 pr-10 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer"
+                    >
+                      <option value="all">All Applications ({stats.total})</option>
+                      <option value="pending">Pending Vetting ({stats.pending})</option>
+                      <option value="to_be_invited">To Be Invited ({stats.toBeInvited})</option>
+                      <option value="interview_scheduled">Interview Scheduled ({stats.interviews})</option>
+                      <option value="admitted">Admitted / Ready to Enroll ({stats.admitted})</option>
+                      <option value="enrolled">Enrolled Active ({stats.enrolled})</option>
+                    </select>
+                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+                </div>
+
+                {/* Desktop Sub-tabs */}
+                <div className="hidden sm:flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
                   {[
                     { id: 'all', label: 'All Applications', count: stats.total },
                     { id: 'pending', label: 'Pending Vetting', count: stats.pending },
@@ -1015,8 +1042,181 @@ export default function AdmissionsManagementPage() {
               </div>
             )}
 
-            {/* Datagrid Table */}
-            <div className={`${adminCardClass} !p-0 overflow-hidden border border-slate-200/80 dark:border-slate-800`}>
+            {/* Mobile Card View (Screens < 768px) */}
+            <div className="md:hidden space-y-3">
+              {loading ? (
+                <div className="p-8 text-center text-slate-500 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
+                    <span className="text-xs font-bold">Loading applications pipeline...</span>
+                  </div>
+                </div>
+              ) : filteredApplications.length === 0 ? (
+                <div className="p-8 text-center text-slate-500 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <AlertCircle className="w-6 h-6 text-slate-400" />
+                    <span className="text-xs font-semibold">No applications found matching the selected criteria.</span>
+                  </div>
+                </div>
+              ) : (
+                filteredApplications.map((app) => (
+                  <div
+                    key={app.id}
+                    className={`p-4 rounded-2xl bg-white dark:bg-slate-900 border-2 transition-all space-y-3 shadow-sm ${
+                      selectedAppIds.has(app.id)
+                        ? 'border-emerald-500 bg-emerald-50/20 dark:bg-emerald-950/20'
+                        : 'border-slate-200 dark:border-slate-800'
+                    }`}
+                  >
+                    {/* Top Row: Select Checkbox, Photo, Candidate Name & Status */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-2.5 min-w-0">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleSelectApp(app.id);
+                          }}
+                          className="mt-0.5 p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400"
+                        >
+                          {selectedAppIds.has(app.id) ? (
+                            <CheckSquare className="w-5 h-5 text-emerald-500" />
+                          ) : (
+                            <Square className="w-5 h-5 text-slate-400" />
+                          )}
+                        </button>
+                        {app.passport_photo_url ? (
+                          <img
+                            src={app.passport_photo_url}
+                            alt={app.full_name}
+                            className="w-10 h-12 object-cover rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm shrink-0"
+                          />
+                        ) : (
+                          <div className="w-10 h-12 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 text-slate-400">
+                            <Users className="w-4 h-4" />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <button
+                            type="button"
+                            onClick={() => setInspectApp(app)}
+                            className="text-left font-bold text-slate-900 dark:text-white text-sm hover:text-emerald-600 block truncate"
+                          >
+                            {app.full_name}
+                          </button>
+                          <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400">
+                            {app.application_number}
+                          </div>
+                          <div className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold truncate">
+                            {app.admitted_program || app.programs[0]}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="shrink-0">{getStatusBadge(app.status)}</div>
+                    </div>
+
+                    {/* Meta Info: Phone, UNEB Index, Interview Date */}
+                    <div className="grid grid-cols-2 gap-2 text-[11px] pt-2 border-t border-slate-100 dark:border-slate-800">
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold">Contact</span>
+                        <span className="text-slate-700 dark:text-slate-300 font-semibold">{app.phone || 'No phone'}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold">UNEB Index</span>
+                        <span className="text-slate-700 dark:text-slate-300 font-mono font-semibold">{app.index_number || 'N/A'}</span>
+                      </div>
+                      {app.interview_date && (
+                        <div className="col-span-2 flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 font-mono text-[11px]">
+                          <Calendar className="w-3.5 h-3.5 shrink-0" />
+                          <span>Interview: {app.interview_date} ({app.interview_time || '09:00 AM'})</span>
+                        </div>
+                      )}
+                      {app.interview_score !== null && app.interview_score !== undefined && (
+                        <div className="col-span-2 text-emerald-700 dark:text-emerald-400 font-bold">
+                          Interview Score: {app.interview_score}/100
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions Row */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setInspectApp(app)}
+                          className="px-3 py-1.5 rounded-lg bg-slate-900 dark:bg-slate-700 text-white font-bold text-xs hover:bg-black transition-colors"
+                        >
+                          Dossier
+                        </button>
+                        {getCandidateDocuments(app).length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenCandidateDocs(app)}
+                            className="px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-bold text-xs flex items-center gap-1"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>Docs ({getCandidateDocuments(app).length})</span>
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        {['submitted', 'under_review'].includes(app.status) && (
+                          <button
+                            type="button"
+                            onClick={() => handleVettingApproval(app)}
+                            className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-500 shadow-sm"
+                          >
+                            Approve
+                          </button>
+                        )}
+                        {app.status === 'shortlisted' && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSchedDate(new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]);
+                              setSchedTime('09:00 AM');
+                              setSchedVenue('RCSN Main Campus, Kalisizo / Rakai District');
+                              setSchedPanel('Senior Nursing & Midwifery Faculty Panel');
+                              setScheduleCandidates([app]);
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-purple-600 text-white font-bold text-xs hover:bg-purple-500 shadow-sm flex items-center gap-1"
+                          >
+                            <CalendarCheck className="w-3.5 h-3.5" />
+                            <span>Invite</span>
+                          </button>
+                        )}
+                        {app.status === 'interview_scheduled' && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setScoreApp(app);
+                              setInterviewScore(app.interview_score ?? 75);
+                              setInterviewNotes(app.interview_notes ?? '');
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-amber-600 text-white font-bold text-xs hover:bg-amber-500 shadow-sm"
+                          >
+                            Score
+                          </button>
+                        )}
+                        {app.status === 'admitted' && (
+                          <button
+                            type="button"
+                            onClick={() => setMatriculateApp(app)}
+                            className="px-3 py-1.5 rounded-lg bg-teal-600 text-white font-bold text-xs hover:bg-teal-500 shadow-sm"
+                          >
+                            Enroll
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Desktop Datagrid Table (Screens >= 768px) */}
+            <div className={`hidden md:block ${adminCardClass} !p-0 overflow-hidden border border-slate-200/80 dark:border-slate-800`}>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-300 font-bold uppercase tracking-wider text-[11px]">
@@ -1381,8 +1581,190 @@ export default function AdmissionsManagementPage() {
               </div>
             </div>
 
-            {/* Candidate Scoring Sheet Table */}
-            <div className={`${adminCardClass} !p-0 overflow-hidden border border-slate-200/80 dark:border-slate-800`}>
+            {/* Mobile Candidate Scoring Cards (Screens < 768px) */}
+            <div className="md:hidden space-y-3.5">
+              {scoringCandidates.length === 0 ? (
+                <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
+                  <div className="flex flex-col items-center justify-center gap-2.5">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400">
+                      <ClipboardList className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">No candidates found awaiting interview scoring.</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400 max-w-sm">
+                      Shortlist candidates and schedule interviews in the Applications Pipeline first.
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                scoringCandidates.map((app) => {
+                  const entry = candidateScores[app.id];
+                  const currentScore = entry?.score !== undefined ? entry.score : (app.interview_score ?? '');
+                  const currentNotes = entry?.notes !== undefined ? entry.notes : (app.interview_notes ?? '');
+                  const isNumeric = currentScore !== '' && !isNaN(Number(currentScore));
+                  const numScore = Number(currentScore);
+                  const isPassed = isNumeric && numScore >= passMarkThreshold;
+                  const isProcessing = !!rowProcessing[app.id];
+
+                  return (
+                    <div
+                      key={app.id}
+                      className="p-4 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 space-y-3 shadow-sm hover:border-emerald-500/40 transition-all"
+                    >
+                      {/* Top: Candidate info and Photo */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3 min-w-0">
+                          {app.passport_photo_url ? (
+                            <img
+                              src={app.passport_photo_url}
+                              alt={app.full_name}
+                              className="w-12 h-14 object-cover rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm shrink-0"
+                            />
+                          ) : (
+                            <div className="w-12 h-14 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 text-slate-400">
+                              <Users className="w-5 h-5" />
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <button
+                              type="button"
+                              onClick={() => setInspectApp(app)}
+                              className="text-left font-bold text-slate-900 dark:text-white text-sm hover:text-emerald-600 block truncate"
+                            >
+                              {app.full_name}
+                            </button>
+                            <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400">
+                              {app.application_number}
+                            </div>
+                            <div className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold truncate">
+                              {app.admitted_program || app.programs[0]}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="shrink-0">{getStatusBadge(app.status)}</div>
+                      </div>
+
+                      {/* Interview Schedule Banner */}
+                      <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-1.5 font-semibold text-slate-900 dark:text-white">
+                          <Calendar className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                          <span>{app.interview_date || 'Date not set'} ({app.interview_time || '09:00 AM'})</span>
+                        </div>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                          {app.phone}
+                        </span>
+                      </div>
+
+                      {/* Score Input & Live Computed Verdict */}
+                      <div className="grid grid-cols-2 gap-2.5 items-center p-3 rounded-xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/60">
+                        <div>
+                          <label className="text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
+                            Oral Score (0-100)
+                          </label>
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              placeholder="0-100"
+                              value={currentScore}
+                              onChange={(e) => {
+                                const val = e.target.value === '' ? '' : Number(e.target.value);
+                                handleScoreInputChange(app.id, val, currentNotes);
+                              }}
+                              className={`w-full px-3 py-2 rounded-xl text-center font-black text-base border outline-none transition-all ${
+                                isNumeric
+                                  ? isPassed
+                                    ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-700 dark:text-emerald-300 ring-2 ring-emerald-500/20'
+                                    : 'bg-rose-50 dark:bg-rose-950/40 border-rose-500 text-rose-700 dark:text-rose-300 ring-2 ring-rose-500/20'
+                                  : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white'
+                              }`}
+                            />
+                            <span className="text-xs font-bold text-slate-400">/100</span>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
+                            Computed Verdict
+                          </label>
+                          {!isNumeric ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-bold bg-slate-200/80 text-slate-600 dark:bg-slate-800 dark:text-slate-400 w-full justify-center">
+                              <Clock className="w-3 h-3" />
+                              <span>Awaiting Score</span>
+                            </span>
+                          ) : isPassed ? (
+                            <div className="p-1.5 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 border border-emerald-500/30 text-center">
+                              <span className="inline-flex items-center gap-1 text-[11px] font-black text-emerald-800 dark:text-emerald-300">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                <span>PASS (≥{passMarkThreshold}%)</span>
+                              </span>
+                              <div className="text-[9px] font-bold text-emerald-700 dark:text-emerald-400">
+                                {autoAdmitOnPass ? 'Auto-Admit Active' : 'Pass Recorded'}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="p-1.5 rounded-xl bg-rose-100 dark:bg-rose-900/50 border border-rose-500/30 text-center">
+                              <span className="inline-flex items-center gap-1 text-[11px] font-black text-rose-800 dark:text-rose-300">
+                                <XCircle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                                <span>FAIL (&lt;{passMarkThreshold}%)</span>
+                              </span>
+                              <div className="text-[9px] font-bold text-rose-700 dark:text-rose-400">
+                                Regret Notice
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Remarks Input */}
+                      <div>
+                        <label className="text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
+                          Panel Remarks / Notes
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Confirmed science passes, good attitude..."
+                          value={currentNotes}
+                          onChange={(e) => handleScoreInputChange(app.id, currentScore, e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-200 outline-none focus:border-emerald-500"
+                        />
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                        <button
+                          type="button"
+                          onClick={() => setInspectApp(app)}
+                          className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-200"
+                        >
+                          Dossier
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSingleCandidateEvaluate(app)}
+                          disabled={isProcessing || !isNumeric}
+                          className={`flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl font-bold text-xs shadow-md transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
+                            isPassed
+                              ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                              : 'bg-rose-600 hover:bg-rose-700 text-white'
+                          }`}
+                        >
+                          {isProcessing ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Send className="w-4 h-4" />
+                          )}
+                          <span>Save &amp; Dispatch Verdict</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Desktop Candidate Scoring Sheet Table (Screens >= 768px) */}
+            <div className={`hidden md:block ${adminCardClass} !p-0 overflow-hidden border border-slate-200/80 dark:border-slate-800`}>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-300 font-bold uppercase tracking-wider text-[11px]">
