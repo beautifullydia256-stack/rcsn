@@ -79,12 +79,13 @@ export interface AdmissionApplicationRecord {
   updated_at: string;
 }
 
-const STORAGE_KEY = 'rcsn_admissions_db_v3';
+const STORAGE_KEY = 'rcsn_admissions_db_v4';
 const DEFAULT_SCHOOL_ID = 'e1b10000-0000-4000-a000-000000000001';
 
 // Purge legacy local storage cache containing demo applications
 try {
   if (typeof window !== 'undefined' && window.localStorage) {
+    window.localStorage.removeItem('rcsn_admissions_db_v3');
     window.localStorage.removeItem('rcsn_admissions_db_v2');
     window.localStorage.removeItem('rcsn_admissions_db');
   }
@@ -168,8 +169,19 @@ export async function fetchApplications(options?: {
     } else {
       remoteAdmissionsTableAvailable = true;
       const remoteList = (data as AdmissionApplicationRecord[]) || [];
-      saveLocalApplications(remoteList);
-      return remoteList;
+      const hydrated = remoteList.map((app) => {
+        if (!app.attached_documents && app.attached_document_url && app.attached_document_url.trim().startsWith('[')) {
+          try {
+            const parsed = JSON.parse(app.attached_document_url);
+            if (Array.isArray(parsed)) {
+              return { ...app, attached_documents: parsed };
+            }
+          } catch (_) {}
+        }
+        return app;
+      });
+      saveLocalApplications(hydrated);
+      return hydrated;
     }
   } catch {
     // Silent fallback to local cache
@@ -325,19 +337,35 @@ export async function createApplication(
     }
 
     if (inserted) {
-      // Also cache locally
+      // Also cache locally with hydrated attached_documents
       const local = getLocalApplications();
-      local.unshift(inserted);
+      let attachedDocsPayload = newRecord.attached_documents || null;
+      if (!attachedDocsPayload && inserted.attached_document_url && inserted.attached_document_url.trim().startsWith('[')) {
+        try {
+          const parsed = JSON.parse(inserted.attached_document_url);
+          if (Array.isArray(parsed)) attachedDocsPayload = parsed;
+        } catch (_) {}
+      }
+      const recordToCache: AdmissionApplicationRecord = {
+        ...inserted,
+        attached_documents: attachedDocsPayload,
+      };
+      local.unshift(recordToCache);
       saveLocalApplications(local);
 
       // Trigger instant confirmation email ONLY after verified database record
       if (inserted.email) {
-        sendApplicationSubmittedEmail(inserted).catch((err) =>
-          console.warn('[AdmissionsService] Email dispatch note:', err)
-        );
+        try {
+          await Promise.race([
+            sendApplicationSubmittedEmail(recordToCache),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Email dispatch timeout')), 6000))
+          ]);
+        } catch (emailErr) {
+          console.warn('[AdmissionsService] Email dispatch note:', emailErr);
+        }
       }
 
-      return { success: true, application: inserted, message: 'Application submitted successfully.' };
+      return { success: true, application: recordToCache, message: 'Application submitted successfully.' };
     }
 
     return {

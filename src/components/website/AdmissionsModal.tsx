@@ -393,6 +393,11 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
           ? attachedDocs[0].size
           : `${attachedDocs.length} documents`;
       const primaryDocData = attachedDocs[0]?.data || undefined;
+      const multiDocsPayload = attachedDocs.map((d) => ({
+        name: d.name,
+        size: d.size,
+        data: d.data,
+      }));
 
       const res = await submitAdmissionApplication({
         fullName,
@@ -410,12 +415,8 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
         subjectGrades: subjectGradesPayload,
         attachedDocumentName: primaryDocName,
         attachedDocumentSize: primaryDocSize,
-        attachedDocumentData: primaryDocData,
-        attachedDocuments: attachedDocs.map((d) => ({
-          name: d.name,
-          size: d.size,
-          data: d.data,
-        })),
+        attachedDocumentData: attachedDocs.length > 1 ? JSON.stringify(multiDocsPayload) : primaryDocData,
+        attachedDocuments: multiDocsPayload,
         passportPhotoData: passportPhotoData || undefined,
         passportPhotoName: passportPhotoName || undefined,
         applicationFee: APPLICATION_FEE_UGX,

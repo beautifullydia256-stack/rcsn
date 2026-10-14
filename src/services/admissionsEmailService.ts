@@ -18,7 +18,10 @@ const DEFAULT_PORTAL_URL = 'https://www.rcsn.ac.ug';
 
 function getSiteOrigin(): string {
   if (typeof window !== 'undefined' && window.location && window.location.origin) {
-    return window.location.origin;
+    const origin = window.location.origin;
+    if (!origin.includes('localhost') && !origin.includes('127.0.0.1')) {
+      return origin;
+    }
   }
   return import.meta.env.VITE_APP_URL || DEFAULT_PORTAL_URL;
 }

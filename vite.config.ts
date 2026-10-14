@@ -47,10 +47,10 @@ function admissionsDevEmailPlugin() {
           req.on('data', (c: any) => chunks.push(c));
           req.on('end', async () => {
             try {
-              const bodyStr = Buffer.concat(chunks).toString();
+              delete require.cache[path.resolve(__dirname, './api/admissions/_send-email.js')];
               // eslint-disable-next-line @typescript-eslint/no-var-requires
               const handler = require(path.resolve(__dirname, './api/admissions/_send-email.js'));
-              req.body = JSON.parse(bodyStr || '{}');
+              req.body = bodyStr ? JSON.parse(bodyStr || '{}') : {};
               await handler(req, res);
             } catch (err) {
               res.writeHead(500, { 'Content-Type': 'application/json' });

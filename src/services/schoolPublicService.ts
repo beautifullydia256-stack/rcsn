@@ -113,9 +113,13 @@ export async function submitAdmissionApplication(
     index_number: data.indexNumber,
     qualifications_summary: data.qualificationsSummary,
     subject_grades: data.subjectGrades || [],
-    attached_document_url: data.attachedDocumentData || null,
+    attached_document_url:
+      data.attachedDocuments && data.attachedDocuments.length > 1
+        ? JSON.stringify(data.attachedDocuments)
+        : (data.attachedDocumentData || null),
     attached_document_name: data.attachedDocumentName || null,
     attached_document_size: data.attachedDocumentSize || null,
+    attached_documents: data.attachedDocuments || null,
     passport_photo_url: data.passportPhotoData || data.passportPhotoUrl || null,
     guardian_name: data.guardianName,
     guardian_phone: data.guardianPhone,

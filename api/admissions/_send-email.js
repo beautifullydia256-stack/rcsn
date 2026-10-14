@@ -2,20 +2,32 @@
 // CommonJS format for Vercel / serverless runtime compatibility.
 
 const https = require('https');
+const path = require('path');
 
 function getApiKey() {
-  return (
+  let key = (
     process.env.RESEND_API_KEY ||
     process.env.VITE_RESEND_API_KEY ||
     ''
-  ).trim();
+  ).trim().replace(/^["']|["']$/g, '');
+
+  if (!key) {
+    try {
+      const dotenv = require('dotenv');
+      const parsed = dotenv.config({ path: path.resolve(__dirname, '../../.env.local') }).parsed;
+      if (parsed && parsed.RESEND_API_KEY) {
+        key = String(parsed.RESEND_API_KEY).trim().replace(/^["']|["']$/g, '');
+      }
+    } catch (_) {}
+  }
+  return key;
 }
 
 function getFromAddress() {
   return (
     process.env.RESEND_FROM ||
     'RCSN Admissions <admissions@rcsn.ac.ug>'
-  ).trim();
+  ).trim().replace(/^["']|["']$/g, '');
 }
 
 function httpsPost(url, headers, body) {
@@ -46,6 +58,31 @@ function httpsPost(url, headers, body) {
   });
 }
 
+async function parseRequestBody(req) {
+  if (req.body !== undefined && req.body !== null) {
+    if (typeof req.body === 'string') {
+      try {
+        return JSON.parse(req.body);
+      } catch (_) {
+        return {};
+      }
+    }
+    return req.body;
+  }
+  return new Promise((resolve) => {
+    let raw = '';
+    req.on('data', (chunk) => (raw += chunk));
+    req.on('end', () => {
+      try {
+        resolve(JSON.parse(raw || '{}'));
+      } catch (_) {
+        resolve({});
+      }
+    });
+    req.on('error', () => resolve({}));
+  });
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
 
@@ -54,15 +91,7 @@ module.exports = async function handler(req, res) {
     return res.end(JSON.stringify({ success: false, error: 'Method not allowed. Use POST.' }));
   }
 
-  let body = req.body;
-  if (typeof body === 'string') {
-    try {
-      body = JSON.parse(body);
-    } catch (_) {
-      body = {};
-    }
-  }
-
+  const body = await parseRequestBody(req);
   const { to, subject, html, applicantName, applicationNumber } = body || {};
 
   if (!to || !html) {
@@ -74,6 +103,7 @@ module.exports = async function handler(req, res) {
   const from = getFromAddress();
 
   if (!apiKey) {
+    console.error('[AdmissionsEmail] RESEND_API_KEY is not configured.');
     res.statusCode = 500;
     return res.end(JSON.stringify({ success: false, error: 'RESEND_API_KEY not configured.' }));
   }

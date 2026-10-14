@@ -627,48 +627,126 @@ export default function AdmissionsManagementPage() {
     }
   };
 
+  const isPdfDoc = (url: string, name: string) => {
+    return (
+      url.startsWith('data:application/pdf') ||
+      /\.pdf(\?.*)?$/i.test(name) ||
+      /\.pdf(\?.*)?$/i.test(url)
+    );
+  };
+
+  const isImgDoc = (url: string, name: string) => {
+    if (isPdfDoc(url, name)) return false;
+    return (
+      url.startsWith('data:image/') ||
+      /\.(png|jpe?g|webp|gif|svg|bmp)(\?.*)?$/i.test(name) ||
+      /\.(png|jpe?g|webp|gif|svg|bmp)(\?.*)?$/i.test(url)
+    );
+  };
+
   const getCandidateDocuments = (app: AdmissionApplicationRecord) => {
     const docs: { name: string; url: string; size?: string; isImage: boolean }[] = [];
 
-    if (app.attached_documents && app.attached_documents.length > 0) {
+    // 1. Direct attached_documents array if present
+    if (app.attached_documents && Array.isArray(app.attached_documents) && app.attached_documents.length > 0) {
       app.attached_documents.forEach((d, idx) => {
         const dUrl = d.data || d.url;
         if (dUrl) {
           const dName = d.name || `Document #${idx + 1}`;
-          const isImg =
-            dUrl.startsWith('data:image/') ||
-            /\.(png|jpe?g|webp|gif|svg)(\?.*)?$/i.test(dName) ||
-            /\.(png|jpe?g|webp|gif|svg)(\?.*)?$/i.test(dUrl);
-          docs.push({ name: dName, url: dUrl, size: d.size, isImage: isImg });
+          docs.push({
+            name: dName,
+            url: dUrl,
+            size: d.size,
+            isImage: isImgDoc(dUrl, dName),
+          });
         }
       });
     }
 
-    if (docs.length === 0 && (app.attached_document_data || app.attached_document_url)) {
-      const dUrl = app.attached_document_data || app.attached_document_url || '';
-      const dName = app.attached_document_name || 'Candidate Academic Document';
-      const isImg =
-        dUrl.startsWith('data:image/') ||
-        /\.(png|jpe?g|webp|gif|svg)(\?.*)?$/i.test(dName) ||
-        /\.(png|jpe?g|webp|gif|svg)(\?.*)?$/i.test(dUrl);
-      docs.push({ name: dName, url: dUrl, size: app.attached_document_size || undefined, isImage: isImg });
+    // 2. If attached_document_url is a serialized JSON array
+    const rawUrl = (app.attached_document_data || app.attached_document_url || '').trim();
+    if (docs.length === 0 && rawUrl.startsWith('[') && rawUrl.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(rawUrl);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          parsed.forEach((d: any, idx: number) => {
+            const dUrl = d.data || d.url || '';
+            if (dUrl) {
+              const dName = d.name || `Document #${idx + 1}`;
+              docs.push({
+                name: dName,
+                url: dUrl,
+                size: d.size,
+                isImage: isImgDoc(dUrl, dName),
+              });
+            }
+          });
+        }
+      } catch (_) {}
+    }
+
+    // 3. Fallback single document
+    if (docs.length === 0 && rawUrl) {
+      let dName = app.attached_document_name || 'Candidate Academic Document';
+      if (dName.includes(',')) {
+        dName = dName.split(',')[0].trim();
+      }
+      docs.push({
+        name: dName,
+        url: rawUrl,
+        size: app.attached_document_size || undefined,
+        isImage: isImgDoc(rawUrl, dName),
+      });
     }
 
     return docs;
   };
 
-  const handleOpenCandidateDocs = (app: AdmissionApplicationRecord) => {
+  const handleOpenInNewTab = (url: string, name: string) => {
+    if (url.startsWith('data:')) {
+      const win = window.open('');
+      if (win) {
+        if (url.startsWith('data:application/pdf') || /\.pdf(\?.*)?$/i.test(name)) {
+          win.document.write(`
+            <!DOCTYPE html>
+            <html>
+              <head><title>${name}</title><style>body,html{margin:0;padding:0;height:100%;overflow:hidden;background:#525659;}</style></head>
+              <body><iframe src="${url}" style="width:100%;height:100%;border:none;"></iframe></body>
+            </html>
+          `);
+        } else {
+          win.document.write(`
+            <!DOCTYPE html>
+            <html>
+              <head><title>${name}</title><style>body,html{margin:0;padding:20px;display:flex;align-items:center;justify-content:center;background:#0f172a;min-height:100vh;}</style></head>
+              <body><img src="${url}" alt="${name}" style="max-width:100%;max-height:95vh;border-radius:8px;box-shadow:0 10px 25px rgba(0,0,0,0.5);" /></body>
+            </html>
+          `);
+        }
+        win.document.close();
+        return;
+      }
+    }
+    window.open(url, '_blank');
+  };
+
+  const handleOpenCandidateDocs = (app: AdmissionApplicationRecord, initialIndex: number | null = null) => {
     const docs = getCandidateDocuments(app);
     if (docs.length === 0) {
       showNotification('No digital documents attached for this candidate.', 'error');
       return;
     }
 
+    const validIndex =
+      initialIndex !== null && initialIndex >= 0 && initialIndex < docs.length
+        ? initialIndex
+        : (docs.length === 1 ? 0 : null);
+
     setCandidateDocsModal({
       isOpen: true,
       app,
       docs,
-      selectedDocIndex: null, // Always display the documents list (Tier 1) first
+      selectedDocIndex: validIndex,
     });
   };
 
@@ -2599,9 +2677,9 @@ export default function AdmissionsManagementPage() {
                         <div className="flex items-center gap-2 shrink-0">
                           <button
                             type="button"
-                            onClick={() => handleOpenCandidateDocs(inspectApp)}
+                            onClick={() => handleOpenCandidateDocs(inspectApp, dIdx)}
                             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#00873E] hover:bg-[#007033] active:scale-95 text-white font-bold text-xs shadow-md transition-all"
-                            title="View and inspect attached documents list"
+                            title="View and preview this document immediately"
                           >
                             <Eye className="w-4 h-4 text-white" />
                             <span>View Document</span>
@@ -2645,9 +2723,9 @@ export default function AdmissionsManagementPage() {
                     <div className="flex items-center gap-2 shrink-0">
                       <button
                         type="button"
-                        onClick={() => handleOpenCandidateDocs(inspectApp)}
+                        onClick={() => handleOpenCandidateDocs(inspectApp, 0)}
                         className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#00873E] hover:bg-[#007033] active:scale-95 text-white font-bold text-xs shadow-md transition-all"
-                        title="View and inspect attached documents list"
+                        title="View and preview attached document immediately"
                       >
                         <Eye className="w-4 h-4 text-white" />
                         <span>View Document</span>
@@ -3037,7 +3115,7 @@ export default function AdmissionsManagementPage() {
 
                         <button
                           type="button"
-                          onClick={() => window.open(currentDoc.url, '_blank')}
+                          onClick={() => handleOpenInNewTab(currentDoc.url, currentDoc.name)}
                           className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/15 hover:bg-white/25 border border-white/25 text-white font-bold text-xs transition-all active:scale-95"
                           title="Open in new browser tab"
                         >
@@ -3090,14 +3168,13 @@ export default function AdmissionsManagementPage() {
                             >
                               Download Document
                             </button>
-                            <a
-                              href={currentDoc.url}
-                              target="_blank"
-                              rel="noreferrer"
+                            <button
+                              type="button"
+                              onClick={() => handleOpenInNewTab(currentDoc.url, currentDoc.name)}
                               className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs transition-all"
                             >
                               Open in New Tab
-                            </a>
+                            </button>
                           </div>
                         </div>
                       )}
