@@ -127,6 +127,16 @@ export async function generateAdmissionApplicationPdf(app: AdmissionApplication)
   doc.text(`${app.paymentMethod || 'Mobile Money'} (Verified)`, W - margin - 39, y + 16.5, { align: 'center' });
   doc.text(`Txn Ref: ${app.paymentReference || 'CONFIRMED'}`, W - margin - 39, y + 19.5, { align: 'center' });
 
+  // Try loading candidate passport photo
+  let passportData = '';
+  if (app.passportPhotoUrl) {
+    try {
+      passportData = await loadImageAsDataUrl(app.passportPhotoUrl);
+    } catch {
+      passportData = '';
+    }
+  }
+
   // 4. Section 1: Candidate Particulars
   y = 92;
   doc.setTextColor(15, 23, 42);
@@ -134,16 +144,45 @@ export async function generateAdmissionApplicationPdf(app: AdmissionApplication)
   doc.setFontSize(9);
   doc.text('1. CANDIDATE PERSONAL PARTICULARS', margin, y);
 
+  // Render Passport Photo Frame on the right
+  const photoW = 26;
+  const photoH = 31;
+  const photoX = W - margin - photoW;
+  const photoY = y + 2.5;
+
+  doc.setFillColor(248, 250, 252);
+  doc.setDrawColor(203, 213, 225);
+  doc.roundedRect(photoX, photoY, photoW, photoH, 1, 1, 'FD');
+
+  if (passportData) {
+    try {
+      doc.addImage(passportData, 'JPEG', photoX + 1, photoY + 1, photoW - 2, photoH - 2);
+    } catch {
+      doc.setFontSize(6.5);
+      doc.setTextColor(148, 163, 184);
+      doc.text('PASSPORT PHOTO', photoX + photoW / 2, photoY + photoH / 2, { align: 'center' });
+    }
+  } else {
+    doc.setFontSize(6.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text('PASSPORT', photoX + photoW / 2, photoY + photoH / 2 - 2, { align: 'center' });
+    doc.text('PHOTO', photoX + photoW / 2, photoY + photoH / 2 + 3, { align: 'center' });
+  }
+
+  doc.setFontSize(5.5);
+  doc.setTextColor(100, 116, 139);
+  doc.text('Official Photo', photoX + photoW / 2, photoY + photoH + 3.5, { align: 'center' });
+
   autoTable(doc, {
     startY: y + 2.5,
-    margin: { left: margin, right: margin },
+    margin: { left: margin, right: margin + photoW + 4 },
     theme: 'plain',
     styles: { fontSize: 8, cellPadding: 2, textColor: [51, 65, 85] },
     columnStyles: {
-      0: { fontStyle: 'bold', textColor: [15, 23, 42], cellWidth: 42 },
-      1: { cellWidth: 50 },
-      2: { fontStyle: 'bold', textColor: [15, 23, 42], cellWidth: 42 },
-      3: { cellWidth: 48 },
+      0: { fontStyle: 'bold', textColor: [15, 23, 42], cellWidth: 32 },
+      1: { cellWidth: 43 },
+      2: { fontStyle: 'bold', textColor: [15, 23, 42], cellWidth: 32 },
+      3: { cellWidth: 43 },
     },
     body: [
       ['Full Name:', app.fullName.toUpperCase(), 'Gender:', app.gender],

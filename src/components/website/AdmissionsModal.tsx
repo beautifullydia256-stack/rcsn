@@ -154,6 +154,15 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedData, setSubmittedData] = useState<AdmissionApplication | null>(null);
 
+  const modalBodyRef = useRef<HTMLDivElement>(null);
+
+  // Automatically scroll modal body to top whenever navigating to a new step
+  useEffect(() => {
+    if (modalBodyRef.current) {
+      modalBodyRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [step]);
+
   const programs = AVAILABLE_PROGRAMS;
 
   // Form State - Multi-Program Support
@@ -279,25 +288,25 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
     if (!files || files.length === 0) return;
 
     const fileList = Array.from(files);
-    const MAX_SINGLE_FILE_BYTES = 5 * 1024 * 1024; // 5 MB per document
-    const MAX_TOTAL_FILES_BYTES = 10 * 1024 * 1024; // 10 MB total
+    const MAX_SINGLE_FILE_BYTES = 3 * 1024 * 1024; // 3 MB per document
+    const MAX_TOTAL_FILES_BYTES = 6 * 1024 * 1024; // 6 MB total
 
-    // 1. Check if any individual file exceeds 5MB
+    // 1. Check if any individual file exceeds 3MB
     const oversizedFile = fileList.find((f) => f.size > MAX_SINGLE_FILE_BYTES);
     if (oversizedFile) {
       setAttachmentError(
-        `"${oversizedFile.name}" exceeds the 5MB limit (${(oversizedFile.size / (1024 * 1024)).toFixed(1)}MB). Please upload documents under 5MB each.`
+        `"${oversizedFile.name}" exceeds the 3MB limit (${(oversizedFile.size / (1024 * 1024)).toFixed(1)}MB). Please upload documents or clear pictures under 3MB each.`
       );
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
 
-    // 2. Check if total attachments size would exceed 10MB
+    // 2. Check if total attachments size would exceed 6MB
     const currentTotalBytes = attachedDocs.reduce((sum, d) => sum + (d.sizeBytes || 0), 0);
     const newFilesTotalBytes = fileList.reduce((sum, f) => sum + f.size, 0);
     if (currentTotalBytes + newFilesTotalBytes > MAX_TOTAL_FILES_BYTES) {
       setAttachmentError(
-        `Total combined attachments size cannot exceed 10MB. Current attachments: ${(currentTotalBytes / (1024 * 1024)).toFixed(1)}MB, new files: ${(newFilesTotalBytes / (1024 * 1024)).toFixed(1)}MB.`
+        `Total combined attachments size cannot exceed 6MB. Current attachments: ${(currentTotalBytes / (1024 * 1024)).toFixed(1)}MB, new files: ${(newFilesTotalBytes / (1024 * 1024)).toFixed(1)}MB.`
       );
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
@@ -425,10 +434,13 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
         setPaymentState('success');
         setSubmittedData(res.application);
         setStep(5);
+      } else {
+        setPaymentError(res.message || 'We could not save your application to the central registry. If you attached large files, please ensure they are clear photos/PDFs under 3MB.');
+        setPaymentState('idle');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Submission error:', err);
-      setPaymentError('Failed to record application after payment. Please contact RCSN Admissions immediately.');
+      setPaymentError(err?.message || 'Failed to record application after payment. Please ensure uploaded documents are under 3MB and try again.');
       setPaymentState('idle');
     } finally {
       setIsSubmitting(false);
@@ -582,7 +594,7 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
           </div>
 
           {/* Form Body - Solid Opaque Background with High Contrast Text */}
-          <div className="p-5 sm:p-7 overflow-y-auto flex-1 no-scrollbar bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+          <div ref={modalBodyRef} className="p-5 sm:p-7 overflow-y-auto flex-1 no-scrollbar bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
             {/* STEP 1: Program Selection */}
             {step === 1 && (
               <div className="space-y-6">
@@ -1021,7 +1033,7 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
                         <span>Attach Academic Documents &amp; Certificates *</span>
                       </h4>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                        Upload your official academic papers (such as UCE / UACE result slips, academic certificates, transcripts, or testimonials). You can upload 1 document or add multiple documents (Max 5MB per document, up to 10MB total).
+                        Upload your official academic papers (such as UCE / UACE result slips, academic certificates, transcripts, or testimonials). Supports clear photos or PDF documents (Max 3MB per document, up to 6MB total).
                       </p>
                     </div>
                     {attachedDocs.length > 0 && (
@@ -1052,7 +1064,7 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
                         Click to browse &amp; upload Academic Documents
                       </span>
                       <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-1">
-                        Supports PDF, PNG, JPG, or JPEG (Max 5MB per document, up to 10MB total) • You can select multiple files or add more
+                        Supports PDF, PNG, JPG, or JPEG (Max 3MB per document, up to 6MB total) • You can select multiple files or add more
                       </span>
                     </div>
                   ) : (

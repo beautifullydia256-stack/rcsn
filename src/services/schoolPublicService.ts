@@ -85,6 +85,59 @@ export async function submitAdmissionApplication(
     status: 'Pending Verification',
   };
 
+  // First, sync to Supabase central database
+  const { createApplication } = await import('@/services/admissionsService');
+  const nameParts = (data.fullName || '').trim().split(/\s+/);
+  let cleanDob = (data.dateOfBirth || '').trim();
+  if (!cleanDob || !/^\d{4}-\d{2}-\d{2}$/.test(cleanDob)) {
+    cleanDob = '2005-01-01';
+  }
+
+  const syncRes = await createApplication({
+    school_id: 'e1b10000-0000-4000-a000-000000000001',
+    application_number: appId,
+    full_name: data.fullName,
+    first_name: nameParts[0] || data.fullName,
+    middle_name: nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : null,
+    last_name: nameParts[nameParts.length - 1] || '',
+    gender: data.gender === 'Male' ? 'Male' : 'Female',
+    date_of_birth: cleanDob,
+    phone: data.phone,
+    email: data.email || null,
+    nin_or_id: data.ninOrId || null,
+    nationality: 'Ugandan',
+    programs: data.programs || [data.program],
+    admitted_program: data.program,
+    intake: data.intake,
+    previous_school: data.previousSchool,
+    index_number: data.indexNumber,
+    qualifications_summary: data.qualificationsSummary,
+    subject_grades: data.subjectGrades || [],
+    attached_document_url: data.attachedDocumentData || null,
+    attached_document_name: data.attachedDocumentName || null,
+    attached_document_size: data.attachedDocumentSize || null,
+    passport_photo_url: data.passportPhotoData || data.passportPhotoUrl || null,
+    guardian_name: data.guardianName,
+    guardian_phone: data.guardianPhone,
+    guardian_relationship: 'Parent / Guardian',
+    application_fee: data.applicationFee || 50000,
+    payment_method: data.paymentMethod || 'MTN Mobile Money',
+    payment_reference: data.paymentReference || `RCSN-MM-${Date.now().toString().slice(-7)}`,
+    payment_status: 'Verified',
+    status: 'submitted',
+    residential_preference: 'Resident',
+  });
+
+  if (!syncRes.success) {
+    console.error('[RCSN Public Service] Database application insertion failed:', syncRes.message);
+    return {
+      success: false,
+      application,
+      message: syncRes.message || 'We could not save your application to the central registry. Please verify your document sizes and try again.',
+    };
+  }
+
+  // Once database has confirmed record, cache in local state
   try {
     const existingRaw = localStorage.getItem(STORAGE_KEYS.APPLICATIONS);
     const existing: AdmissionApplication[] = existingRaw ? JSON.parse(existingRaw) : [];
@@ -94,54 +147,7 @@ export async function submitAdmissionApplication(
     console.warn('[RCSN Public Service] Could not write to localStorage:', err);
   }
 
-  // Also sync to Supabase admission_applications table
-  try {
-    const { createApplication } = await import('@/services/admissionsService');
-    const nameParts = (data.fullName || '').trim().split(/\s+/);
-    let cleanDob = (data.dateOfBirth || '').trim();
-    if (!cleanDob || !/^\d{4}-\d{2}-\d{2}$/.test(cleanDob)) {
-      cleanDob = '2005-01-01';
-    }
-    await createApplication({
-      school_id: 'e1b10000-0000-4000-a000-000000000001',
-      application_number: appId,
-      full_name: data.fullName,
-      first_name: nameParts[0] || data.fullName,
-      middle_name: nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : null,
-      last_name: nameParts[nameParts.length - 1] || '',
-      gender: data.gender === 'Male' ? 'Male' : 'Female',
-      date_of_birth: cleanDob,
-      phone: data.phone,
-      email: data.email || null,
-      nin_or_id: data.ninOrId || null,
-      programs: data.programs || [data.program],
-      admitted_program: data.program,
-      intake: data.intake,
-      previous_school: data.previousSchool,
-      index_number: data.indexNumber,
-      qualifications_summary: data.qualificationsSummary,
-      subject_grades: data.subjectGrades || [],
-      attached_document_url: data.attachedDocumentData || null,
-      attached_document_name: data.attachedDocumentName || null,
-      attached_document_size: data.attachedDocumentSize || null,
-      attached_document_data: data.attachedDocumentData || null,
-      attached_documents: data.attachedDocuments || null,
-      passport_photo_url: data.passportPhotoData || data.passportPhotoUrl || null,
-      guardian_name: data.guardianName,
-      guardian_phone: data.guardianPhone,
-      guardian_relationship: 'Parent / Guardian',
-      application_fee: data.applicationFee || 50000,
-      payment_method: data.paymentMethod || 'MTN Mobile Money',
-      payment_reference: data.paymentReference || `RCSN-MM-${Date.now().toString().slice(-7)}`,
-      payment_status: 'Verified',
-      status: 'submitted',
-      residential_preference: 'Resident',
-    });
-  } catch (err) {
-    console.warn('[RCSN Public Service] AdmissionsService sync note:', err);
-  }
-
-  console.log('[RCSN Admission Application Received & Synced]:', application);
+  console.log('[RCSN Admission Application Verified & Stored]:', application);
 
   return {
     success: true,

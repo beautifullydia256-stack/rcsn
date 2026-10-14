@@ -52,9 +52,9 @@ export default function NativeModal({
     md: `max-w-lg ${MODAL_MAX_H}`,
     lg: `max-w-2xl ${MODAL_MAX_H}`,
     xl: `max-w-3xl ${MODAL_MAX_H}`,
-    '2xl': `max-w-5xl ${MODAL_MAX_H}`,
+    '2xl': 'max-w-5xl max-h-[min(92dvh,880px)]',
     /** Nearly full width on small screens; on sm+ cap ~1152px so desktop is not edge-to-edge */
-    full: `max-w-[calc(100vw-1.5rem)] sm:max-w-6xl sm:mx-auto ${MODAL_MAX_H}`,
+    full: 'max-w-[calc(100vw-1.5rem)] sm:max-w-6xl sm:mx-auto max-h-[min(92dvh,880px)]',
   };
 
   const renderHeaderIcon = () => {
@@ -144,13 +144,9 @@ export default function NativeModal({
                 </div>
               )}
 
-              {/* Inner body - no scrollbar, smooth scroll */}
+              {/* Inner body - smooth scroll with custom scrollbar */}
               <div
-                className={
-                  "min-h-0 flex-1 overflow-y-auto overscroll-y-contain touch-pan-y px-5 py-5 sm:px-7 sm:py-6 relative z-10 no-scrollbar " +
-                  "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0"
-                }
-                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain touch-pan-y px-5 py-5 sm:px-7 sm:py-6 relative z-10 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.25)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/25 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/40"
               >
                 {children}
               </div>

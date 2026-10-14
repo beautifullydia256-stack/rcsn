@@ -34,6 +34,8 @@ import {
   UploadCloud,
   FileCheck,
   ExternalLink,
+  Mail,
+  CalendarCheck,
 } from 'lucide-react';
 import {
   fetchApplications,
@@ -150,7 +152,7 @@ export default function AdmissionsManagementPage() {
   const stats = useMemo(() => {
     const total = applications.length;
     const pending = applications.filter((a) => ['submitted', 'under_review'].includes(a.status)).length;
-    const interviews = applications.filter((a) => a.status === 'interview_scheduled').length;
+    const interviews = applications.filter((a) => ['shortlisted', 'interview_scheduled'].includes(a.status)).length;
     const admitted = applications.filter((a) => ['interview_passed', 'admitted', 'offer_accepted'].includes(a.status)).length;
     const enrolled = applications.filter((a) => a.status === 'enrolled').length;
     return { total, pending, interviews, admitted, enrolled };
@@ -161,7 +163,7 @@ export default function AdmissionsManagementPage() {
     return applications.filter((app) => {
       // Tab filter
       if (activeTab === 'pending' && !['submitted', 'under_review'].includes(app.status)) return false;
-      if (activeTab === 'interview_scheduled' && app.status !== 'interview_scheduled') return false;
+      if (activeTab === 'interview_scheduled' && !['shortlisted', 'interview_scheduled'].includes(app.status)) return false;
       if (activeTab === 'admitted' && !['interview_passed', 'admitted', 'offer_accepted'].includes(app.status)) return false;
       if (activeTab === 'enrolled' && app.status !== 'enrolled') return false;
 
@@ -188,17 +190,14 @@ export default function AdmissionsManagementPage() {
 
   // Action Handlers
   const handleVettingApproval = async (app: AdmissionApplicationRecord) => {
-    setActionLoading(true);
-    try {
-      await updateApplication(app.id, { status: 'shortlisted' });
-      showNotification(`Application ${app.application_number} shortlisted for interview.`);
-      await loadData();
-      if (inspectApp?.id === app.id) setInspectApp(null);
-    } catch {
-      showNotification('Failed to update vetting status.', 'error');
-    } finally {
-      setActionLoading(false);
-    }
+    // Seamlessly open Schedule Interview modal with smart defaults so the candidate
+    // gets an official interview appointment and receives their invitation email immediately
+    setSchedDate(new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]);
+    setSchedTime('09:00 AM');
+    setSchedVenue('RCSN Main Campus, Kalisizo / Rakai District');
+    setSchedPanel('Senior Nursing & Midwifery Faculty Panel');
+    setScheduleApp(app);
+    if (inspectApp?.id === app.id) setInspectApp(null);
   };
 
   const handleVettingRejection = async (app: AdmissionApplicationRecord) => {
@@ -230,8 +229,9 @@ export default function AdmissionsManagementPage() {
         interviewVenue: schedVenue,
         interviewPanel: schedPanel,
       });
-      showNotification(`Interview scheduled for ${scheduleApp.full_name} on ${schedDate}. Invitation email dispatched.`);
+      showNotification(`Interview successfully scheduled for ${scheduleApp.full_name} on ${schedDate}. Official invitation email dispatched to ${scheduleApp.email || 'candidate'}! Record moved to Interview Scheduled & Scoring Desk.`);
       setScheduleApp(null);
+      setActiveTab('interview_scheduled');
       await loadData();
     } catch {
       showNotification('Failed to schedule interview.', 'error');
@@ -977,7 +977,7 @@ export default function AdmissionsManagementPage() {
                   {[
                     { id: 'all', label: 'All Applications', count: stats.total },
                     { id: 'pending', label: 'Pending Vetting', count: stats.pending },
-                    { id: 'interview_scheduled', label: 'Interview Scheduled', count: stats.interviews },
+                    { id: 'interview_scheduled', label: 'Interview Scheduled / Shortlisted', count: stats.interviews },
                     { id: 'admitted', label: 'Admitted / Ready to Enroll', count: stats.admitted },
                     { id: 'enrolled', label: 'Enrolled Active', count: stats.enrolled },
                   ].map((tab) => (
@@ -1087,12 +1087,13 @@ export default function AdmissionsManagementPage() {
                       filteredApplications.map((app) => (
                         <tr
                           key={app.id}
-                          className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors ${
-                            selectedAppIds.has(app.id) ? 'bg-emerald-500/5 dark:bg-emerald-500/10' : ''
+                          onClick={() => setInspectApp(app)}
+                          className={`cursor-pointer hover:bg-emerald-50/70 dark:hover:bg-slate-800/60 transition-colors ${
+                            selectedAppIds.has(app.id) ? 'bg-emerald-500/10 dark:bg-emerald-500/15' : ''
                           }`}
                         >
                           {/* Row Multi-Select Checkbox */}
-                          <td className="py-3.5 px-3 text-center">
+                          <td className="py-3.5 px-3 text-center" onClick={(e) => e.stopPropagation()}>
                             <button
                               type="button"
                               onClick={() => toggleSelectApp(app.id)}
@@ -1186,9 +1187,39 @@ export default function AdmissionsManagementPage() {
                             </div>
                           </td>
 
-                          {/* Workflow Actions - ICONS ONLY */}
-                          <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                          {/* Workflow Actions */}
+                          <td className="py-3.5 px-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                             <div className="inline-flex items-center justify-end gap-1.5">
+                              {/* Direct Schedule Interview Button for Pending Candidates */}
+                              {['submitted', 'under_review'].includes(app.status) && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleVettingApproval(app)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-emerald-300 dark:border-emerald-800 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold text-xs transition-all shadow-sm"
+                                  title="Approve Candidate and Schedule Interview"
+                                >
+                                  <CalendarCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                  <span>Schedule Interview</span>
+                                </button>
+                              )}
+
+                              {/* Direct Score Candidate Button for Shortlisted / Scheduled Candidates */}
+                              {['shortlisted', 'interview_scheduled'].includes(app.status) && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setScoreApp(app);
+                                    setInterviewScore(app.interview_score ?? 75);
+                                    setInterviewNotes(app.interview_notes ?? '');
+                                  }}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 font-bold text-xs transition-all shadow-sm"
+                                  title="Record Interview Score & Panel Evaluation"
+                                >
+                                  <Award className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                                  <span>Score Candidate</span>
+                                </button>
+                              )}
+
                               {/* Quick Document Viewer Button */}
                               {(app.attached_document_url || app.attached_document_data) && (
                                 <button
@@ -1395,7 +1426,8 @@ export default function AdmissionsManagementPage() {
                         return (
                           <tr
                             key={app.id}
-                            className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
+                            onClick={() => setInspectApp(app)}
+                            className="cursor-pointer hover:bg-emerald-50/70 dark:hover:bg-slate-800/60 transition-colors"
                           >
                             {/* Candidate Info with Passport Thumbnail */}
                             <td className="py-3.5 px-4">
@@ -1453,7 +1485,7 @@ export default function AdmissionsManagementPage() {
                             </td>
 
                             {/* Score Input (0-100) */}
-                            <td className="py-3.5 px-4 text-center">
+                            <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                               <div className="inline-flex items-center justify-center">
                                 <input
                                   type="number"
@@ -1507,7 +1539,7 @@ export default function AdmissionsManagementPage() {
                             </td>
 
                             {/* Panel Remarks Input */}
-                            <td className="py-3.5 px-4">
+                            <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
                               <input
                                 type="text"
                                 placeholder="Panel remarks (e.g. Excellent bedside manner, verified UCE passes)"
@@ -1518,7 +1550,7 @@ export default function AdmissionsManagementPage() {
                             </td>
 
                             {/* Action Buttons */}
-                            <td className="py-3.5 px-4 text-right space-x-1.5 whitespace-nowrap">
+                            <td className="py-3.5 px-4 text-right space-x-1.5 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                               <button
                                 type="button"
                                 onClick={() => handleSingleCandidateEvaluate(app)}
@@ -1695,8 +1727,8 @@ export default function AdmissionsManagementPage() {
       <NativeModal
         isOpen={!!scheduleApp}
         onClose={() => setScheduleApp(null)}
-        title="Schedule Oral Interview"
-        subtitle="Set appointment date, reporting time, and campus venue for candidate."
+        title="Schedule Interview & Dispatch Invitation Email"
+        subtitle="Approve candidate qualifications, set appointment, and automatically email candidate their official interview invitation."
         icon={Calendar}
         size="md"
       >
@@ -1710,6 +1742,21 @@ export default function AdmissionsManagementPage() {
               <span className="text-emerald-400 font-semibold block mt-0.5">
                 {scheduleApp.admitted_program || scheduleApp.programs[0]}
               </span>
+            </div>
+
+            {/* Clear Notification Banner */}
+            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 text-xs flex items-start gap-2.5">
+              <Mail className="w-4 h-4 shrink-0 text-emerald-400 mt-0.5" />
+              <div>
+                <p className="font-bold text-white">Automated Candidate Notification</p>
+                <p className="text-white/80 text-[11px] mt-0.5 leading-relaxed">
+                  Upon confirmation, the system will automatically dispatch the official interview invitation email to{' '}
+                  <span className="font-semibold text-emerald-300">{scheduleApp.email || 'the applicant'}</span>{' '}
+                  with their appointment date, reporting time, campus venue, and a link to download their official Interview Slip. The candidate will automatically appear under{' '}
+                  <span className="font-semibold text-white">Interview Scheduled</span> and the{' '}
+                  <span className="font-semibold text-white">Interview Results Desk</span>.
+                </p>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -1778,7 +1825,8 @@ export default function AdmissionsManagementPage() {
                 disabled={actionLoading}
                 className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold text-emerald-950 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:brightness-110 border border-emerald-300/60 shadow-[0_4px_16px_rgba(16,185,129,0.35)] transition-all active:scale-[0.98] disabled:opacity-50"
               >
-                {actionLoading ? 'Scheduling...' : 'Confirm Appointment'}
+                <Send className="w-3.5 h-3.5" />
+                <span>{actionLoading ? 'Scheduling & Dispatching Email...' : 'Schedule & Send Interview Invitation Email'}</span>
               </button>
             </div>
           </form>
@@ -1947,7 +1995,7 @@ export default function AdmissionsManagementPage() {
         size="2xl"
       >
         {inspectApp && (
-          <div className="space-y-5 text-xs text-slate-800 dark:text-slate-100 flex flex-col max-h-[78vh] overflow-y-auto no-scrollbar pb-2">
+          <div className="space-y-5 text-xs text-slate-800 dark:text-slate-100 pb-2">
             {/* OFFICIAL ADMISSION DOSSIER DOCUMENT CONTAINER */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden">
               
@@ -2392,7 +2440,7 @@ export default function AdmissionsManagementPage() {
                 )}
               </div>
 
-              {/* Vetting Decisions */}
+              {/* Vetting & Interview Decisions */}
               {['submitted', 'under_review'].includes(inspectApp.status) && (
                 <div className="flex items-center gap-2 justify-end">
                   <button
@@ -2411,6 +2459,55 @@ export default function AdmissionsManagementPage() {
                   >
                     <Check className="w-3.5 h-3.5" />
                     <span>Approve for Interview</span>
+                  </button>
+                </div>
+              )}
+
+              {['shortlisted', 'interview_scheduled'].includes(inspectApp.status) && (
+                <div className="flex items-center gap-2 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => handleVettingApproval(inspectApp)}
+                    disabled={actionLoading}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs transition-all"
+                  >
+                    <Calendar className="w-3.5 h-3.5 text-indigo-500" />
+                    <span>Reschedule Interview</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const appToScore = inspectApp;
+                      setInspectApp(null);
+                      setScoreApp(appToScore);
+                      setInterviewScore(appToScore.interview_score ?? 75);
+                      setInterviewNotes(appToScore.interview_notes ?? '');
+                    }}
+                    disabled={actionLoading}
+                    className="inline-flex items-center justify-center gap-2 px-5 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 shadow-md transition-all active:scale-[0.98] disabled:opacity-50"
+                  >
+                    <Award className="w-3.5 h-3.5" />
+                    <span>Record Interview Score</span>
+                  </button>
+                </div>
+              )}
+
+              {inspectApp.status === 'interview_passed' && (
+                <div className="flex items-center gap-2 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const appToAdmit = inspectApp;
+                      setInspectApp(null);
+                      setAdmitApp(appToAdmit);
+                      setAdmittedProgramChoice(appToAdmit.admitted_program || appToAdmit.programs[0] || 'Certificate in Nursing');
+                      setAdmitResidency((appToAdmit.residential_preference as any) || 'Resident');
+                    }}
+                    disabled={actionLoading}
+                    className="inline-flex items-center justify-center gap-2 px-5 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-md transition-all active:scale-[0.98] disabled:opacity-50"
+                  >
+                    <GraduationCap className="w-3.5 h-3.5" />
+                    <span>Issue Admission Offer</span>
                   </button>
                 </div>
               )}

@@ -315,13 +315,22 @@ export async function createApplication(
       .select('*')
       .maybeSingle();
 
-    if (!error && inserted) {
+    if (error) {
+      console.error('[AdmissionsService] Supabase insert failed:', error);
+      return {
+        success: false,
+        application: newRecord,
+        message: error.message || 'Database error: Could not save application to central registry.',
+      };
+    }
+
+    if (inserted) {
       // Also cache locally
       const local = getLocalApplications();
       local.unshift(inserted);
       saveLocalApplications(local);
 
-      // Trigger instant confirmation email
+      // Trigger instant confirmation email ONLY after verified database record
       if (inserted.email) {
         sendApplicationSubmittedEmail(inserted).catch((err) =>
           console.warn('[AdmissionsService] Email dispatch note:', err)
@@ -330,23 +339,20 @@ export async function createApplication(
 
       return { success: true, application: inserted, message: 'Application submitted successfully.' };
     }
-  } catch (err) {
-    console.warn('[AdmissionsService] Supabase insert error, saving locally:', err);
+
+    return {
+      success: false,
+      application: newRecord,
+      message: 'Failed to confirm application record in database. No confirmation email was sent.',
+    };
+  } catch (err: any) {
+    console.error('[AdmissionsService] Critical error during application creation:', err);
+    return {
+      success: false,
+      application: newRecord,
+      message: err?.message || 'Server error: Application could not be submitted. Please try again.',
+    };
   }
-
-  // Local fallback save
-  const local = getLocalApplications();
-  local.unshift(newRecord);
-  saveLocalApplications(local);
-
-  // Trigger instant confirmation email on local fallback
-  if (newRecord.email) {
-    sendApplicationSubmittedEmail(newRecord).catch((err) =>
-      console.warn('[AdmissionsService] Email dispatch note (fallback):', err)
-    );
-  }
-
-  return { success: true, application: newRecord, message: 'Application submitted successfully.' };
 }
 
 /**
