@@ -47,6 +47,17 @@ export default function NativeModal({
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   const sizeClasses = {
     sm: `max-w-md ${MODAL_MAX_H}`,
     md: `max-w-lg ${MODAL_MAX_H}`,
@@ -82,16 +93,16 @@ export default function NativeModal({
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop - 100% Transparent so background page remains completely visible & unblurred */}
+          {/* Backdrop - Dimmed & soft blur so modal pops with maximum clarity */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={closeOnOverlayClick ? onClose : undefined}
-            className="fixed inset-0 bg-transparent z-[240]"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[240] pointer-events-auto"
           />
 
-          {/* Modal Container: centered; inner body scrolls (scrollbar visually hidden). */}
+          {/* Modal Container: centered; inner body scrolls */}
           <div className="fixed inset-0 z-[240] flex items-center justify-center p-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] sm:p-6 pointer-events-none overflow-y-auto overflow-x-hidden">
             <motion.div
               initial={{ opacity: 0, scale: 0.97, y: 14 }}
@@ -99,10 +110,10 @@ export default function NativeModal({
               exit={{ opacity: 0, scale: 0.97, y: 14 }}
               transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
               className={`relative w-full shrink-0 ${sizeClasses[size]} pointer-events-auto my-auto flex flex-col min-h-0 rounded-[28px] 
-                bg-slate-950/45 dark:bg-black/55 
-                backdrop-blur-md backdrop-saturate-[150%] 
+                bg-slate-950/75 dark:bg-black/80 
+                backdrop-blur-xl backdrop-saturate-[180%] 
                 border border-white/30 border-t-white/60 border-l-white/40 border-b-white/20 
-                shadow-[0_20px_50px_rgba(0,0,0,0.35),inset_0_1.5px_2px_rgba(255,255,255,0.5),inset_0_-1px_1px_rgba(255,255,255,0.15)] 
+                shadow-[0_25px_60px_rgba(0,0,0,0.5),inset_0_1.5px_2px_rgba(255,255,255,0.5),inset_0_-1px_1px_rgba(255,255,255,0.15)] 
                 text-white overflow-hidden`}
             >
               {/* Top Specular Sheen (iOS Liquid Edge) */}
@@ -125,7 +136,7 @@ export default function NativeModal({
                         </h2>
                       )}
                       {subtitle && (
-                        <p className="text-xs text-white/60 truncate sm:text-clip mt-0.5">
+                        <p className="text-xs text-white/70 truncate sm:text-clip mt-0.5">
                           {subtitle}
                         </p>
                       )}
@@ -135,10 +146,12 @@ export default function NativeModal({
                     <button
                       type="button"
                       onClick={onClose}
-                      className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white/70 hover:text-white transition active:scale-95 shrink-0"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/20 hover:bg-rose-600 text-white font-bold text-xs border border-white/30 shadow transition-all active:scale-95 shrink-0"
                       aria-label="Close"
+                      title="Close window (ESC)"
                     >
                       <X className="w-4 h-4" />
+                      <span className="hidden sm:inline">Close</span>
                     </button>
                   )}
                 </div>

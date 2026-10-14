@@ -65,7 +65,7 @@ export default function AdmissionsManagementPage() {
   const [applications, setApplications] = useState<AdmissionApplicationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'interview_scheduled' | 'admitted' | 'enrolled'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'to_be_invited' | 'interview_scheduled' | 'admitted' | 'enrolled'>('pending');
   const [selectedProgram, setSelectedProgram] = useState<string>('all');
 
   // View Mode: 'pipeline' (Datagrid Table) | 'scoring' (Oral & Practical Scoring Sheet)
@@ -90,7 +90,7 @@ export default function AdmissionsManagementPage() {
 
   // Modal States
   const [inspectApp, setInspectApp] = useState<AdmissionApplicationRecord | null>(null);
-  const [scheduleApp, setScheduleApp] = useState<AdmissionApplicationRecord | null>(null);
+  const [scheduleCandidates, setScheduleCandidates] = useState<AdmissionApplicationRecord[]>([]);
   const [scoreApp, setScoreApp] = useState<AdmissionApplicationRecord | null>(null);
   const [admitApp, setAdmitApp] = useState<AdmissionApplicationRecord | null>(null);
   const [matriculateApp, setMatriculateApp] = useState<AdmissionApplicationRecord | null>(null);
@@ -103,6 +103,8 @@ export default function AdmissionsManagementPage() {
     fileName: string;
     isImage: boolean;
     size?: string;
+    allDocs?: { name: string; url: string; size?: string; isImage: boolean }[];
+    activeIndex?: number;
   } | null>(null);
   const dossierPassportInputRef = useRef<HTMLInputElement | null>(null);
   const dossierDocumentInputRef = useRef<HTMLInputElement | null>(null);
@@ -111,8 +113,8 @@ export default function AdmissionsManagementPage() {
   // Scheduling Form
   const [schedDate, setSchedDate] = useState('');
   const [schedTime, setSchedTime] = useState('09:00 AM');
-  const [schedVenue, setSchedVenue] = useState('RCSN Main Campus, Rakai Town');
-  const [schedPanel, setSchedPanel] = useState('Senior Nursing Faculty Panel');
+  const [schedVenue, setSchedVenue] = useState('RCSN Main Campus, Kalisizo / Rakai District');
+  const [schedPanel, setSchedPanel] = useState('Senior Nursing & Midwifery Faculty Panel');
 
   // Scoring Form
   const [interviewScore, setInterviewScore] = useState<number>(75);
@@ -152,10 +154,11 @@ export default function AdmissionsManagementPage() {
   const stats = useMemo(() => {
     const total = applications.length;
     const pending = applications.filter((a) => ['submitted', 'under_review'].includes(a.status)).length;
-    const interviews = applications.filter((a) => ['shortlisted', 'interview_scheduled'].includes(a.status)).length;
+    const toBeInvited = applications.filter((a) => a.status === 'shortlisted').length;
+    const interviews = applications.filter((a) => a.status === 'interview_scheduled').length;
     const admitted = applications.filter((a) => ['interview_passed', 'admitted', 'offer_accepted'].includes(a.status)).length;
     const enrolled = applications.filter((a) => a.status === 'enrolled').length;
-    return { total, pending, interviews, admitted, enrolled };
+    return { total, pending, toBeInvited, interviews, admitted, enrolled };
   }, [applications]);
 
   // Filtered List
@@ -163,7 +166,8 @@ export default function AdmissionsManagementPage() {
     return applications.filter((app) => {
       // Tab filter
       if (activeTab === 'pending' && !['submitted', 'under_review'].includes(app.status)) return false;
-      if (activeTab === 'interview_scheduled' && !['shortlisted', 'interview_scheduled'].includes(app.status)) return false;
+      if (activeTab === 'to_be_invited' && app.status !== 'shortlisted') return false;
+      if (activeTab === 'interview_scheduled' && app.status !== 'interview_scheduled') return false;
       if (activeTab === 'admitted' && !['interview_passed', 'admitted', 'offer_accepted'].includes(app.status)) return false;
       if (activeTab === 'enrolled' && app.status !== 'enrolled') return false;
 
@@ -190,14 +194,18 @@ export default function AdmissionsManagementPage() {
 
   // Action Handlers
   const handleVettingApproval = async (app: AdmissionApplicationRecord) => {
-    // Seamlessly open Schedule Interview modal with smart defaults so the candidate
-    // gets an official interview appointment and receives their invitation email immediately
-    setSchedDate(new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]);
-    setSchedTime('09:00 AM');
-    setSchedVenue('RCSN Main Campus, Kalisizo / Rakai District');
-    setSchedPanel('Senior Nursing & Midwifery Faculty Panel');
-    setScheduleApp(app);
-    if (inspectApp?.id === app.id) setInspectApp(null);
+    setActionLoading(true);
+    try {
+      await updateApplication(app.id, { status: 'shortlisted' });
+      showNotification(`${app.full_name} approved for interview! Added to 'To Be Invited'. Set an interview day to dispatch invitations.`);
+      if (inspectApp?.id === app.id) setInspectApp(null);
+      await loadData();
+      setActiveTab('to_be_invited');
+    } catch {
+      showNotification('Failed to update vetting approval status.', 'error');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleVettingRejection = async (app: AdmissionApplicationRecord) => {
@@ -219,22 +227,27 @@ export default function AdmissionsManagementPage() {
 
   const handleConfirmSchedule = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!scheduleApp || !schedDate) return;
+    if (scheduleCandidates.length === 0 || !schedDate) return;
 
     setActionLoading(true);
     try {
-      await scheduleInterview(scheduleApp.id, {
+      const candidateIds = scheduleCandidates.map((c) => c.id);
+      const { successCount, failureCount } = await batchScheduleInterviews(candidateIds, {
         interviewDate: schedDate,
         interviewTime: schedTime,
         interviewVenue: schedVenue,
         interviewPanel: schedPanel,
       });
-      showNotification(`Interview successfully scheduled for ${scheduleApp.full_name} on ${schedDate}. Official invitation email dispatched to ${scheduleApp.email || 'candidate'}! Record moved to Interview Scheduled & Scoring Desk.`);
-      setScheduleApp(null);
+
+      showNotification(
+        `Interview date set for ${schedDate}! Official invitations sent to ${successCount} candidate(s)${failureCount > 0 ? ` (${failureCount} failed)` : ''}. Candidates moved to 'Interview Scheduled' and the Interview Results Desk.`
+      );
+      setScheduleCandidates([]);
+      setSelectedAppIds(new Set());
       setActiveTab('interview_scheduled');
       await loadData();
     } catch {
-      showNotification('Failed to schedule interview.', 'error');
+      showNotification('Failed to schedule interview appointments.', 'error');
     } finally {
       setActionLoading(false);
     }
@@ -578,9 +591,9 @@ export default function AdmissionsManagementPage() {
       case 'under_review':
         return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">Under Vetting</span>;
       case 'shortlisted':
-        return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300">Shortlisted</span>;
+        return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-900 dark:bg-purple-900/60 dark:text-purple-200 border border-purple-300 dark:border-purple-700">Approved • To Be Invited</span>;
       case 'interview_scheduled':
-        return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300">Interview Scheduled</span>;
+        return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-900 dark:bg-indigo-900/60 dark:text-indigo-200 border border-indigo-300 dark:border-indigo-700">Interview Scheduled</span>;
       case 'interview_passed':
         return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">Interview Passed</span>;
       case 'admitted':
@@ -706,26 +719,53 @@ export default function AdmissionsManagementPage() {
     }
   };
 
-  const handleOpenDocViewer = (app: AdmissionApplicationRecord) => {
-    const docUrl = app.attached_document_data || app.attached_document_url;
-    if (!docUrl) {
-      showNotification('No document file attached for this candidate.', 'error');
+  const getCandidateDocuments = (app: AdmissionApplicationRecord) => {
+    const docs: { name: string; url: string; size?: string; isImage: boolean }[] = [];
+
+    if (app.attached_documents && app.attached_documents.length > 0) {
+      app.attached_documents.forEach((d, idx) => {
+        const dUrl = d.data || d.url;
+        if (dUrl) {
+          const dName = d.name || `Document #${idx + 1}`;
+          const isImg =
+            dUrl.startsWith('data:image/') ||
+            /\.(png|jpe?g|webp|gif|svg)(\?.*)?$/i.test(dName) ||
+            /\.(png|jpe?g|webp|gif|svg)(\?.*)?$/i.test(dUrl);
+          docs.push({ name: dName, url: dUrl, size: d.size, isImage: isImg });
+        }
+      });
+    }
+
+    if (docs.length === 0 && (app.attached_document_data || app.attached_document_url)) {
+      const dUrl = app.attached_document_data || app.attached_document_url || '';
+      const dName = app.attached_document_name || 'Candidate Academic Document';
+      const isImg =
+        dUrl.startsWith('data:image/') ||
+        /\.(png|jpe?g|webp|gif|svg)(\?.*)?$/i.test(dName) ||
+        /\.(png|jpe?g|webp|gif|svg)(\?.*)?$/i.test(dUrl);
+      docs.push({ name: dName, url: dUrl, size: app.attached_document_size || undefined, isImage: isImg });
+    }
+
+    return docs;
+  };
+
+  const handleOpenDocViewer = (app: AdmissionApplicationRecord, initialDocIndex = 0) => {
+    const docs = getCandidateDocuments(app);
+    if (docs.length === 0) {
+      showNotification('No digital documents attached for this candidate.', 'error');
       return;
     }
 
-    const docName = app.attached_document_name || 'Candidate Verification Document';
-    const isImage =
-      docUrl.startsWith('data:image/') ||
-      /\.(png|jpe?g|webp|gif|svg)(\?.*)?$/i.test(docName) ||
-      /\.(png|jpe?g|webp|gif|svg)(\?.*)?$/i.test(docUrl);
-
+    const currentDoc = docs[initialDocIndex] || docs[0];
     setPreviewDocModal({
       isOpen: true,
-      title: `${app.full_name} — ${docName}`,
-      url: docUrl,
-      fileName: docName,
-      isImage,
-      size: app.attached_document_size || undefined,
+      title: `${app.full_name} — Candidate Attached Credentials`,
+      url: currentDoc.url,
+      fileName: currentDoc.name,
+      isImage: currentDoc.isImage,
+      size: currentDoc.size,
+      allDocs: docs,
+      activeIndex: initialDocIndex,
     });
   };
 
@@ -977,7 +1017,8 @@ export default function AdmissionsManagementPage() {
                   {[
                     { id: 'all', label: 'All Applications', count: stats.total },
                     { id: 'pending', label: 'Pending Vetting', count: stats.pending },
-                    { id: 'interview_scheduled', label: 'Interview Scheduled / Shortlisted', count: stats.interviews },
+                    { id: 'to_be_invited', label: 'To Be Invited', count: stats.toBeInvited },
+                    { id: 'interview_scheduled', label: 'Interview Scheduled', count: stats.interviews },
                     { id: 'admitted', label: 'Admitted / Ready to Enroll', count: stats.admitted },
                     { id: 'enrolled', label: 'Enrolled Active', count: stats.enrolled },
                   ].map((tab) => (
@@ -1035,6 +1076,43 @@ export default function AdmissionsManagementPage() {
                 </div>
               </div>
             </div>
+
+            {/* To Be Invited Call-to-Action Action Banner */}
+            {activeTab === 'to_be_invited' && stats.toBeInvited > 0 && (
+              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-purple-500/15 via-indigo-500/10 to-purple-500/15 border-2 border-purple-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-12 h-12 rounded-2xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-md">
+                    <CalendarCheck className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="font-black text-sm sm:text-base text-slate-900 dark:text-white">
+                      {stats.toBeInvited} Candidate{stats.toBeInvited === 1 ? '' : 's'} Approved &amp; Waiting to be Invited
+                    </h4>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
+                      The admissions committee has approved these candidates. Set the official interview day and campus venue to dispatch invitation letters and slips.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-end shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const allShortlisted = applications.filter((a) => a.status === 'shortlisted');
+                      setSchedDate(new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]);
+                      setSchedTime('09:00 AM');
+                      setSchedVenue('RCSN Main Campus, Kalisizo / Rakai District');
+                      setSchedPanel('Senior Nursing & Midwifery Faculty Panel');
+                      setScheduleCandidates(allShortlisted);
+                    }}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-xs shadow-lg transition-all active:scale-95"
+                  >
+                    <Send className="w-4 h-4" />
+                    <span>Set Interview Day &amp; Invite All ({stats.toBeInvited})</span>
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Datagrid Table */}
             <div className={`${adminCardClass} !p-0 overflow-hidden border border-slate-200/80 dark:border-slate-800`}>
@@ -1190,21 +1268,40 @@ export default function AdmissionsManagementPage() {
                           {/* Workflow Actions */}
                           <td className="py-3.5 px-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                             <div className="inline-flex items-center justify-end gap-1.5">
-                              {/* Direct Schedule Interview Button for Pending Candidates */}
+                              {/* Approve Button for Pending Candidates (Adds to To Be Invited) */}
                               {['submitted', 'under_review'].includes(app.status) && (
                                 <button
                                   type="button"
                                   onClick={() => handleVettingApproval(app)}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-emerald-300 dark:border-emerald-800 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold text-xs transition-all shadow-sm"
-                                  title="Approve Candidate and Schedule Interview"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow transition-all active:scale-95"
+                                  title="Approve candidate qualifications for interview (adds to To Be Invited pool)"
                                 >
-                                  <CalendarCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                                  <span>Schedule Interview</span>
+                                  <Check className="w-3.5 h-3.5" />
+                                  <span>Approve</span>
                                 </button>
                               )}
 
-                              {/* Direct Score Candidate Button for Shortlisted / Scheduled Candidates */}
-                              {['shortlisted', 'interview_scheduled'].includes(app.status) && (
+                              {/* Set Day & Invite Button for Shortlisted Candidates */}
+                              {app.status === 'shortlisted' && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSchedDate(new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]);
+                                    setSchedTime('09:00 AM');
+                                    setSchedVenue('RCSN Main Campus, Kalisizo / Rakai District');
+                                    setSchedPanel('Senior Nursing & Midwifery Faculty Panel');
+                                    setScheduleCandidates([app]);
+                                  }}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow transition-all active:scale-95"
+                                  title="Set Interview Day and Send Official Invitation"
+                                >
+                                  <CalendarCheck className="w-3.5 h-3.5" />
+                                  <span>Set Day &amp; Invite</span>
+                                </button>
+                              )}
+
+                              {/* Direct Score Candidate Button for Scheduled Candidates */}
+                              {app.status === 'interview_scheduled' && (
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -1212,21 +1309,21 @@ export default function AdmissionsManagementPage() {
                                     setInterviewScore(app.interview_score ?? 75);
                                     setInterviewNotes(app.interview_notes ?? '');
                                   }}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 font-bold text-xs transition-all shadow-sm"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow transition-all active:scale-95"
                                   title="Record Interview Score & Panel Evaluation"
                                 >
-                                  <Award className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                                  <Award className="w-3.5 h-3.5" />
                                   <span>Score Candidate</span>
                                 </button>
                               )}
 
                               {/* Quick Document Viewer Button */}
-                              {(app.attached_document_url || app.attached_document_data) && (
+                              {getCandidateDocuments(app).length > 0 && (
                                 <button
                                   type="button"
                                   onClick={() => handleOpenDocViewer(app)}
-                                  className="p-1.5 rounded-lg border border-teal-300 dark:border-teal-800 hover:bg-teal-50 dark:hover:bg-teal-950/40 text-teal-700 dark:text-teal-300 transition-all"
-                                  title="View Candidate Uploaded UNEB Result Slip"
+                                  className="p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all"
+                                  title={`View Candidate Document (${getCandidateDocuments(app).length} attached)`}
                                 >
                                   <FileText className="w-3.5 h-3.5" />
                                 </button>
@@ -1723,25 +1820,45 @@ export default function AdmissionsManagementPage() {
         }}
       />
 
-      {/* Schedule Interview Modal */}
+      {/* Schedule Interview Modal (Single & Batch) */}
       <NativeModal
-        isOpen={!!scheduleApp}
-        onClose={() => setScheduleApp(null)}
-        title="Schedule Interview & Dispatch Invitation Email"
-        subtitle="Approve candidate qualifications, set appointment, and automatically email candidate their official interview invitation."
+        isOpen={scheduleCandidates.length > 0}
+        onClose={() => setScheduleCandidates([])}
+        title="Set Interview Day & Dispatch Official Invitations"
+        subtitle={
+          scheduleCandidates.length === 1
+            ? `Schedule appointment & email official invitation to ${scheduleCandidates[0].full_name}`
+            : `Set interview appointment & dispatch invitations to ${scheduleCandidates.length} approved candidate(s)`
+        }
         icon={Calendar}
         size="md"
       >
-        {scheduleApp && (
+        {scheduleCandidates.length > 0 && (
           <form onSubmit={handleConfirmSchedule} className="p-6 space-y-4 text-xs text-white">
-            <div className="p-3.5 rounded-2xl bg-white/5 border border-white/15 backdrop-blur-sm space-y-1">
-              <span className="text-white/50 block text-[10px] uppercase font-bold tracking-wider">Candidate</span>
-              <span className="font-bold text-sm text-white block">
-                {scheduleApp.full_name} ({scheduleApp.application_number})
+            {/* Candidate Info Box */}
+            <div className="p-3.5 rounded-2xl bg-white/5 border border-white/15 backdrop-blur-sm space-y-1.5">
+              <span className="text-white/50 block text-[10px] uppercase font-bold tracking-wider">
+                {scheduleCandidates.length === 1 ? 'Candidate Being Invited' : `Candidates Being Invited (${scheduleCandidates.length})`}
               </span>
-              <span className="text-emerald-400 font-semibold block mt-0.5">
-                {scheduleApp.admitted_program || scheduleApp.programs[0]}
-              </span>
+              {scheduleCandidates.length === 1 ? (
+                <>
+                  <span className="font-bold text-sm text-white block">
+                    {scheduleCandidates[0].full_name} ({scheduleCandidates[0].application_number})
+                  </span>
+                  <span className="text-emerald-400 font-semibold block mt-0.5">
+                    {scheduleCandidates[0].admitted_program || scheduleCandidates[0].programs[0]}
+                  </span>
+                </>
+              ) : (
+                <div className="max-h-24 overflow-y-auto space-y-1 pr-1">
+                  {scheduleCandidates.map((c) => (
+                    <div key={c.id} className="text-xs text-white flex items-center justify-between">
+                      <span className="font-bold">{c.full_name}</span>
+                      <span className="text-white/60 font-mono text-[10px]">{c.application_number}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Clear Notification Banner */}
@@ -1750,9 +1867,11 @@ export default function AdmissionsManagementPage() {
               <div>
                 <p className="font-bold text-white">Automated Candidate Notification</p>
                 <p className="text-white/80 text-[11px] mt-0.5 leading-relaxed">
-                  Upon confirmation, the system will automatically dispatch the official interview invitation email to{' '}
-                  <span className="font-semibold text-emerald-300">{scheduleApp.email || 'the applicant'}</span>{' '}
-                  with their appointment date, reporting time, campus venue, and a link to download their official Interview Slip. The candidate will automatically appear under{' '}
+                  Upon confirmation, the system will immediately dispatch the official interview invitation email to{' '}
+                  <span className="font-semibold text-emerald-300">
+                    {scheduleCandidates.length === 1 ? (scheduleCandidates[0].email || 'the applicant') : `all ${scheduleCandidates.length} candidates`}
+                  </span>{' '}
+                  with their appointment date, reporting time, campus venue, and a link to download their official Interview Slip. Candidates will automatically appear under{' '}
                   <span className="font-semibold text-white">Interview Scheduled</span> and the{' '}
                   <span className="font-semibold text-white">Interview Results Desk</span>.
                 </p>
@@ -1815,7 +1934,7 @@ export default function AdmissionsManagementPage() {
             <div className="pt-3 border-t border-white/15 flex justify-end gap-2.5">
               <button
                 type="button"
-                onClick={() => setScheduleApp(null)}
+                onClick={() => setScheduleCandidates([])}
                 className="px-4 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 text-white/80 hover:text-white font-semibold transition-all backdrop-blur-sm"
               >
                 Cancel
@@ -1826,7 +1945,13 @@ export default function AdmissionsManagementPage() {
                 className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold text-emerald-950 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:brightness-110 border border-emerald-300/60 shadow-[0_4px_16px_rgba(16,185,129,0.35)] transition-all active:scale-[0.98] disabled:opacity-50"
               >
                 <Send className="w-3.5 h-3.5" />
-                <span>{actionLoading ? 'Scheduling & Dispatching Email...' : 'Schedule & Send Interview Invitation Email'}</span>
+                <span>
+                  {actionLoading
+                    ? 'Dispatching Invitations...'
+                    : scheduleCandidates.length === 1
+                    ? 'Schedule & Send Official Invitation'
+                    : `Send Official Invitations (${scheduleCandidates.length})`}
+                </span>
               </button>
             </div>
           </form>
@@ -2214,24 +2339,26 @@ export default function AdmissionsManagementPage() {
                 </div>
 
                 {(inspectApp.attached_documents && inspectApp.attached_documents.length > 0) ? (
-                  <div className="space-y-2">
+                  <div className="space-y-2.5">
                     {inspectApp.attached_documents.map((doc, dIdx) => (
                       <div
                         key={dIdx}
-                        className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 hover:border-emerald-500/40 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-3"
+                        className="p-4 rounded-xl bg-white dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-700 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 shadow-sm transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3.5"
                       >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-500/30 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400 font-bold text-xs">
-                            <FileText className="w-4 h-4" />
+                        <div className="flex items-center gap-3.5 min-w-0">
+                          <div className="w-11 h-11 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 border-2 border-emerald-300 dark:border-emerald-700/80 flex items-center justify-center shrink-0 text-[#00873E] dark:text-emerald-400 font-bold">
+                            <FileText className="w-5 h-5" />
                           </div>
                           <div className="min-w-0">
-                            <div className="font-bold text-slate-900 dark:text-white text-xs truncate max-w-sm">
+                            <div className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm truncate max-w-sm sm:max-w-md">
                               {doc.name || `Document #${dIdx + 1}`}
                             </div>
-                            <div className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5">
-                              <span>{doc.size || 'Candidate Document'}</span>
+                            <div className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2 mt-1">
+                              <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-mono text-[10px] font-bold border border-slate-200 dark:border-slate-600">
+                                {doc.size || 'Attached File'}
+                              </span>
                               <span>•</span>
-                              <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Attached File #{dIdx + 1}</span>
+                              <span className="text-emerald-700 dark:text-emerald-400 font-bold">Credential #{dIdx + 1}</span>
                             </div>
                           </div>
                         </div>
@@ -2239,32 +2366,21 @@ export default function AdmissionsManagementPage() {
                         <div className="flex items-center gap-2 shrink-0">
                           <button
                             type="button"
-                            onClick={() => {
-                              const dUrl = doc.data || doc.url;
-                              if (!dUrl) return;
-                              const isImg =
-                                dUrl.startsWith('data:image/') ||
-                                /\.(png|jpe?g|webp|gif|svg)/i.test(doc.name);
-                              setPreviewDocModal({
-                                isOpen: true,
-                                title: `${inspectApp.full_name} — ${doc.name}`,
-                                url: dUrl,
-                                fileName: doc.name,
-                                isImage: isImg,
-                              });
-                            }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-bold text-xs transition-all shadow-sm"
+                            onClick={() => handleOpenDocViewer(inspectApp, dIdx)}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#00873E] hover:bg-[#007033] active:scale-95 text-white font-bold text-xs shadow-md transition-all"
+                            title="View and inspect attached document"
                           >
-                            <Eye className="w-3.5 h-3.5" />
+                            <Eye className="w-4 h-4 text-white" />
                             <span>View Document</span>
                           </button>
 
                           <button
                             type="button"
                             onClick={() => handleDownloadDocument(doc.data || doc.url, doc.name)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs transition-all"
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-black dark:bg-slate-700 dark:hover:bg-slate-600 active:scale-95 text-white font-bold text-xs shadow-md border border-slate-800 dark:border-slate-600 transition-all"
+                            title="Download document file"
                           >
-                            <Download className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                            <Download className="w-4 h-4 text-emerald-400" />
                             <span>Download</span>
                           </button>
                         </div>
@@ -2274,19 +2390,21 @@ export default function AdmissionsManagementPage() {
                 ) : (inspectApp.attached_document_name ||
                   inspectApp.attached_document_url ||
                   inspectApp.attached_document_data) ? (
-                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 hover:border-emerald-500/40 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-500/30 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400">
-                        <FileText className="w-4 h-4" />
+                  <div className="p-4 rounded-xl bg-white dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-700 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 shadow-sm transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <div className="w-11 h-11 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 border-2 border-emerald-300 dark:border-emerald-700/80 flex items-center justify-center shrink-0 text-[#00873E] dark:text-emerald-400 font-bold">
+                        <FileText className="w-5 h-5" />
                       </div>
                       <div className="min-w-0">
-                        <div className="font-bold text-slate-900 dark:text-white text-xs truncate max-w-sm">
+                        <div className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm truncate max-w-sm sm:max-w-md">
                           {inspectApp.attached_document_name || 'Academic Result Slip / Document'}
                         </div>
-                        <div className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5">
-                          <span>{inspectApp.attached_document_size || 'Attached File'}</span>
+                        <div className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2 mt-1">
+                          <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-mono text-[10px] font-bold border border-slate-200 dark:border-slate-600">
+                            {inspectApp.attached_document_size || 'Attached File'}
+                          </span>
                           <span>•</span>
-                          <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Candidate Attachment</span>
+                          <span className="text-emerald-700 dark:text-emerald-400 font-bold">Candidate Attachment</span>
                         </div>
                       </div>
                     </div>
@@ -2294,10 +2412,11 @@ export default function AdmissionsManagementPage() {
                     <div className="flex items-center gap-2 shrink-0">
                       <button
                         type="button"
-                        onClick={() => handleOpenDocViewer(inspectApp)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-bold text-xs transition-all shadow-sm"
+                        onClick={() => handleOpenDocViewer(inspectApp, 0)}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#00873E] hover:bg-[#007033] active:scale-95 text-white font-bold text-xs shadow-md transition-all"
+                        title="View and inspect attached document"
                       >
-                        <Eye className="w-3.5 h-3.5" />
+                        <Eye className="w-4 h-4 text-white" />
                         <span>View Document</span>
                       </button>
 
@@ -2310,23 +2429,24 @@ export default function AdmissionsManagementPage() {
                               `${inspectApp.full_name.replace(/\s+/g, '_')}_Academic_Document`
                           )
                         }
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs transition-all"
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-black dark:bg-slate-700 dark:hover:bg-slate-600 active:scale-95 text-white font-bold text-xs shadow-md border border-slate-800 dark:border-slate-600 transition-all"
+                        title="Download document file"
                       >
-                        <Download className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                        <Download className="w-4 h-4 text-emerald-400" />
                         <span>Download</span>
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/30 border border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-between">
-                    <div className="flex items-center gap-2.5 text-slate-500 dark:text-slate-400 text-xs">
-                      <AlertCircle className="w-4 h-4 text-amber-500" />
+                  <div className="p-4 rounded-xl bg-slate-100/80 dark:bg-slate-800/40 border-2 border-dashed border-slate-300 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 text-slate-700 dark:text-slate-300 text-xs font-semibold">
+                      <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
                       <span>No digital academic documents attached yet for this candidate.</span>
                     </div>
                     <button
                       type="button"
                       onClick={() => dossierDocumentInputRef.current?.click()}
-                      className="px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-bold text-xs transition-all"
+                      className="px-4 py-2 rounded-xl bg-[#00873E] hover:bg-[#007033] text-white font-bold text-xs shadow-sm transition-all"
                     >
                       Upload Now
                     </button>
@@ -2367,7 +2487,8 @@ export default function AdmissionsManagementPage() {
             {/* ACTION TOOLBAR & VETTING CONTROLS */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
               {/* Document Download Quick Actions */}
-              <div className="flex flex-wrap gap-2">
+              {/* Document Download Quick Actions & Close */}
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => {
@@ -2400,9 +2521,10 @@ export default function AdmissionsManagementPage() {
                     };
                     void generateAdmissionApplicationPdf(mappedApp);
                   }}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 border border-slate-300 dark:border-white/20 text-slate-800 dark:text-white font-semibold text-xs transition-all shadow-sm"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-black dark:bg-slate-800 dark:hover:bg-slate-700 text-white font-bold text-xs shadow-md border border-slate-800 dark:border-slate-700 transition-all active:scale-95"
+                  title="Download complete application dossier as signed PDF"
                 >
-                  <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <Download className="w-3.5 h-3.5 text-emerald-400" />
                   <span>Download Application (PDF)</span>
                 </button>
 
@@ -2410,9 +2532,10 @@ export default function AdmissionsManagementPage() {
                   <button
                     type="button"
                     onClick={() => generateInterviewSlipPdf(inspectApp)}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-semibold text-xs transition-all shadow-sm"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md transition-all active:scale-95"
+                    title="Download candidate official interview appointment slip"
                   >
-                    <Calendar className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                    <Calendar className="w-3.5 h-3.5 text-white" />
                     <span>Download Interview Slip</span>
                   </button>
                 )}
@@ -2422,7 +2545,8 @@ export default function AdmissionsManagementPage() {
                     <button
                       type="button"
                       onClick={() => generateAdmissionLetterPdf(inspectApp)}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 font-semibold text-xs transition-all shadow-sm"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all active:scale-95"
+                      title="Download official provisional admission offer letter"
                     >
                       <Download className="w-3.5 h-3.5" />
                       <span>Download Admission Offer</span>
@@ -2431,13 +2555,24 @@ export default function AdmissionsManagementPage() {
                     <button
                       type="button"
                       onClick={() => generateAdmissionInvoicePdf(inspectApp)}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/60 dark:hover:bg-teal-900/60 border border-teal-300 dark:border-teal-800 text-teal-800 dark:text-teal-300 font-semibold text-xs transition-all shadow-sm"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-md transition-all active:scale-95"
+                      title="Download banking tuition fee structure invoice"
                     >
                       <Receipt className="w-3.5 h-3.5" />
                       <span>Download Fee Invoice</span>
                     </button>
                   </>
                 )}
+
+                <button
+                  type="button"
+                  onClick={() => setInspectApp(null)}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 font-bold text-xs border border-slate-300 dark:border-slate-700 transition-all shadow-sm active:scale-95"
+                  title="Close dossier (ESC)"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span>Close Dossier</span>
+                </button>
               </div>
 
               {/* Vetting & Interview Decisions */}
@@ -2447,7 +2582,7 @@ export default function AdmissionsManagementPage() {
                     type="button"
                     onClick={() => handleVettingRejection(inspectApp)}
                     disabled={actionLoading}
-                    className="px-4 py-2 rounded-xl border border-rose-300 dark:border-rose-500/40 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/20 dark:hover:bg-rose-500/30 text-rose-700 dark:text-rose-300 font-bold text-xs transition-all"
+                    className="px-4 py-2 rounded-xl border-2 border-rose-400 dark:border-rose-500/40 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/20 dark:hover:bg-rose-500/30 text-rose-700 dark:text-rose-300 font-bold text-xs transition-all"
                   >
                     Reject Candidate
                   </button>
@@ -2463,13 +2598,43 @@ export default function AdmissionsManagementPage() {
                 </div>
               )}
 
-              {['shortlisted', 'interview_scheduled'].includes(inspectApp.status) && (
+              {inspectApp.status === 'shortlisted' && (
                 <div className="flex items-center gap-2 justify-end">
                   <button
                     type="button"
-                    onClick={() => handleVettingApproval(inspectApp)}
+                    onClick={() => {
+                      const appToSched = inspectApp;
+                      setInspectApp(null);
+                      setSchedDate(new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]);
+                      setSchedTime('09:00 AM');
+                      setSchedVenue('RCSN Main Campus, Kalisizo / Rakai District');
+                      setSchedPanel('Senior Nursing & Midwifery Faculty Panel');
+                      setScheduleCandidates([appToSched]);
+                    }}
                     disabled={actionLoading}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs transition-all"
+                    className="inline-flex items-center justify-center gap-2 px-5 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-md transition-all active:scale-[0.98] disabled:opacity-50"
+                  >
+                    <CalendarCheck className="w-3.5 h-3.5" />
+                    <span>Set Interview Day &amp; Invite</span>
+                  </button>
+                </div>
+              )}
+
+              {inspectApp.status === 'interview_scheduled' && (
+                <div className="flex items-center gap-2 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const appToSched = inspectApp;
+                      setInspectApp(null);
+                      setSchedDate(appToSched.interview_date || new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]);
+                      setSchedTime(appToSched.interview_time || '09:00 AM');
+                      setSchedVenue(appToSched.interview_venue || 'RCSN Main Campus, Kalisizo / Rakai District');
+                      setSchedPanel(appToSched.interview_panel || 'Senior Nursing & Midwifery Faculty Panel');
+                      setScheduleCandidates([appToSched]);
+                    }}
+                    disabled={actionLoading}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs transition-all"
                   >
                     <Calendar className="w-3.5 h-3.5 text-indigo-500" />
                     <span>Reschedule Interview</span>
@@ -2526,20 +2691,69 @@ export default function AdmissionsManagementPage() {
         size="2xl"
       >
         {previewDocModal && (
-          <div className="p-6 space-y-4 text-white">
+          <div className="space-y-4 text-white">
+            {/* Multiple Attached Documents Tab Switcher */}
+            {previewDocModal.allDocs && previewDocModal.allDocs.length > 1 && (
+              <div className="flex items-center gap-2 p-2 rounded-2xl bg-slate-900/90 border border-white/20 overflow-x-auto shadow-md">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 px-2 shrink-0">
+                  Attached Files ({previewDocModal.allDocs.length}):
+                </span>
+                {previewDocModal.allDocs.map((doc, idx) => {
+                  const isSelected =
+                    previewDocModal.activeIndex === idx ||
+                    previewDocModal.url === doc.url;
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setPreviewDocModal((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                fileName: doc.name,
+                                url: doc.url,
+                                isImage: doc.isImage,
+                                size: doc.size,
+                                activeIndex: idx,
+                              }
+                            : null
+                        );
+                      }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2 shrink-0 ${
+                        isSelected
+                          ? 'bg-[#00873E] text-white shadow-lg ring-2 ring-emerald-400/50'
+                          : 'bg-white/10 text-white/80 hover:bg-white/20 hover:text-white border border-white/15'
+                      }`}
+                    >
+                      <FileText className="w-3.5 h-3.5 text-emerald-300" />
+                      <span>{doc.name || `Document #${idx + 1}`}</span>
+                      {doc.size && <span className="text-[10px] opacity-75">({doc.size})</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             {/* Top Toolbar */}
-            <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/15">
-              <div className="flex items-center gap-2 text-xs">
-                <span className="font-bold text-emerald-400">Official Candidate Attachment</span>
+            <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-2xl bg-slate-900/90 border border-white/20 shadow-md">
+              <div className="flex items-center gap-2.5 text-xs min-w-0">
+                <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 font-bold flex items-center gap-1.5 shrink-0">
+                  <FileCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Verified Attachment</span>
+                </span>
+                <span className="font-bold text-white text-xs truncate max-w-xs">{previewDocModal.fileName}</span>
                 {previewDocModal.size && (
-                  <span className="text-white/40">({previewDocModal.size})</span>
+                  <span className="text-white/60 font-mono text-[11px] shrink-0">({previewDocModal.size})</span>
                 )}
               </div>
-              <div className="flex items-center gap-2">
+
+              <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => handleDownloadDocument(previewDocModal.url, previewDocModal.fileName)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-bold text-xs transition-all"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-md transition-all active:scale-95"
+                  title="Download file to device"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>Download File</span>
@@ -2547,27 +2761,37 @@ export default function AdmissionsManagementPage() {
                 <button
                   type="button"
                   onClick={() => window.open(previewDocModal.url, '_blank')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs transition-all"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/15 hover:bg-white/25 border border-white/25 text-white font-bold text-xs transition-all active:scale-95"
+                  title="Open in external browser tab"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
                   <span>Open in Tab</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewDocModal(null)}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs shadow-md transition-all active:scale-95"
+                  title="Close document viewer (ESC)"
+                >
+                  <X className="w-4 h-4" />
+                  <span>Close Viewer</span>
                 </button>
               </div>
             </div>
 
             {/* Document Content View Area */}
-            <div className="w-full min-h-[460px] max-h-[70vh] bg-slate-950/80 rounded-2xl border border-white/10 overflow-auto flex items-center justify-center p-3">
+            <div className="w-full min-h-[460px] max-h-[68vh] bg-slate-950/90 rounded-2xl border-2 border-white/15 overflow-auto flex items-center justify-center p-3 shadow-inner">
               {previewDocModal.isImage ? (
                 <img
                   src={previewDocModal.url}
                   alt={previewDocModal.fileName}
-                  className="max-w-full max-h-[65vh] object-contain rounded-lg shadow-2xl"
+                  className="max-w-full max-h-[64vh] object-contain rounded-lg shadow-2xl"
                 />
               ) : previewDocModal.url.startsWith('data:application/pdf') || previewDocModal.url.endsWith('.pdf') ? (
                 <iframe
                   src={previewDocModal.url}
                   title={previewDocModal.fileName}
-                  className="w-full h-[65vh] rounded-lg border-0"
+                  className="w-full h-[64vh] rounded-lg border-0 bg-white"
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center p-12 text-center text-white/70 space-y-4">
@@ -2595,6 +2819,95 @@ export default function AdmissionsManagementPage() {
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Bottom Controls & Easy-Close Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-slate-900/90 border border-white/20">
+              <div className="text-xs text-white/70">
+                {previewDocModal.allDocs && previewDocModal.allDocs.length > 1 ? (
+                  <div className="flex items-center gap-2">
+                    <span>
+                      Viewing {(previewDocModal.activeIndex ?? 0) + 1} of {previewDocModal.allDocs.length} attached document(s)
+                    </span>
+                    <div className="flex items-center gap-1 ml-2">
+                      <button
+                        type="button"
+                        disabled={(previewDocModal.activeIndex ?? 0) <= 0}
+                        onClick={() => {
+                          const prevIdx = (previewDocModal.activeIndex ?? 0) - 1;
+                          const prevDoc = previewDocModal.allDocs?.[prevIdx];
+                          if (prevDoc) {
+                            setPreviewDocModal((prev) =>
+                              prev
+                                ? {
+                                    ...prev,
+                                    fileName: prevDoc.name,
+                                    url: prevDoc.url,
+                                    isImage: prevDoc.isImage,
+                                    size: prevDoc.size,
+                                    activeIndex: prevIdx,
+                                  }
+                                : null
+                            );
+                          }
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-40 text-xs font-bold transition-all"
+                      >
+                        ← Prev
+                      </button>
+                      <button
+                        type="button"
+                        disabled={
+                          (previewDocModal.activeIndex ?? 0) >=
+                          (previewDocModal.allDocs.length - 1)
+                        }
+                        onClick={() => {
+                          const nextIdx = (previewDocModal.activeIndex ?? 0) + 1;
+                          const nextDoc = previewDocModal.allDocs?.[nextIdx];
+                          if (nextDoc) {
+                            setPreviewDocModal((prev) =>
+                              prev
+                                ? {
+                                    ...prev,
+                                    fileName: nextDoc.name,
+                                    url: nextDoc.url,
+                                    isImage: nextDoc.isImage,
+                                    size: nextDoc.size,
+                                    activeIndex: nextIdx,
+                                  }
+                                : null
+                            );
+                          }
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-40 text-xs font-bold transition-all"
+                      >
+                        Next →
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <span className="text-white/60">Press ESC or click Close Viewer to exit</span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleDownloadDocument(previewDocModal.url, previewDocModal.fileName)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow transition-all active:scale-95"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewDocModal(null)}
+                  className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs shadow transition-all active:scale-95"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span>Close Viewer</span>
+                </button>
+              </div>
             </div>
           </div>
         )}
