@@ -345,9 +345,22 @@ export default function NotificationsPage() {
             sender = `${cleanName} • ${sender}`;
           }
 
-          const preview = em.body_text
-            ? em.body_text.replace(/\s+/g, ' ').trim().slice(0, 160)
-            : 'Inbound institutional correspondence received on school domain.';
+          const attachments = Array.isArray(em.metadata?.attachments)
+            ? (em.metadata.attachments as Array<{ filename?: string; name?: string }>)
+            : [];
+          const attachNames = attachments
+            .map((a) => a.filename || a.name)
+            .filter(Boolean)
+            .join(', ');
+
+          let preview = '';
+          if (em.body_text && em.body_text.trim()) {
+            preview = em.body_text.replace(/\s+/g, ' ').trim().slice(0, 160);
+          } else if (em.body_html && em.body_html.trim()) {
+            preview = em.body_html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160);
+          } else if (attachNames) {
+            preview = `Attachments: ${attachNames}`;
+          }
 
           items.push({
             id: `email_${em.id}`,

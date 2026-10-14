@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   GraduationCap,
@@ -83,6 +83,15 @@ export default function Home() {
     setSelectedProgram(programName);
     setAdmissionsOpen(true);
   };
+
+  useEffect(() => {
+    const handleGlobalOpen = (e: Event) => {
+      const detail = (e as CustomEvent<{ program?: string }>).detail;
+      openAdmissionsWith(detail?.program);
+    };
+    window.addEventListener('rcsn:open-admissions', handleGlobalOpen);
+    return () => window.removeEventListener('rcsn:open-admissions', handleGlobalOpen);
+  }, []);
 
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

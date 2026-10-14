@@ -97,6 +97,16 @@ export default function RcsnFooter() {
                 </Link>
               </li>
               <li>
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent('rcsn:open-admissions'))}
+                  className="hover:text-emerald-400 transition-colors flex items-center gap-1.5 cursor-pointer text-left"
+                >
+                  <ArrowRight className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Apply Online (2026/2027)</span>
+                </button>
+              </li>
+              <li>
                 <Link to="/admissions" className="hover:text-emerald-400 transition-colors flex items-center gap-1.5">
                   <ArrowRight className="w-3.5 h-3.5 text-emerald-600" />
                   <span>Admissions & Fees</span>

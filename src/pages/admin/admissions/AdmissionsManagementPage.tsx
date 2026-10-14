@@ -53,6 +53,8 @@ import MatriculateStudentModal from './MatriculateStudentModal';
 import { generateInterviewSlipPdf } from '@/lib/generateInterviewSlipPdf';
 import { generateAdmissionLetterPdf } from '@/lib/generateAdmissionLetterPdf';
 import { generateAdmissionInvoicePdf } from '@/lib/generateAdmissionInvoicePdf';
+import { generateAdmissionApplicationPdf } from '@/lib/generateAdmissionApplicationPdf';
+import type { AdmissionApplication } from '@/services/schoolPublicService';
 import { AVAILABLE_PROGRAMS } from '@/components/website/AdmissionsModal';
 import NativeModal from '@/components/NativeModal';
 import LiquidGlassSelect from '@/components/ui/LiquidGlassSelect';
@@ -762,16 +764,16 @@ export default function AdmissionsManagementPage() {
               className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
                 viewMode === 'pipeline'
                   ? 'bg-emerald-600 text-white shadow-md'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-700/50'
+                  : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-white/80 dark:hover:bg-slate-700/60'
               }`}
             >
               <Users className="w-4 h-4" />
               <span>Applications Pipeline</span>
               <span
-                className={`px-2 py-0.5 rounded-full text-[10px] ${
+                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                   viewMode === 'pipeline'
                     ? 'bg-white/20 text-white'
-                    : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                    : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200'
                 }`}
               >
                 {filteredApplications.length}
@@ -784,16 +786,16 @@ export default function AdmissionsManagementPage() {
               className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
                 viewMode === 'scoring'
                   ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-700/50'
+                  : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-white/80 dark:hover:bg-slate-700/60'
               }`}
             >
-              <Award className="w-4 h-4 text-amber-300" />
+              <Award className="w-4 h-4 text-amber-500 dark:text-amber-300" />
               <span>Interview Results</span>
               <span
-                className={`px-2 py-0.5 rounded-full text-[10px] ${
+                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                   viewMode === 'scoring'
                     ? 'bg-white/20 text-white'
-                    : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 font-mono font-bold'
+                    : 'bg-amber-500/20 text-amber-800 dark:text-amber-300'
                 }`}
               >
                 {scoringCandidates.length}
@@ -802,7 +804,7 @@ export default function AdmissionsManagementPage() {
           </div>
 
           <div className="flex items-center gap-2 px-2">
-            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium hidden md:inline">
+            <span className="text-[11px] text-slate-600 dark:text-slate-400 font-semibold hidden md:inline">
               {viewMode === 'pipeline'
                 ? 'Select multiple candidates for bulk interview invitation or enrollment'
                 : `Interview scoring & evaluation (Pass threshold: ${passMarkThreshold}%)`}
@@ -811,7 +813,7 @@ export default function AdmissionsManagementPage() {
               type="button"
               onClick={loadData}
               disabled={loading}
-              className="p-2 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
+              className="p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 shadow-sm transition-colors"
               title="Refresh application records"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -1005,7 +1007,7 @@ export default function AdmissionsManagementPage() {
               </div>
 
               {/* Search and Program Selector */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 pt-2 border-t border-slate-200/80 dark:border-slate-800/80">
                 <div className="md:col-span-8 relative">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
@@ -1013,7 +1015,7 @@ export default function AdmissionsManagementPage() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search candidate name, Application ID, phone number, or UNEB index..."
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
 
@@ -1021,11 +1023,11 @@ export default function AdmissionsManagementPage() {
                   <select
                     value={selectedProgram}
                     onChange={(e) => setSelectedProgram(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   >
-                    <option value="all">All Academic Programs</option>
+                    <option value="all" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">All Academic Programs</option>
                     {AVAILABLE_PROGRAMS.map((p) => (
-                      <option key={p.name} value={p.name}>
+                      <option key={p.name} value={p.name} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
                         {p.name}
                       </option>
                     ))}
@@ -1035,10 +1037,10 @@ export default function AdmissionsManagementPage() {
             </div>
 
             {/* Datagrid Table */}
-            <div className={`${adminCardClass} !p-0 overflow-hidden`}>
+            <div className={`${adminCardClass} !p-0 overflow-hidden border border-slate-200/80 dark:border-slate-800`}>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700/80 text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider">
+                  <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-300 font-bold uppercase tracking-wider text-[11px]">
                     <tr>
                       <th className="py-3.5 px-3 w-10 text-center">
                         <button
@@ -1260,20 +1262,20 @@ export default function AdmissionsManagementPage() {
         {viewMode === 'scoring' && (
           <div className="space-y-6">
             {/* Header Card */}
-            <div className={`${adminCardClass} bg-slate-900 text-white border border-slate-800`}>
+            <div className={`${adminCardClass} border border-slate-200/80 dark:border-slate-800`}>
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div>
-                  <h3 className="text-lg font-black text-white flex items-center gap-2">
-                    <Award className="w-5 h-5 text-emerald-400" />
-                    <span>Interview Results</span>
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                    <Award className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                    <span>Interview Results & Scoring Desk</span>
                   </h3>
                 </div>
 
                 {/* Configuration Controls */}
                 <div className="flex flex-wrap items-center gap-4">
                   {/* Pass Mark Threshold Input */}
-                  <div className="flex items-center gap-2 bg-slate-800/80 px-3.5 py-2 rounded-xl border border-slate-700">
-                    <label className="text-xs font-bold text-slate-300">
+                  <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800/80 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700">
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
                       Pass Threshold:
                     </label>
                     <div className="flex items-center gap-1">
@@ -1283,14 +1285,14 @@ export default function AdmissionsManagementPage() {
                         max="100"
                         value={passMarkThreshold}
                         onChange={(e) => setPassMarkThreshold(Math.max(1, Math.min(100, Number(e.target.value))))}
-                        className="w-14 px-2 py-1 rounded-lg bg-slate-900 border border-slate-600 text-emerald-400 font-bold text-sm text-center outline-none focus:border-emerald-500"
+                        className="w-14 px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-emerald-600 dark:text-emerald-400 font-black text-sm text-center outline-none focus:border-emerald-500 shadow-sm"
                       />
-                      <span className="text-xs text-slate-400 font-bold">%</span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">%</span>
                     </div>
                   </div>
 
                   {/* Auto-Admit Toggle */}
-                  <div className="flex items-center gap-2.5 bg-slate-800/80 px-3.5 py-2 rounded-xl border border-slate-700">
+                  <div className="flex items-center gap-2.5 bg-slate-100 dark:bg-slate-800/80 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700">
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
                         type="checkbox"
@@ -1298,9 +1300,9 @@ export default function AdmissionsManagementPage() {
                         onChange={(e) => setAutoAdmitOnPass(e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-10 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                      <div className="w-10 h-5 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
                     </label>
-                    <span className="text-xs font-bold text-slate-200">Auto-Admit on Pass</span>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Auto-Admit on Pass</span>
                   </div>
 
                   {/* Batch Process All Button */}
@@ -1321,15 +1323,15 @@ export default function AdmissionsManagementPage() {
               </div>
 
               {/* Scoring Desk Search Bar */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mt-4 pt-4 border-t border-white/10">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mt-4 pt-4 border-t border-slate-200/80 dark:border-white/10">
                 <div className="md:col-span-8 relative">
-                  <Search className="w-4 h-4 text-white/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <Search className="w-4 h-4 text-slate-400 dark:text-white/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search candidate name, Application ID, phone number, or index number..."
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-black/30 border border-white/15 text-xs text-white placeholder-white/40 focus:outline-none focus:border-emerald-400"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
 
@@ -1337,11 +1339,11 @@ export default function AdmissionsManagementPage() {
                   <select
                     value={selectedProgram}
                     onChange={(e) => setSelectedProgram(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-black/30 border border-white/15 text-xs text-white focus:outline-none focus:border-emerald-400"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   >
                     <option value="all">All Academic Programs</option>
                     {AVAILABLE_PROGRAMS.map((p) => (
-                      <option key={p.name} value={p.name} className="text-slate-900">
+                      <option key={p.name} value={p.name} className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">
                         {p.name}
                       </option>
                     ))}
@@ -1351,10 +1353,10 @@ export default function AdmissionsManagementPage() {
             </div>
 
             {/* Candidate Scoring Sheet Table */}
-            <div className={`${adminCardClass} !p-0 overflow-hidden`}>
+            <div className={`${adminCardClass} !p-0 overflow-hidden border border-slate-200/80 dark:border-slate-800`}>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700/80 text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider">
+                  <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-300 font-bold uppercase tracking-wider text-[11px]">
                     <tr>
                       <th className="py-3.5 px-4">Candidate & App ID</th>
                       <th className="py-3.5 px-4">Program & Residence</th>
@@ -1368,11 +1370,13 @@ export default function AdmissionsManagementPage() {
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                     {scoringCandidates.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-12 text-center text-slate-500">
-                          <div className="flex flex-col items-center justify-center gap-2">
-                            <ClipboardList className="w-8 h-8 text-slate-400" />
-                            <span className="font-semibold">No candidates found awaiting interview scoring.</span>
-                            <span className="text-xs text-slate-400">
+                        <td colSpan={7} className="py-14 text-center">
+                          <div className="flex flex-col items-center justify-center gap-2.5">
+                            <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400">
+                              <ClipboardList className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                            </div>
+                            <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">No candidates found awaiting interview scoring.</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400 max-w-sm">
                               Shortlist candidates and schedule interviews in the Applications Pipeline first.
                             </span>
                           </div>
@@ -1933,332 +1937,484 @@ export default function AdmissionsManagementPage() {
         )}
       </NativeModal>
 
-      {/* Candidate Full Inspector Drawer / Modal */}
+      {/* Candidate Full Official Dossier Document Modal */}
       <NativeModal
         isOpen={!!inspectApp}
         onClose={() => setInspectApp(null)}
-        title={inspectApp ? `Candidate Dossier: ${inspectApp.application_number}` : 'Candidate Dossier'}
-        subtitle="Complete bio details, UNEB results slips, next-of-kin, and payment status."
+        title={inspectApp ? `Official Application Dossier: ${inspectApp.application_number}` : 'Candidate Application File'}
+        subtitle={inspectApp ? `${inspectApp.full_name} • ${inspectApp.programs.join(', ') || 'Nursing / Midwifery'}` : 'Official Academic and Personal Admissions File'}
         icon={ShieldCheck}
-        size="xl"
+        size="2xl"
       >
         {inspectApp && (
-          <div className="p-6 space-y-5 text-xs text-white flex flex-col max-h-[75vh] overflow-y-auto no-scrollbar">
-            {/* Header Card with Passport Photo */}
-            <div className="p-5 rounded-2xl bg-gradient-to-br from-white/[0.08] via-white/[0.04] to-white/[0.02] border border-white/15 backdrop-blur-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
-              <div className="flex items-center gap-4">
-                {/* Official Passport Photo Box with Hover & Upload Option */}
-                <div className="relative group shrink-0">
-                  <div className="w-20 h-24 rounded-xl overflow-hidden bg-slate-900 border-2 border-emerald-500/40 shadow-lg shadow-emerald-500/10 flex items-center justify-center">
-                    {inspectApp.passport_photo_url ? (
-                      <img
-                        src={inspectApp.passport_photo_url}
-                        alt={inspectApp.full_name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex flex-col items-center justify-center p-2 text-center text-white/40">
-                        <Users className="w-6 h-6 mb-1 text-white/30" />
-                        <span className="text-[9px] font-bold">No Photo</span>
-                      </div>
-                    )}
+          <div className="space-y-5 text-xs text-slate-800 dark:text-slate-100 flex flex-col max-h-[78vh] overflow-y-auto no-scrollbar pb-2">
+            {/* OFFICIAL ADMISSION DOSSIER DOCUMENT CONTAINER */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden">
+              
+              {/* TOP INSTITUTIONAL DOCUMENT HEADER */}
+              <div className="p-5 sm:p-6 bg-slate-50 dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-12 h-12 rounded-xl bg-white dark:bg-slate-900 p-1 border border-slate-200 dark:border-slate-700 shadow-sm shrink-0 flex items-center justify-center">
+                    <img
+                      src="/images/rcsn/logo.png"
+                      alt="RCSN Crest"
+                      className="w-10 h-10 object-contain"
+                    />
                   </div>
-
-                  {/* Quick Change / Upload Photo Overlay Button */}
-                  <button
-                    type="button"
-                    onClick={() => dossierPassportInputRef.current?.click()}
-                    disabled={uploadingDossierCredential === 'passport'}
-                    className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex flex-col items-center justify-center text-white text-[10px] font-bold gap-1 cursor-pointer"
-                    title="Change / Upload Official Passport Photo"
-                  >
-                    {uploadingDossierCredential === 'passport' ? (
-                      <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
-                    ) : (
-                      <>
-                        <Camera className="w-4 h-4 text-emerald-400" />
-                        <span>Update</span>
-                      </>
-                    )}
-                  </button>
-
-                  <input
-                    ref={dossierPassportInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleDossierPassportUpload}
-                  />
-
-                  {inspectApp.passport_photo_url && (
-                    <span className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-full bg-emerald-500 text-black text-[9px] font-black uppercase tracking-wider shadow">
-                      Verified
-                    </span>
-                  )}
+                  <div>
+                    <h3 className="text-sm sm:text-base font-black tracking-tight text-slate-900 dark:text-white uppercase leading-tight">
+                      Rakai Community School of Nursing
+                    </h3>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                      Office of the Academic Registrar • Official Admissions Dossier
+                    </p>
+                  </div>
                 </div>
 
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-lg font-black text-white tracking-tight">
-                      {inspectApp.full_name}
-                    </h4>
-                  </div>
-                  <p className="text-white/70 text-xs mt-0.5">
-                    {inspectApp.gender} • DOB: {inspectApp.date_of_birth} • Tel: {inspectApp.phone}
-                  </p>
-                  {inspectApp.email && (
-                    <p className="text-emerald-400/90 text-[11px] font-mono mt-0.5">
-                      {inspectApp.email}
-                    </p>
-                  )}
-                  <div className="mt-2 flex items-center gap-2">
+                <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-2">
+                  <span className="font-mono text-xs font-bold text-slate-900 dark:text-emerald-400 px-3 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-500/30">
+                    {inspectApp.application_number}
+                  </span>
+                  <div className="shrink-0">{getStatusBadge(inspectApp.status)}</div>
+                </div>
+              </div>
+
+              {/* CANDIDATE IDENTITY & COURSE APPLIED FOR */}
+              <div className="p-5 sm:p-6 space-y-4 border-b border-slate-100 dark:border-slate-800/80">
+                <div className="flex flex-col sm:flex-row items-start gap-5">
+                  {/* Passport Photo Box (Official 3:4 Frame, NO Verified Tag) */}
+                  <div className="relative group shrink-0">
+                    <div className="w-24 h-32 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-center">
+                      {inspectApp.passport_photo_url ? (
+                        <img
+                          src={inspectApp.passport_photo_url}
+                          alt={inspectApp.full_name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center justify-center p-2 text-center text-slate-400 dark:text-slate-500">
+                          <Users className="w-7 h-7 mb-1 text-slate-300 dark:text-slate-600" />
+                          <span className="text-[10px] font-bold">No Photo</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Change / Upload Photo Overlay */}
                     <button
                       type="button"
                       onClick={() => dossierPassportInputRef.current?.click()}
-                      className="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1 transition-colors"
+                      disabled={uploadingDossierCredential === 'passport'}
+                      className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex flex-col items-center justify-center text-white text-[10px] font-bold gap-1 cursor-pointer"
+                      title="Update Passport Photo"
                     >
-                      <Camera className="w-3 h-3" />
-                      <span>{inspectApp.passport_photo_url ? 'Replace Passport Photo' : 'Upload Passport Photo'}</span>
+                      {uploadingDossierCredential === 'passport' ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+                      ) : (
+                        <>
+                          <Camera className="w-4 h-4 text-emerald-400" />
+                          <span>Update</span>
+                        </>
+                      )}
                     </button>
-                    {inspectApp.passport_photo_url && (
-                      <span className="text-[10px] text-white/40">• Inherited to Student Profile upon Matriculation</span>
-                    )}
-                  </div>
-                </div>
-              </div>
 
-              <div className="shrink-0">{getStatusBadge(inspectApp.status)}</div>
-            </div>
+                    <input
+                      ref={dossierPassportInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleDossierPassportUpload}
+                    />
 
-            {/* Quick Actions (PDF Downloads) */}
-            <div className="flex flex-wrap gap-2">
-              {inspectApp.interview_date && (
-                <button
-                  type="button"
-                  onClick={() => generateInterviewSlipPdf(inspectApp)}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-white font-semibold transition-all"
-                >
-                  <Calendar className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Download Interview Slip (PDF)</span>
-                </button>
-              )}
-
-              {['admitted', 'offer_accepted', 'enrolled'].includes(inspectApp.status) && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => generateAdmissionLetterPdf(inspectApp)}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/40 text-emerald-300 font-semibold transition-all"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>Download Admission Offer (PDF)</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => generateAdmissionInvoicePdf(inspectApp)}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-teal-500/20 hover:bg-teal-500/30 border border-teal-400/40 text-teal-300 font-semibold transition-all"
-                  >
-                    <Receipt className="w-3.5 h-3.5" />
-                    <span>Download Fee Invoice (PDF)</span>
-                  </button>
-                </>
-              )}
-            </div>
-
-            {/* Programs Applied */}
-            <div className="space-y-1.5">
-              <span className="font-bold text-white/70 uppercase tracking-wider block text-[11px]">
-                Chosen Academic Programs
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {inspectApp.programs.map((p, idx) => (
-                  <span
-                    key={idx}
-                    className="px-3 py-1 rounded-xl bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-400/30"
-                  >
-                    {p}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* Academic Background & UNEB Subject Passes */}
-            <div className="space-y-2">
-              <span className="font-bold text-white/70 uppercase tracking-wider block text-[11px]">
-                UNEB Science Grades & Academic Background
-              </span>
-              <div className="p-3.5 rounded-xl bg-white/5 border border-white/15 backdrop-blur-sm space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-white/90">
-                    Previous School: {inspectApp.previous_school || 'N/A'}
-                  </span>
-                  <span className="font-mono font-bold text-white/60">
-                    Index: {inspectApp.index_number || 'N/A'}
-                  </span>
-                </div>
-                {inspectApp.subject_grades && inspectApp.subject_grades.length > 0 && (
-                  <div className="flex flex-wrap gap-2 pt-2 border-t border-white/10">
-                    {inspectApp.subject_grades.map((sg, idx) => (
-                      <span
-                        key={idx}
-                        className="px-2.5 py-1 rounded-lg bg-black/30 border border-white/20 font-mono font-bold"
+                    <div className="mt-1.5 text-center">
+                      <button
+                        type="button"
+                        onClick={() => dossierPassportInputRef.current?.click()}
+                        className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline inline-flex items-center gap-1"
                       >
-                        {sg.subject}: <span className="text-emerald-400">{sg.grade}</span>
+                        <Camera className="w-3 h-3" />
+                        <span>{inspectApp.passport_photo_url ? 'Change Photo' : 'Upload Photo'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Candidate Bio & Chosen Programs */}
+                  <div className="flex-1 space-y-3 min-w-0">
+                    <div>
+                      <h4 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                        {inspectApp.full_name}
+                      </h4>
+                      <p className="text-xs sm:text-sm font-semibold text-emerald-700 dark:text-emerald-400 mt-0.5 flex flex-wrap items-center gap-2">
+                        <span>Intake: {inspectApp.intake || '2026/2027 Academic Session'}</span>
+                      </p>
+                    </div>
+
+                    {/* Program Applied For */}
+                    <div>
+                      <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-slate-500 block mb-1">
+                        Course(s) Applied For:
                       </span>
-                    ))}
+                      <div className="flex flex-wrap gap-1.5">
+                        {inspectApp.programs.map((p, idx) => (
+                          <span
+                            key={idx}
+                            className="px-3 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-[#00873E] dark:text-emerald-300 font-bold text-xs border border-emerald-500/30"
+                          >
+                            {p}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Demographic Key-Values Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1 text-[11px]">
+                      <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
+                        <span className="text-slate-400 dark:text-slate-500 font-medium block text-[9px] uppercase">Gender</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{inspectApp.gender || 'Not Specified'}</span>
+                      </div>
+                      <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
+                        <span className="text-slate-400 dark:text-slate-500 font-medium block text-[9px] uppercase">Date of Birth</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{inspectApp.date_of_birth || 'N/A'}</span>
+                      </div>
+                      <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
+                        <span className="text-slate-400 dark:text-slate-500 font-medium block text-[9px] uppercase">Telephone</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{inspectApp.phone || 'N/A'}</span>
+                      </div>
+                      {inspectApp.email && (
+                        <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 col-span-2">
+                          <span className="text-slate-400 dark:text-slate-500 font-medium block text-[9px] uppercase">Email Address</span>
+                          <span className="font-bold text-slate-800 dark:text-slate-200 font-mono text-[10px] break-all">{inspectApp.email}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
-            </div>
-
-            {/* Next of Kin & Payment */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-3.5 rounded-xl bg-white/5 border border-white/15 backdrop-blur-sm space-y-1">
-                <span className="font-bold text-white/50 uppercase tracking-wider block text-[10px]">
-                  Next of Kin / Guardian
-                </span>
-                <div className="font-bold text-white">
-                  {inspectApp.guardian_name || 'N/A'}
-                </div>
-                <div className="text-white/60">{inspectApp.guardian_phone || 'No phone'}</div>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-white/5 border border-white/15 backdrop-blur-sm space-y-1">
-                <span className="font-bold text-white/50 uppercase tracking-wider block text-[10px]">
-                  Application Fee (UGX 50,000)
-                </span>
-                <div className="font-bold text-emerald-400 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Paid & Verified</span>
-                </div>
-                <div className="text-white/60 font-mono text-[10px]">
-                  Ref: {inspectApp.payment_reference || 'RCSN-MOMO-TXN'}
                 </div>
               </div>
-            </div>
 
-            {/* Attached UNEB Slips & Verification Documents */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-white/70 uppercase tracking-wider block text-[11px] flex items-center gap-1.5">
-                  <FileCheck className="w-3.5 h-3.5 text-emerald-400" />
-                  UNEB Science Slip & Attached Verification Documents
-                </span>
-                <button
-                  type="button"
-                  onClick={() => dossierDocumentInputRef.current?.click()}
-                  disabled={uploadingDossierCredential === 'document'}
-                  className="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1 transition-colors"
-                >
-                  {uploadingDossierCredential === 'document' ? (
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                  ) : (
-                    <UploadCloud className="w-3 h-3" />
-                  )}
-                  <span>
-                    {inspectApp.attached_document_name || inspectApp.attached_document_url
-                      ? 'Upload / Replace Slip'
-                      : 'Upload UNEB Slip'}
+              {/* SECTION: ACADEMIC RESULTS */}
+              <div className="p-5 sm:p-6 space-y-3 border-b border-slate-100 dark:border-slate-800/80">
+                <div className="flex items-center justify-between">
+                  <h5 className="font-black text-slate-900 dark:text-white uppercase tracking-wider text-xs flex items-center gap-2">
+                    <GraduationCap className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <span>Academic Results</span>
+                  </h5>
+                  <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 font-semibold">
+                    Index No: {inspectApp.index_number || 'N/A'}
                   </span>
-                </button>
-                <input
-                  ref={dossierDocumentInputRef}
-                  type="file"
-                  accept="image/*,application/pdf"
-                  className="hidden"
-                  onChange={handleDossierDocumentUpload}
-                />
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 space-y-2.5">
+                  <div className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    <span className="text-slate-400 dark:text-slate-500 font-normal">Previous Institution / Secondary School: </span>
+                    <span className="font-bold text-slate-900 dark:text-white">{inspectApp.previous_school || 'Not Specified'}</span>
+                  </div>
+
+                  {inspectApp.subject_grades && inspectApp.subject_grades.length > 0 ? (
+                    <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
+                      <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-slate-500 block mb-2">
+                        Official Subject Passes:
+                      </span>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+                        {inspectApp.subject_grades.map((sg, idx) => (
+                          <div
+                            key={idx}
+                            className="p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between"
+                          >
+                            <span className="text-slate-700 dark:text-slate-300 font-semibold text-xs">{sg.subject}</span>
+                            <span className="font-black font-mono text-emerald-600 dark:text-emerald-400 text-xs px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-500/30">
+                              {sg.grade}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-400 dark:text-slate-500 italic">
+                      No breakdown of individual subject grades recorded. Please refer to attached result slip documents below.
+                    </p>
+                  )}
+                </div>
               </div>
 
-              {(inspectApp.attached_document_name ||
-                inspectApp.attached_document_url ||
-                inspectApp.attached_document_data) ? (
-                <div className="p-4 rounded-xl bg-white/5 border border-emerald-500/30 backdrop-blur-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center shrink-0 text-emerald-400">
-                      <FileText className="w-5 h-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="font-bold text-white text-xs truncate max-w-xs">
-                        {inspectApp.attached_document_name || 'Official UNEB Pass Slip / Academic Transcript'}
-                      </div>
-                      <div className="text-[10px] text-white/50 flex items-center gap-2 mt-0.5">
-                        <span>{inspectApp.attached_document_size || 'Official Verification Document'}</span>
-                        <span>•</span>
-                        <span className="text-emerald-400 font-semibold flex items-center gap-0.5">
-                          <CheckCircle2 className="w-2.5 h-2.5" /> Verified Candidate Document
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+              {/* SECTION: RESULT SLIPS & ATTACHED DOCUMENTS */}
+              <div className="p-5 sm:p-6 space-y-3 border-b border-slate-100 dark:border-slate-800/80">
+                <div className="flex items-center justify-between">
+                  <h5 className="font-black text-slate-900 dark:text-white uppercase tracking-wider text-xs flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <span>Result Slips & Attached Documents</span>
+                  </h5>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    {/* View Document Button */}
-                    <button
-                      type="button"
-                      onClick={() => handleOpenDocViewer(inspectApp)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-bold text-xs transition-all shadow-sm"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      <span>View Document</span>
-                    </button>
-
-                    {/* Download Document Button */}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleDownloadDocument(
-                          inspectApp.attached_document_data || inspectApp.attached_document_url,
-                          inspectApp.attached_document_name ||
-                            `${inspectApp.full_name.replace(/\s+/g, '_')}_UNEB_Slip`
-                        )
-                      }
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs transition-all"
-                    >
-                      <Download className="w-3.5 h-3.5 text-teal-300" />
-                      <span>Download</span>
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-4 rounded-xl bg-white/[0.03] border border-dashed border-white/15 flex items-center justify-between">
-                  <div className="flex items-center gap-2.5 text-white/50 text-xs">
-                    <AlertCircle className="w-4 h-4 text-amber-400/80" />
-                    <span>No digital UNEB result slip attached yet for this candidate.</span>
-                  </div>
                   <button
                     type="button"
                     onClick={() => dossierDocumentInputRef.current?.click()}
-                    className="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-bold text-xs transition-all"
+                    disabled={uploadingDossierCredential === 'document'}
+                    className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-emerald-500/30 bg-emerald-50 dark:bg-emerald-950/40 transition-colors"
                   >
-                    Upload Now
+                    {uploadingDossierCredential === 'document' ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <UploadCloud className="w-3.5 h-3.5" />
+                    )}
+                    <span>Attach Additional Document</span>
+                  </button>
+                  <input
+                    ref={dossierDocumentInputRef}
+                    type="file"
+                    accept="image/*,application/pdf"
+                    className="hidden"
+                    onChange={handleDossierDocumentUpload}
+                  />
+                </div>
+
+                {(inspectApp.attached_documents && inspectApp.attached_documents.length > 0) ? (
+                  <div className="space-y-2">
+                    {inspectApp.attached_documents.map((doc, dIdx) => (
+                      <div
+                        key={dIdx}
+                        className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 hover:border-emerald-500/40 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-3"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-500/30 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400 font-bold text-xs">
+                            <FileText className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-bold text-slate-900 dark:text-white text-xs truncate max-w-sm">
+                              {doc.name || `Document #${dIdx + 1}`}
+                            </div>
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5">
+                              <span>{doc.size || 'Candidate Document'}</span>
+                              <span>•</span>
+                              <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Attached File #{dIdx + 1}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const dUrl = doc.data || doc.url;
+                              if (!dUrl) return;
+                              const isImg =
+                                dUrl.startsWith('data:image/') ||
+                                /\.(png|jpe?g|webp|gif|svg)/i.test(doc.name);
+                              setPreviewDocModal({
+                                isOpen: true,
+                                title: `${inspectApp.full_name} — ${doc.name}`,
+                                url: dUrl,
+                                fileName: doc.name,
+                                isImage: isImg,
+                              });
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-bold text-xs transition-all shadow-sm"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>View Document</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadDocument(doc.data || doc.url, doc.name)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs transition-all"
+                          >
+                            <Download className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                            <span>Download</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (inspectApp.attached_document_name ||
+                  inspectApp.attached_document_url ||
+                  inspectApp.attached_document_data) ? (
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 hover:border-emerald-500/40 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-500/30 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-bold text-slate-900 dark:text-white text-xs truncate max-w-sm">
+                          {inspectApp.attached_document_name || 'Academic Result Slip / Document'}
+                        </div>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5">
+                          <span>{inspectApp.attached_document_size || 'Attached File'}</span>
+                          <span>•</span>
+                          <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Candidate Attachment</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenDocViewer(inspectApp)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-bold text-xs transition-all shadow-sm"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>View Document</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleDownloadDocument(
+                            inspectApp.attached_document_data || inspectApp.attached_document_url,
+                            inspectApp.attached_document_name ||
+                              `${inspectApp.full_name.replace(/\s+/g, '_')}_Academic_Document`
+                          )
+                        }
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs transition-all"
+                      >
+                        <Download className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                        <span>Download</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/30 border border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5 text-slate-500 dark:text-slate-400 text-xs">
+                      <AlertCircle className="w-4 h-4 text-amber-500" />
+                      <span>No digital academic documents attached yet for this candidate.</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => dossierDocumentInputRef.current?.click()}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-bold text-xs transition-all"
+                    >
+                      Upload Now
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* SECTION: GUARDIAN & APPLICATION FEE */}
+              <div className="p-5 sm:p-6 grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50/70 dark:bg-slate-950/50">
+                <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-slate-500 block">
+                    Next of Kin / Guardian
+                  </span>
+                  <div className="font-bold text-sm text-slate-900 dark:text-white">
+                    {inspectApp.guardian_name || 'Not Recorded'}
+                  </div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400">
+                    {inspectApp.guardian_phone || 'No phone recorded'}
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-slate-500 block">
+                    Application Processing Fee (UGX 50,000)
+                  </span>
+                  <div className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 text-xs">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Payment Received</span>
+                  </div>
+                  <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                    Ref: {inspectApp.payment_reference || 'RCSN-MM-RECORDED'}
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* ACTION TOOLBAR & VETTING CONTROLS */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
+              {/* Document Download Quick Actions */}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const mappedApp: AdmissionApplication = {
+                      id: inspectApp.application_number || inspectApp.id,
+                      fullName: inspectApp.full_name,
+                      gender: inspectApp.gender as any,
+                      dateOfBirth: inspectApp.date_of_birth,
+                      phone: inspectApp.phone,
+                      email: inspectApp.email || undefined,
+                      programs: inspectApp.programs || [],
+                      intake: inspectApp.intake || '2026/2027',
+                      studyMode: 'Boarding',
+                      previousSchool: inspectApp.previous_school || 'N/A',
+                      indexNumber: inspectApp.index_number || 'N/A',
+                      qualificationsSummary: inspectApp.qualifications_summary || '',
+                      subjectGrades: inspectApp.subject_grades,
+                      attachedDocumentName: inspectApp.attached_document_name || undefined,
+                      attachedDocumentSize: inspectApp.attached_document_size || undefined,
+                      attachedDocumentData: inspectApp.attached_document_data || undefined,
+                      attachedDocuments: inspectApp.attached_documents as any,
+                      passportPhotoUrl: inspectApp.passport_photo_url || undefined,
+                      applicationFee: inspectApp.application_fee,
+                      paymentMethod: 'Mobile Money',
+                      paymentReference: inspectApp.payment_reference || undefined,
+                      guardianName: inspectApp.guardian_name || 'N/A',
+                      guardianPhone: inspectApp.guardian_phone || 'N/A',
+                      submittedAt: inspectApp.created_at,
+                      status: (inspectApp.status === 'admitted' ? 'Accepted' : inspectApp.status === 'under_review' ? 'Reviewed' : 'Pending Verification'),
+                    };
+                    void generateAdmissionApplicationPdf(mappedApp);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 border border-slate-300 dark:border-white/20 text-slate-800 dark:text-white font-semibold text-xs transition-all shadow-sm"
+                >
+                  <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Download Application (PDF)</span>
+                </button>
+
+                {inspectApp.interview_date && (
+                  <button
+                    type="button"
+                    onClick={() => generateInterviewSlipPdf(inspectApp)}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-semibold text-xs transition-all shadow-sm"
+                  >
+                    <Calendar className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                    <span>Download Interview Slip</span>
+                  </button>
+                )}
+
+                {['admitted', 'offer_accepted', 'enrolled'].includes(inspectApp.status) && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => generateAdmissionLetterPdf(inspectApp)}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 font-semibold text-xs transition-all shadow-sm"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Download Admission Offer</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => generateAdmissionInvoicePdf(inspectApp)}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/60 dark:hover:bg-teal-900/60 border border-teal-300 dark:border-teal-800 text-teal-800 dark:text-teal-300 font-semibold text-xs transition-all shadow-sm"
+                    >
+                      <Receipt className="w-3.5 h-3.5" />
+                      <span>Download Fee Invoice</span>
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {/* Vetting Decisions */}
+              {['submitted', 'under_review'].includes(inspectApp.status) && (
+                <div className="flex items-center gap-2 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => handleVettingRejection(inspectApp)}
+                    disabled={actionLoading}
+                    className="px-4 py-2 rounded-xl border border-rose-300 dark:border-rose-500/40 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/20 dark:hover:bg-rose-500/30 text-rose-700 dark:text-rose-300 font-bold text-xs transition-all"
+                  >
+                    Reject Candidate
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleVettingApproval(inspectApp)}
+                    disabled={actionLoading}
+                    className="inline-flex items-center justify-center gap-2 px-5 py-2 rounded-xl text-xs font-bold text-white bg-[#00873E] hover:bg-[#007033] shadow-md transition-all active:scale-[0.98] disabled:opacity-50"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Approve for Interview</span>
                   </button>
                 </div>
               )}
             </div>
-
-            {/* Vetting Decisions */}
-            {['submitted', 'under_review'].includes(inspectApp.status) && (
-              <div className="pt-3 border-t border-white/15 flex items-center justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => handleVettingRejection(inspectApp)}
-                  disabled={actionLoading}
-                  className="px-4 py-2.5 rounded-xl border border-rose-500/40 bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 font-bold transition-all"
-                >
-                  Reject Candidate
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleVettingApproval(inspectApp)}
-                  disabled={actionLoading}
-                  className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold text-emerald-950 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:brightness-110 border border-emerald-300/60 shadow-[0_4px_16px_rgba(16,185,129,0.35)] transition-all active:scale-[0.98] disabled:opacity-50"
-                >
-                  Approve for Interview
-                </button>
-              </div>
-            )}
           </div>
         )}
       </NativeModal>
@@ -2267,7 +2423,7 @@ export default function AdmissionsManagementPage() {
       <NativeModal
         isOpen={!!previewDocModal?.isOpen}
         onClose={() => setPreviewDocModal(null)}
-        title={previewDocModal?.fileName || 'Candidate Verification Document'}
+        title={previewDocModal?.fileName || 'Candidate Document Preview'}
         subtitle={previewDocModal?.title}
         icon={FileCheck}
         size="2xl"

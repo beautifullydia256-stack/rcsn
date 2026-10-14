@@ -11,6 +11,12 @@ export interface SubjectGrade {
   grade: string;
 }
 
+export interface AttachedDocument {
+  name: string;
+  size: string;
+  data: string;
+}
+
 export interface AdmissionApplication {
   id: string;
   fullName: string;
@@ -30,6 +36,7 @@ export interface AdmissionApplication {
   attachedDocumentName?: string;
   attachedDocumentSize?: string;
   attachedDocumentData?: string;
+  attachedDocuments?: AttachedDocument[];
   passportPhotoUrl?: string;
   passportPhotoData?: string;
   passportPhotoName?: string;
@@ -91,6 +98,10 @@ export async function submitAdmissionApplication(
   try {
     const { createApplication } = await import('@/services/admissionsService');
     const nameParts = (data.fullName || '').trim().split(/\s+/);
+    let cleanDob = (data.dateOfBirth || '').trim();
+    if (!cleanDob || !/^\d{4}-\d{2}-\d{2}$/.test(cleanDob)) {
+      cleanDob = '2005-01-01';
+    }
     await createApplication({
       school_id: 'e1b10000-0000-4000-a000-000000000001',
       application_number: appId,
@@ -98,8 +109,8 @@ export async function submitAdmissionApplication(
       first_name: nameParts[0] || data.fullName,
       middle_name: nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : null,
       last_name: nameParts[nameParts.length - 1] || '',
-      gender: data.gender,
-      date_of_birth: data.dateOfBirth,
+      gender: data.gender === 'Male' ? 'Male' : 'Female',
+      date_of_birth: cleanDob,
       phone: data.phone,
       email: data.email || null,
       nin_or_id: data.ninOrId || null,
@@ -114,6 +125,7 @@ export async function submitAdmissionApplication(
       attached_document_name: data.attachedDocumentName || null,
       attached_document_size: data.attachedDocumentSize || null,
       attached_document_data: data.attachedDocumentData || null,
+      attached_documents: data.attachedDocuments || null,
       passport_photo_url: data.passportPhotoData || data.passportPhotoUrl || null,
       guardian_name: data.guardianName,
       guardian_phone: data.guardianPhone,

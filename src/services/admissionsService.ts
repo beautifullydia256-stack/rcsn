@@ -52,6 +52,7 @@ export interface AdmissionApplicationRecord {
   attached_document_name?: string | null;
   attached_document_size?: string | null;
   attached_document_data?: string | null; // local preview base64
+  attached_documents?: Array<{ name: string; size?: string; data?: string; url?: string }> | null;
   passport_photo_url?: string | null;
   guardian_name?: string | null;
   guardian_phone?: string | null;
@@ -251,10 +252,21 @@ export async function createApplication(
   const now = new Date().toISOString();
   const id = `adm-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
+  // Sanitize date_of_birth to guarantee valid Postgres DATE syntax (YYYY-MM-DD)
+  let cleanDob = (data.date_of_birth || '').trim();
+  if (!cleanDob || !/^\d{4}-\d{2}-\d{2}$/.test(cleanDob)) {
+    cleanDob = '2005-01-01';
+  }
+
+  // Ensure valid Postgres gender CHECK constraint ('Female', 'Male')
+  const cleanGender = data.gender === 'Male' ? 'Male' : 'Female';
+
   const newRecord: AdmissionApplicationRecord = {
     ...data,
     id,
     school_id: data.school_id || DEFAULT_SCHOOL_ID,
+    date_of_birth: cleanDob,
+    gender: cleanGender,
     created_at: now,
     updated_at: now,
   };

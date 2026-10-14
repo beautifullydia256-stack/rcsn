@@ -44,6 +44,14 @@ interface SubjectItem {
   isCore?: boolean;
 }
 
+interface AttachedDocItem {
+  id: string;
+  name: string;
+  size: string;
+  sizeBytes?: number;
+  data: string;
+}
+
 // O-Level Academic Subject Grades: A, B, C, D, E, O, F
 const DEFAULT_SUBJECTS: SubjectItem[] = [
   { subject: 'Biology', grade: 'A', isCore: true },
@@ -72,6 +80,73 @@ export function resolveProgramName(target?: string): string {
     return pClean === targetClean || pClean.includes(targetClean) || targetClean.includes(pClean);
   });
   return found ? found.name : target;
+}
+
+async function processDocumentFile(file: File): Promise<{ name: string; size: string; data: string }> {
+  if (file.type.startsWith('image/')) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const MAX_DIM = 1600;
+          let width = img.width;
+          let height = img.height;
+          if (width > height && width > MAX_DIM) {
+            height = Math.round((height * MAX_DIM) / width);
+            width = MAX_DIM;
+          } else if (height > MAX_DIM) {
+            width = Math.round((width * MAX_DIM) / height);
+            height = MAX_DIM;
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressed = canvas.toDataURL('image/jpeg', 0.82);
+            const approxBytes = Math.round((compressed.length * 3) / 4);
+            const sizeStr =
+              approxBytes > 1024 * 1024
+                ? `${(approxBytes / (1024 * 1024)).toFixed(1)} MB`
+                : `${Math.round(approxBytes / 1024)} KB`;
+            resolve({ name: file.name, size: sizeStr, data: compressed });
+          } else {
+            resolve({
+              name: file.name,
+              size:
+                file.size > 1024 * 1024
+                  ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+                  : `${Math.round(file.size / 1024)} KB`,
+              data: (e.target?.result as string) || '',
+            });
+          }
+        };
+        img.onerror = () => {
+          resolve({
+            name: file.name,
+            size: `${Math.round(file.size / 1024)} KB`,
+            data: (e.target?.result as string) || '',
+          });
+        };
+        img.src = (e.target?.result as string) || '';
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const sizeStr =
+        file.size > 1024 * 1024
+          ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+          : `${Math.round(file.size / 1024)} KB`;
+      resolve({ name: file.name, size: sizeStr, data: (reader.result as string) || '' });
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }: AdmissionsModalProps) {
@@ -123,11 +198,9 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
   const [customSubjectName, setCustomSubjectName] = useState('');
   const [qualificationsSummary, setQualificationsSummary] = useState('');
 
-  // Document Attachment
+  // Document Attachments (Multi-document support)
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [attachedFileName, setAttachedFileName] = useState('');
-  const [attachedFileSize, setAttachedFileSize] = useState('');
-  const [attachedFileData, setAttachedFileData] = useState('');
+  const [attachedDocs, setAttachedDocs] = useState<AttachedDocItem[]>([]);
   const [attachmentError, setAttachmentError] = useState('');
 
   // Passport Photo Attachment
@@ -137,7 +210,7 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
   const [passportPhotoSize, setPassportPhotoSize] = useState('');
   const [passportPhotoError, setPassportPhotoError] = useState('');
 
-  const handlePassportPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePassportPhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -147,19 +220,15 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      setPassportPhotoError('Passport photo is too large. Maximum size is 5MB.');
+      setPassportPhotoError('Passport photo should not exceed 5MB.');
       return;
     }
 
     setPassportPhotoError('');
-    setPassportPhotoName(file.name);
-    setPassportPhotoSize(`${(file.size / 1024).toFixed(0)} KB`);
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      setPassportPhotoData(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    const processed = await processDocumentFile(file);
+    setPassportPhotoName(processed.name);
+    setPassportPhotoSize(processed.size);
+    setPassportPhotoData(processed.data);
   };
 
   const handleRemovePassportPhoto = () => {
@@ -175,6 +244,10 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
   const [paymentProvider, setPaymentProvider] = useState<'MTN Mobile Money' | 'Airtel Money'>('MTN Mobile Money');
   const [payingPhone, setPayingPhone] = useState('');
   const [paymentState, setPaymentState] = useState<'idle' | 'initiating' | 'awaiting_pin' | 'verifying' | 'success'>('idle');
+  const [submitProgress, setSubmitProgress] = useState<{ percent: number; label: string }>({
+    percent: 0,
+    label: '',
+  });
   const [txnReference, setTxnReference] = useState('');
   const [paymentError, setPaymentError] = useState('');
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
@@ -201,37 +274,62 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
     setSubjects((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleFilesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    if (file.size > 10 * 1024 * 1024) {
-      setAttachmentError('File is too large. Maximum size is 10MB.');
+    const fileList = Array.from(files);
+    const MAX_SINGLE_FILE_BYTES = 5 * 1024 * 1024; // 5 MB per document
+    const MAX_TOTAL_FILES_BYTES = 10 * 1024 * 1024; // 10 MB total
+
+    // 1. Check if any individual file exceeds 5MB
+    const oversizedFile = fileList.find((f) => f.size > MAX_SINGLE_FILE_BYTES);
+    if (oversizedFile) {
+      setAttachmentError(
+        `"${oversizedFile.name}" exceeds the 5MB limit (${(oversizedFile.size / (1024 * 1024)).toFixed(1)}MB). Please upload documents under 5MB each.`
+      );
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    // 2. Check if total attachments size would exceed 10MB
+    const currentTotalBytes = attachedDocs.reduce((sum, d) => sum + (d.sizeBytes || 0), 0);
+    const newFilesTotalBytes = fileList.reduce((sum, f) => sum + f.size, 0);
+    if (currentTotalBytes + newFilesTotalBytes > MAX_TOTAL_FILES_BYTES) {
+      setAttachmentError(
+        `Total combined attachments size cannot exceed 10MB. Current attachments: ${(currentTotalBytes / (1024 * 1024)).toFixed(1)}MB, new files: ${(newFilesTotalBytes / (1024 * 1024)).toFixed(1)}MB.`
+      );
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
 
     setAttachmentError('');
-    setAttachedFileName(file.name);
-    setAttachedFileSize(`${(file.size / 1024).toFixed(0)} KB`);
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setAttachedFileData(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    for (const file of fileList) {
+      const processed = await processDocumentFile(file);
+      setAttachedDocs((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          name: processed.name,
+          size: processed.size,
+          sizeBytes: file.size,
+          data: processed.data,
+        },
+      ]);
+    }
+
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleRemoveFile = () => {
-    setAttachedFileName('');
-    setAttachedFileSize('');
-    setAttachedFileData('');
-    if (fileInputRef.current) fileInputRef.current.value = '';
+  const handleRemoveDoc = (id: string) => {
+    setAttachedDocs((prev) => prev.filter((d) => d.id !== id));
   };
 
   // Pre-fill paying phone when navigating to step 4
   const handleProceedToPayment = () => {
-    if (!attachedFileName) {
-      setAttachmentError('Please attach a copy or photo of your official UNEB result slip / certificate before proceeding.');
+    if (attachedDocs.length === 0) {
+      setAttachmentError('Please attach at least one academic result slip or certificate before proceeding.');
       return;
     }
     if (!previousSchool.trim() || !indexNumber.trim()) {
@@ -265,10 +363,14 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
 
   const handleSimulatePinApproval = async () => {
     setPaymentState('verifying');
-    await new Promise((r) => setTimeout(r, 1200));
-    setPaymentState('success');
+    setSubmitProgress({ percent: 20, label: 'Uploading academic documents...' });
+    await new Promise((r) => setTimeout(r, 600));
 
-    // Auto submit application after verified payment
+    setSubmitProgress({ percent: 50, label: 'Uploading academic documents...' });
+    await new Promise((r) => setTimeout(r, 500));
+
+    setSubmitProgress({ percent: 75, label: 'Submitting candidate application...' });
+
     setIsSubmitting(true);
     try {
       const subjectGradesPayload: SubjectGrade[] = subjects.map((s) => ({
@@ -276,10 +378,17 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
         grade: s.grade,
       }));
 
+      const primaryDocName = attachedDocs.map((d) => d.name).join(', ');
+      const primaryDocSize =
+        attachedDocs.length === 1
+          ? attachedDocs[0].size
+          : `${attachedDocs.length} documents`;
+      const primaryDocData = attachedDocs[0]?.data || undefined;
+
       const res = await submitAdmissionApplication({
         fullName,
         gender,
-        dateOfBirth,
+        dateOfBirth: dateOfBirth || '2005-01-01',
         phone,
         email: email || undefined,
         ninOrId: ninOrId || undefined,
@@ -288,11 +397,16 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
         intake,
         previousSchool,
         indexNumber,
-        qualificationsSummary: qualificationsSummary || `Grades submitted: ${subjects.map((s) => `${s.subject}: ${s.grade}`).join(', ')}`,
+        qualificationsSummary: `Academic documents uploaded (${attachedDocs.length}): ${primaryDocName}`,
         subjectGrades: subjectGradesPayload,
-        attachedDocumentName: attachedFileName,
-        attachedDocumentSize: attachedFileSize,
-        attachedDocumentData: attachedFileData || undefined,
+        attachedDocumentName: primaryDocName,
+        attachedDocumentSize: primaryDocSize,
+        attachedDocumentData: primaryDocData,
+        attachedDocuments: attachedDocs.map((d) => ({
+          name: d.name,
+          size: d.size,
+          data: d.data,
+        })),
         passportPhotoData: passportPhotoData || undefined,
         passportPhotoName: passportPhotoName || undefined,
         applicationFee: APPLICATION_FEE_UGX,
@@ -303,12 +417,19 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
       });
 
       if (res.success) {
+        setSubmitProgress({ percent: 90, label: 'Generating receipt...' });
+        await new Promise((r) => setTimeout(r, 400));
+        setSubmitProgress({ percent: 100, label: 'Generating receipt...' });
+        await new Promise((r) => setTimeout(r, 300));
+
+        setPaymentState('success');
         setSubmittedData(res.application);
         setStep(5);
       }
     } catch (err) {
       console.error('Submission error:', err);
       setPaymentError('Failed to record application after payment. Please contact RCSN Admissions immediately.');
+      setPaymentState('idle');
     } finally {
       setIsSubmitting(false);
     }
@@ -340,10 +461,7 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
     setIndexNumber('');
     setPreviousSchool('');
     setQualificationsSummary('');
-    setSubjects(DEFAULT_SUBJECTS);
-    setAttachedFileName('');
-    setAttachedFileSize('');
-    setAttachedFileData('');
+    setAttachedDocs([]);
     setPassportPhotoData('');
     setPassportPhotoName('');
     setPassportPhotoSize('');
@@ -770,7 +888,7 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
 
                   <button
                     type="button"
-                    disabled={!fullName.trim() || !phone.trim() || !guardianName.trim() || !guardianPhone.trim()}
+                    disabled={!fullName.trim() || !phone.trim() || !guardianName.trim() || !guardianPhone.trim() || !dateOfBirth.trim()}
                     onClick={() => setStep(3)}
                     className="inline-flex items-center gap-2 px-7 py-3 rounded-xl bg-[#00873E] hover:bg-[#007033] disabled:opacity-50 text-white font-bold text-sm shadow transition-all"
                   >
@@ -894,84 +1012,105 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
                   </div>
                 </div>
 
-                {/* DOCUMENT UPLOAD (RESULT SLIP) */}
-                <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3">
-                  <div className="flex items-center justify-between">
+                {/* DOCUMENT UPLOADS (ACADEMIC RESULTS / CERTIFICATES / TESTIMONIALS) */}
+                <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
                     <div>
                       <h4 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
                         <Upload className="w-4 h-4 text-[#00873E]" />
-                        <span>Attach UNEB Result Slip or Academic Certificate *</span>
+                        <span>Attach Academic Documents &amp; Certificates *</span>
                       </h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        Upload a photo or scanned PDF of your official UNEB result slip (Max 10MB).
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                        Upload your official academic papers (such as UCE / UACE result slips, academic certificates, transcripts, or testimonials). You can upload 1 document or add multiple documents (Max 5MB per document, up to 10MB total).
                       </p>
                     </div>
+                    {attachedDocs.length > 0 && (
+                      <span className="self-start shrink-0 px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-[11px] font-bold">
+                        {attachedDocs.length} {attachedDocs.length === 1 ? 'Document' : 'Documents'} Attached
+                      </span>
+                    )}
                   </div>
 
                   <input
                     ref={fileInputRef}
                     type="file"
+                    multiple
                     accept=".pdf,.png,.jpg,.jpeg"
-                    onChange={handleFileChange}
+                    onChange={handleFilesChange}
                     className="hidden"
                   />
 
-                  {!attachedFileName ? (
+                  {attachedDocs.length === 0 ? (
                     <div
                       onClick={() => fileInputRef.current?.click()}
-                      className="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-[#00873E] rounded-2xl p-6 text-center cursor-pointer bg-white dark:bg-slate-900 transition-colors"
+                      className="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-[#00873E] dark:hover:border-emerald-500 rounded-2xl p-6 text-center cursor-pointer bg-white dark:bg-slate-900 transition-all hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20 group"
                     >
-                      <FileText className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
-                        Click to browse & upload Result Slip
+                      <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-[#00873E] dark:text-emerald-400 mx-auto mb-2 flex items-center justify-center group-hover:scale-105 transition-transform">
+                        <Upload className="w-6 h-6" />
+                      </div>
+                      <span className="text-xs font-black text-slate-800 dark:text-slate-200 block">
+                        Click to browse &amp; upload Academic Documents
                       </span>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">
-                        Supports PDF, PNG, JPG, or JPEG
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-1">
+                        Supports PDF, PNG, JPG, or JPEG (Max 5MB per document, up to 10MB total) • You can select multiple files or add more
                       </span>
                     </div>
                   ) : (
-                    <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 flex items-center justify-between">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <FileCheck className="w-6 h-6 text-emerald-600 shrink-0" />
-                        <div className="min-w-0">
-                          <span className="text-xs font-bold text-slate-900 dark:text-white block truncate">
-                            {attachedFileName}
-                          </span>
-                          <span className="text-[11px] text-slate-500 dark:text-slate-400 block">
-                            {attachedFileSize} • Verified Attachment Ready
-                          </span>
-                        </div>
+                    <div className="space-y-2.5">
+                      <div className="space-y-2">
+                        {attachedDocs.map((doc, idx) => (
+                          <div
+                            key={doc.id}
+                            className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800/80 flex items-center justify-between shadow-sm hover:border-emerald-400 transition-all"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 flex items-center justify-center shrink-0 font-bold text-xs">
+                                #{idx + 1}
+                              </div>
+                              <div className="min-w-0">
+                                <span className="text-xs font-bold text-slate-900 dark:text-white block truncate">
+                                  {doc.name}
+                                </span>
+                                <span className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5">
+                                  <span>{doc.size}</span>
+                                  <span>•</span>
+                                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                                    <FileCheck className="w-3 h-3" />
+                                    <span>Ready for Submission</span>
+                                  </span>
+                                </span>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveDoc(doc.id)}
+                              title="Remove this document"
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shrink-0 ml-2"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
                       </div>
+
+                      {/* Add Another Document Button */}
                       <button
                         type="button"
-                        onClick={handleRemoveFile}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-white dark:hover:bg-slate-800 transition-colors"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full py-2.5 px-4 rounded-xl border border-dashed border-emerald-400 dark:border-emerald-700/80 hover:border-emerald-600 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/30 text-[#00873E] dark:text-emerald-400 font-bold text-xs flex items-center justify-center gap-2 transition-all"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Plus className="w-4 h-4" />
+                        <span>Add Another Document (e.g. UACE, Certificate, Testimonial)</span>
                       </button>
                     </div>
                   )}
 
                   {attachmentError && (
-                    <p className="text-xs text-red-600 dark:text-red-400 font-semibold flex items-center gap-1.5">
+                    <p className="text-xs text-red-600 dark:text-red-400 font-semibold flex items-center gap-1.5 pt-1">
                       <AlertCircle className="w-4 h-4 shrink-0" />
                       <span>{attachmentError}</span>
                     </p>
                   )}
-                </div>
-
-                {/* Additional Qualifications / Notes */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                    Additional Academic Qualifications or Certificates (Optional)
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={qualificationsSummary}
-                    onChange={(e) => setQualificationsSummary(e.target.value)}
-                    placeholder="Enter any other certificates, A-Level combination, or health training experience..."
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  />
                 </div>
 
                 <div className="pt-4 flex justify-between items-center border-t border-slate-200 dark:border-slate-800">
@@ -986,7 +1125,7 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
 
                   <button
                     type="button"
-                    disabled={!previousSchool.trim() || !indexNumber.trim() || !attachedFileName}
+                    disabled={!previousSchool.trim() || !indexNumber.trim() || attachedDocs.length === 0}
                     onClick={handleProceedToPayment}
                     className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-[#00873E] hover:bg-[#007033] disabled:opacity-50 text-white font-black text-sm shadow-xl transition-all"
                   >
@@ -1180,12 +1319,26 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
                 )}
 
                 {paymentState === 'verifying' && (
-                  <div className="p-5 rounded-2xl bg-emerald-950 text-white text-center space-y-3 border border-emerald-700">
-                    <Loader2 className="w-8 h-8 text-emerald-400 animate-spin mx-auto" />
-                    <h5 className="text-sm font-bold">Verifying Payment Clearance...</h5>
-                    <p className="text-xs text-emerald-200">
-                      Clearing transaction {txnReference} and recording official application...
-                    </p>
+                  <div className="p-6 sm:p-8 rounded-3xl bg-slate-900 text-white text-center space-y-4 border border-slate-800 shadow-2xl max-w-md mx-auto">
+                    <div className="w-12 h-12 rounded-2xl bg-[#00873E]/20 border border-[#00873E]/40 text-emerald-400 mx-auto flex items-center justify-center">
+                      <Loader2 className="w-6 h-6 animate-spin text-emerald-400" />
+                    </div>
+
+                    <div className="space-y-1">
+                      <h5 className="text-sm sm:text-base font-bold text-white">
+                        {submitProgress.label}
+                      </h5>
+                      <span className="text-xs text-emerald-400 font-mono font-bold block">
+                        {submitProgress.percent}%
+                      </span>
+                    </div>
+
+                    <div className="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden border border-slate-700 p-0.5">
+                      <div
+                        className="bg-emerald-500 h-full rounded-full transition-all duration-300 ease-out"
+                        style={{ width: `${submitProgress.percent}%` }}
+                      />
+                    </div>
                   </div>
                 )}
 
@@ -1283,12 +1436,16 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
                     </div>
                   )}
 
-                  {/* Attached Document Status */}
+                  {/* Attached Documents Status */}
                   <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center">
-                    <span className="text-slate-500">Attached UNEB Result Slip:</span>
+                    <span className="text-slate-500">Attached Academic Documents:</span>
                     <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>{submittedData.attachedDocumentName || 'Official Document Attached'}</span>
+                      <span>
+                        {submittedData.attachedDocuments && submittedData.attachedDocuments.length > 0
+                          ? `${submittedData.attachedDocuments.length} Document(s) Attached`
+                          : submittedData.attachedDocumentName || 'Official Documents Attached'}
+                      </span>
                     </span>
                   </div>
 

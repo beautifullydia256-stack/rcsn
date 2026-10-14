@@ -239,10 +239,13 @@ export async function generateAdmissionApplicationPdf(app: AdmissionApplication)
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7);
   doc.setTextColor(51, 65, 85);
-  doc.text('Attached UNEB Slip / Document:', margin + 4, y + 5);
+  doc.text('Attached Academic Documents:', margin + 4, y + 5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(0, 135, 62);
-  doc.text(`[VERIFIED ATTACHMENT]: ${app.attachedDocumentName || 'Official UNEB Result Slip Logged'}`, margin + 55, y + 5);
+  const docSummary = app.attachedDocuments && app.attachedDocuments.length > 0
+    ? `${app.attachedDocuments.length} File(s): ${app.attachedDocuments.map((d) => d.name).join(', ')}`
+    : (app.attachedDocumentName || 'Official Academic Documents Logged');
+  doc.text(`[VERIFIED ATTACHMENTS]: ${docSummary.length > 80 ? docSummary.slice(0, 77) + '...' : docSummary}`, margin + 55, y + 5);
 
   // 7. Important Admissions Next Steps & Interview Calling
   y += 12;

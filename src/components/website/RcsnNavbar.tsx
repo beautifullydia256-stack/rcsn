@@ -139,10 +139,18 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
       <div className="bg-[#005C29] text-white text-xs py-2 px-3 sm:px-4 lg:px-6 border-b border-[#004720]">
         <div className="max-w-screen-2xl mx-auto flex flex-wrap justify-between items-center gap-2">
           <div className="flex items-center gap-4 flex-wrap">
-            <span className="flex items-center gap-1.5 font-medium text-emerald-100">
+            <button
+              type="button"
+              onClick={() => {
+                if (onOpenAdmissions) onOpenAdmissions();
+                else window.dispatchEvent(new CustomEvent('rcsn:open-admissions'));
+              }}
+              className="flex items-center gap-1.5 font-medium text-emerald-100 hover:text-white transition-colors cursor-pointer text-left"
+              title="Click to Apply for 2026/2027 Intakes"
+            >
               <Calendar className="w-3.5 h-3.5 text-emerald-300" />
-              <span>Admissions Ongoing for 2026/2027 Intakes</span>
-            </span>
+              <span>Admissions Ongoing for 2026/2027 Intakes • Apply Now</span>
+            </button>
             <span className="hidden md:inline-flex items-center gap-1 text-emerald-200">
               <MapPin className="w-3.5 h-3.5 text-emerald-300" />
               <span>Rakai Town Council, Byakabanda Rd</span>
@@ -271,29 +279,23 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
                 <span>Application Status</span>
               </Link>
 
-              {/* Apply Online Button (Always visible on desktop!) */}
-              {onOpenAdmissions ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    closeDropdown();
+              {/* Apply Online Button (Always visible and triggers modal directly) */}
+              <button
+                type="button"
+                onClick={() => {
+                  closeDropdown();
+                  if (onOpenAdmissions) {
                     onOpenAdmissions();
-                  }}
-                  className="hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 lg:px-3.5 lg:py-2 rounded-lg bg-[#00873E] hover:bg-[#007033] text-white font-bold text-xs lg:text-sm shadow-sm transition-colors whitespace-nowrap"
-                >
-                  <GraduationCap className="w-3.5 h-3.5" />
-                  <span>Apply Now</span>
-                </button>
-              ) : (
-                <Link
-                  to="/admissions"
-                  onClick={closeDropdown}
-                  className="hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 lg:px-3.5 lg:py-2 rounded-lg bg-[#00873E] hover:bg-[#007033] text-white font-bold text-xs lg:text-sm shadow-sm transition-colors whitespace-nowrap"
-                >
-                  <GraduationCap className="w-3.5 h-3.5" />
-                  <span>Apply Now</span>
-                </Link>
-              )}
+                  } else {
+                    window.dispatchEvent(new CustomEvent('rcsn:open-admissions'));
+                  }
+                }}
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 lg:px-3.5 lg:py-2 rounded-lg bg-[#00873E] hover:bg-[#007033] text-white font-bold text-xs lg:text-sm shadow-sm transition-colors whitespace-nowrap cursor-pointer"
+                title="Apply Online"
+              >
+                <GraduationCap className="w-3.5 h-3.5" />
+                <span>Apply Now</span>
+              </button>
 
               {/* LOGIN (Always visible on all screens!) */}
               <Link
@@ -639,28 +641,21 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
                     <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
                       Admissions are open for January and July Intakes. Transparent government-aligned fee structure with flexible installment options.
                     </p>
-                    {onOpenAdmissions ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          closeDropdown();
+                    <button
+                      type="button"
+                      onClick={() => {
+                        closeDropdown();
+                        if (onOpenAdmissions) {
                           onOpenAdmissions();
-                        }}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#00873E] hover:bg-[#007033] text-white text-xs font-bold shadow-sm transition-colors"
-                      >
-                        <GraduationCap className="w-4 h-4" />
-                        <span>Start Online Application</span>
-                      </button>
-                    ) : (
-                      <Link
-                        to="/admissions"
-                        onClick={closeDropdown}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#00873E] hover:bg-[#007033] text-white text-xs font-bold shadow-sm transition-colors"
-                      >
-                        <GraduationCap className="w-4 h-4" />
-                        <span>Start Online Application</span>
-                      </Link>
-                    )}
+                        } else {
+                          window.dispatchEvent(new CustomEvent('rcsn:open-admissions'));
+                        }
+                      }}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#00873E] hover:bg-[#007033] text-white text-xs font-bold shadow-sm transition-colors cursor-pointer"
+                    >
+                      <GraduationCap className="w-4 h-4" />
+                      <span>Start Online Application</span>
+                    </button>
                   </div>
 
                   <div className="col-span-8 grid grid-cols-2 gap-3">
@@ -999,28 +994,21 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
             })}
 
             <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-col gap-2.5">
-              {onOpenAdmissions ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMobileMenuOpen(false);
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  if (onOpenAdmissions) {
                     onOpenAdmissions();
-                  }}
-                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#00873E] hover:bg-[#007033] text-white font-bold text-base shadow-md transition-all active:scale-[0.98]"
-                >
-                  <GraduationCap className="w-5 h-5" />
-                  <span>Apply Online</span>
-                </button>
-              ) : (
-                <Link
-                  to="/admissions"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#00873E] hover:bg-[#007033] text-white font-bold text-base shadow-md transition-all active:scale-[0.98]"
-                >
-                  <GraduationCap className="w-5 h-5" />
-                  <span>Apply Online</span>
-                </Link>
-              )}
+                  } else {
+                    window.dispatchEvent(new CustomEvent('rcsn:open-admissions'));
+                  }
+                }}
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#00873E] hover:bg-[#007033] text-white font-bold text-base shadow-md transition-all active:scale-[0.98] cursor-pointer"
+              >
+                <GraduationCap className="w-5 h-5" />
+                <span>Apply Online</span>
+              </button>
 
               <Link
                 to="/application-status"

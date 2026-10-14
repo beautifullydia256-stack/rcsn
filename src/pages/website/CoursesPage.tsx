@@ -81,6 +81,15 @@ export default function CoursesPage() {
     setAdmissionsOpen(true);
   };
 
+  useEffect(() => {
+    const handleGlobal = (e: Event) => {
+      const detail = (e as CustomEvent<{ program?: string }>).detail;
+      openAdmissionsFor(detail?.program || 'Certificate in Nursing');
+    };
+    window.addEventListener('rcsn:open-admissions', handleGlobal);
+    return () => window.removeEventListener('rcsn:open-admissions', handleGlobal);
+  }, []);
+
   const courses = [
     {
       id: 'cert-nursing',

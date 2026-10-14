@@ -26,7 +26,16 @@ export default function AdmissionsPage() {
   const [admissionsOpen, setAdmissionsOpen] = useState(false);
 
   useEffect(() => {
-    if (location.hash) {
+    if (location.search.includes('apply=true') || location.hash === '#apply') {
+      setAdmissionsOpen(true);
+    }
+    const handleGlobal = () => setAdmissionsOpen(true);
+    window.addEventListener('rcsn:open-admissions', handleGlobal);
+    return () => window.removeEventListener('rcsn:open-admissions', handleGlobal);
+  }, [location.search, location.hash]);
+
+  useEffect(() => {
+    if (location.hash && location.hash !== '#apply') {
       const rawId = location.hash.replace('#', '');
       setTimeout(() => {
         const el = document.getElementById(rawId);
