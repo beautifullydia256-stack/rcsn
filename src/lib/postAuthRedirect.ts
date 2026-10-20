@@ -19,6 +19,7 @@ export const roleToPath: Record<string, string> = {
   hr: '/dashboard/hr',
   hr_manager: '/dashboard/hr',
   human_resource: '/dashboard/hr',
+  ict: '/dashboard/ict',
 };
 
 /** JWT user_metadata (and legacy raw_user_meta_data on some paths). */

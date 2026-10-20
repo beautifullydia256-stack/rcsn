@@ -44,6 +44,8 @@ export function getRoleTitle(role: string | null | undefined, schoolType?: strin
         return 'Institutional Administrator';
       case 'owner':
         return 'Director / Governing Council';
+      case 'ict':
+        return 'ICT & Systems Officer';
       default:
         return norm ? norm.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : 'Staff';
     }
@@ -83,6 +85,8 @@ export function getRoleTitle(role: string | null | undefined, schoolType?: strin
       return 'School Administrator';
     case 'owner':
       return 'School Owner / Director';
+    case 'ict':
+      return 'ICT & Systems Officer';
     default:
       return norm ? norm.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : 'Staff';
   }

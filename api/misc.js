@@ -180,6 +180,7 @@ module.exports = async function handler(req, res) {
     case 'delete-email':             return load('./admin/_delete-email')(req, res);
     case 'email-attachment':         return load('./admin/_email-attachment')(req, res);
     case 'download-cloud-document':  return load('./admin/_download-cloud-document')(req, res);
+    case 'ict-password-reset':       return load('./admin/_ict-password-reset')(req, res);
     default:
       res.statusCode = 404;
       return res.end(JSON.stringify({ error: `Unknown action: ${action}` }));

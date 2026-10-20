@@ -65,6 +65,16 @@ const AccountantDashboard = lazy(() => import('../pages/accountant/Dashboard'));
 const LibrarianDashboard = lazy(() => import('../pages/librarian/Dashboard'));
 const HeadTeacherDashboard = lazy(() => import('../pages/head-teacher/Dashboard'));
 const OwnerDashboard = lazy(() => import('../pages/owner/Dashboard'));
+const IctLayout = lazy(() => import('../pages/ict/IctLayout'));
+const IctDashboard = lazy(() => import('../pages/ict/IctDashboard'));
+const IctAccountsPage = lazy(() => import('../pages/ict/IctAccountsPage'));
+const IctWorkstationsPage = lazy(() => import('../pages/ict/IctWorkstationsPage'));
+const IctLabSchedulePage = lazy(() => import('../pages/ict/IctLabSchedulePage'));
+const IctNetworkPage = lazy(() => import('../pages/ict/IctNetworkPage'));
+const IctHelpdeskPage = lazy(() => import('../pages/ict/IctHelpdeskPage'));
+const IctWebmailPage = lazy(() => import('../pages/ict/IctWebmailPage'));
+const SchoolChatPage = lazy(() => import('../pages/chat/SchoolChatPage'));
+const SchoolCalendarPage = lazy(() => import('../pages/shared/SchoolCalendarPage'));
 
 // Public routes
 const HomePage = lazy(() => import('../pages/Home'));
@@ -242,6 +252,24 @@ export const router: RouteObject[] = [
           { path: 'reports/viewer', element: <ReportViewer /> },
           { path: 'identity', element: <IdentityPage /> },
           { path: 'identity/:id', element: <StudentIDCardPage /> },
+        ],
+      },
+      {
+        path: 'ict',
+        element: <IctLayout />,
+        children: [
+          { index: true, element: <IctDashboard /> },
+          { path: 'email', element: <IctWebmailPage /> },
+          { path: 'accounts', element: <IctAccountsPage /> },
+          { path: 'workstations', element: <IctWorkstationsPage /> },
+          { path: 'schedule', element: <IctLabSchedulePage /> },
+          { path: 'biometrics', element: <BiometricDevicesPage /> },
+          { path: 'network', element: <IctNetworkPage /> },
+          { path: 'helpdesk', element: <IctHelpdeskPage /> },
+          { path: 'requisitions', element: <BudgetRequisitionsPage /> },
+          { path: 'store-indent', element: <DailyIndentPage /> },
+          { path: 'messages', element: <SchoolChatPage /> },
+          { path: 'calendar', element: <SchoolCalendarPage /> },
         ],
       },
       {

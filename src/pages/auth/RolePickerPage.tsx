@@ -10,7 +10,7 @@ import { getRoleTitle, getGreetingLastName } from '@/lib/roleTerminology';
 
 import {
   GraduationCap, School, BookOpen, Users, Award, Briefcase,
-  Compass, Wallet, TestTube, Building2, ClipboardList, Settings, User
+  Compass, Wallet, TestTube, Building2, ClipboardList, Settings, User, Monitor
 } from 'lucide-react';
 
 function getRoleIcon(role: string): React.ReactNode {
@@ -32,6 +32,7 @@ function getRoleIcon(role: string): React.ReactNode {
     case 'human_resource': return <Briefcase className="w-5 h-5 text-teal-400" />;
     case 'student': return <GraduationCap className="w-5 h-5 text-purple-400" />;
     case 'owner': return <Settings className="w-5 h-5 text-yellow-400" />;
+    case 'ict': return <Monitor className="w-5 h-5 text-emerald-400" />;
     default: return <User className="w-5 h-5 text-slate-400" />;
   }
 }

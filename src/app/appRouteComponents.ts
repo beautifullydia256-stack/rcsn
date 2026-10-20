@@ -314,5 +314,16 @@ export const MatronGatePassesPage = lazyWithRetry(() => import('@/pages/matron/M
 // Student Facility Passes & Liabilities
 export const StudentFacilitiesPage = lazyWithRetry(() => import('@/pages/student/facilities/StudentFacilitiesPage'));
 
+// ICT & Systems Portal
+export const IctLayout = lazyWithRetry(() => import('@/pages/ict/IctLayout'));
+export const IctDashboard = lazyWithRetry(() => import('@/pages/ict/IctDashboard'));
+export const IctAccountsPage = lazyWithRetry(() => import('@/pages/ict/IctAccountsPage'));
+export const IctWorkstationsPage = lazyWithRetry(() => import('@/pages/ict/IctWorkstationsPage'));
+export const IctLabSchedulePage = lazyWithRetry(() => import('@/pages/ict/IctLabSchedulePage'));
+export const IctNetworkPage = lazyWithRetry(() => import('@/pages/ict/IctNetworkPage'));
+export const IctHelpdeskPage = lazyWithRetry(() => import('@/pages/ict/IctHelpdeskPage'));
+export const IctWebmailPage = lazyWithRetry(() => import('@/pages/ict/IctWebmailPage'));
+
+
 
 

@@ -250,6 +250,14 @@ import {
   DailyIndentPage,
   BudgetRequisitionsPage,
   ConsolidatedBudgetApprovalPage,
+  IctLayout,
+  IctDashboard,
+  IctAccountsPage,
+  IctWorkstationsPage,
+  IctLabSchedulePage,
+  IctNetworkPage,
+  IctHelpdeskPage,
+  IctWebmailPage,
 } from './app/appRouteComponents';
 
 /**
@@ -803,6 +811,21 @@ function AppRouteTree() {
             <Route path="broadcasts" element={<GuildBroadcastsPage />} />
             <Route path="elections" element={<GuildElectionsAdminPage />} />
           </Route>
+        </Route>
+        {/* ICT & Systems Portal */}
+        <Route path="ict" element={<IctLayout />}>
+          <Route index element={<IctDashboard />} />
+          <Route path="email" element={<IctWebmailPage />} />
+          <Route path="accounts" element={<IctAccountsPage />} />
+          <Route path="workstations" element={<IctWorkstationsPage />} />
+          <Route path="schedule" element={<IctLabSchedulePage />} />
+          <Route path="biometrics" element={<BiometricDevicesPage />} />
+          <Route path="network" element={<IctNetworkPage />} />
+          <Route path="helpdesk" element={<IctHelpdeskPage />} />
+          <Route path="requisitions" element={<BudgetRequisitionsPage />} />
+          <Route path="store-indent" element={<DailyIndentPage />} />
+          <Route path="messages" element={<SchoolChatPage />} />
+          <Route path="calendar" element={<SchoolCalendarPage />} />
         </Route>
         <Route path="owner/*" element={<OwnerDashboard />} />
       </Route>
