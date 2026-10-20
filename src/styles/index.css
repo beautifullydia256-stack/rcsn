@@ -268,14 +268,61 @@ input[type='range'].slider::-moz-range-thumb:hover {
   user-select: none;
 }
 
-/* Invisible scrollbar utility */
-.no-scrollbar::-webkit-scrollbar {
+/* Invisible scrollbar utility & global mobile navigation scrollbar elimination */
+.no-scrollbar::-webkit-scrollbar,
+.hide-scrollbar::-webkit-scrollbar {
   display: none !important;
   width: 0 !important;
   height: 0 !important;
 }
-.no-scrollbar {
+.no-scrollbar,
+.hide-scrollbar {
   -ms-overflow-style: none !important;
   scrollbar-width: none !important;
 }
+
+/* Explicitly eliminate scrollbars on all navigation components across all viewports */
+nav,
+nav *,
+[role="navigation"],
+[role="navigation"] *,
+.pw-botnav,
+.pw-botnav *,
+.pw-botnav-items,
+.pw-botnav-items * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+nav::-webkit-scrollbar,
+nav *::-webkit-scrollbar,
+[role="navigation"]::-webkit-scrollbar,
+[role="navigation"] *::-webkit-scrollbar,
+.pw-botnav::-webkit-scrollbar,
+.pw-botnav *::-webkit-scrollbar,
+.pw-botnav-items::-webkit-scrollbar,
+.pw-botnav-items *::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Mobile viewport scrollbar removal (preserves touch gesture scrolling without clunky desktop bars) */
+@media (max-width: 1024px) {
+  html,
+  body,
+  *,
+  *::before,
+  *::after {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+  
+  *::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+}
+
 
