@@ -357,39 +357,6 @@ CREATE POLICY "ict_network_nodes_delete_staff" ON public.ict_network_nodes
         AND users.role IN ('ict', 'admin', 'owner', 'principal', 'super_admin', 'developer')
     )
   );
-
--- Seed initial 30 workstations for RCSN Computer Lab if table is empty
-INSERT INTO public.ict_workstations (school_id, station_code, row_number, cpu_specs, ram_gb, storage_specs, os_version, has_ups, mouse_status, keyboard_status, monitor_status, overall_status)
-SELECT
-  'e1b10000-0000-4000-a000-000000000001',
-  'PC-' || LPAD(s.n::text, 2, '0'),
-  'Row ' || (((s.n - 1) / 6) + 1)::text,
-  'Intel Core i5-8500',
-  8,
-  '256GB SSD',
-  'Windows 11 Pro',
-  true,
-  'working',
-  'working',
-  'working',
-  'operational'
-FROM generate_series(1, 30) AS s(n)
-ON CONFLICT (school_id, station_code) DO NOTHING;
-
--- Seed Network & CCTV infrastructure if empty
-INSERT INTO public.ict_network_nodes (school_id, name, device_type, location, ip_address, status)
-VALUES
-  ('e1b10000-0000-4000-a000-000000000001', 'Main Gateway Router (Fiber)', 'router', 'Server Room', '192.168.1.1', 'online'),
-  ('e1b10000-0000-4000-a000-000000000001', 'Core 24-Port Switch A', 'switch', 'Server Room', '192.168.1.2', 'online'),
-  ('e1b10000-0000-4000-a000-000000000001', 'Admin Block Wi-Fi AP', 'access_point', 'Admin Block Corridor', '192.168.1.10', 'online'),
-  ('e1b10000-0000-4000-a000-000000000001', 'Computer Lab High-Density AP', 'access_point', 'Computer Lab', '192.168.1.11', 'online'),
-  ('e1b10000-0000-4000-a000-000000000001', 'Library Wi-Fi AP', 'access_point', 'Library Reading Hall', '192.168.1.12', 'online'),
-  ('e1b10000-0000-4000-a000-000000000001', 'Lecture Hall 1 Wi-Fi AP', 'access_point', 'Lecture Block A', '192.168.1.13', 'online'),
-  ('e1b10000-0000-4000-a000-000000000001', 'CCTV 01 - Campus Main Gate', 'cctv_camera', 'Security Gatehouse', '192.168.1.51', 'online'),
-  ('e1b10000-0000-4000-a000-000000000001', 'CCTV 02 - Admin Reception', 'cctv_camera', 'Admin Foyer', '192.168.1.52', 'online'),
-  ('e1b10000-0000-4000-a000-000000000001', 'CCTV 03 - Computer Laboratory', 'cctv_camera', 'Computer Lab Interior', '192.168.1.53', 'online'),
-  ('e1b10000-0000-4000-a000-000000000001', 'CCTV 04 - Skills Laboratory', 'cctv_camera', 'Skills Lab Entrance', '192.168.1.54', 'online')
-ON CONFLICT DO NOTHING;
-
 -- Reload PostgREST schema cache
 NOTIFY pgrst, 'reload schema';
+

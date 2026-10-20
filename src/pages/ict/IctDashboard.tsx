@@ -30,31 +30,24 @@ export default function IctDashboard() {
   const navigate = useNavigate();
   const schoolId = useAuthStore((s) => s.schoolId) || 'e1b10000-0000-4000-a000-000000000001';
 
-  // 1. Fetch Workstations
+  // 1. Fetch Workstations directly from Supabase
   const { data: workstations = [] } = useQuery<DashboardWorkstation[]>({
     queryKey: ['ict-workstations-kpi', schoolId],
     queryFn: async () => {
-      try {
-        const { data, error } = await supabase
-          .from('ict_workstations')
-          .select('id, station_code, overall_status')
-          .eq('school_id', schoolId);
-        if (!error && Array.isArray(data) && data.length > 0) return data;
-      } catch {}
-      // Resilient local storage or 30-lab-station baseline
-      try {
-        const raw = localStorage.getItem('rcsn_ict_workstations');
-        if (raw) return JSON.parse(raw);
-      } catch {}
-      return Array.from({ length: 30 }, (_, i) => ({
-        id: `local-${i + 1}`,
-        station_code: `PC-${String(i + 1).padStart(2, '0')}`,
-        overall_status: 'operational',
-      }));
+      const { data, error } = await supabase
+        .from('ict_workstations')
+        .select('id, station_code, overall_status')
+        .eq('school_id', schoolId)
+        .order('station_code', { ascending: true });
+      if (error) {
+        console.error('Error fetching workstations KPI:', error);
+        return [];
+      }
+      return (data || []) as DashboardWorkstation[];
     },
   });
 
-  // 2. Fetch Biometric devices
+  // 2. Fetch Biometric devices directly from Supabase
   const { data: biometricDevices = [] } = useQuery({
     queryKey: ['ict-biometrics-kpi', schoolId],
     queryFn: async () => {
@@ -66,7 +59,7 @@ export default function IctDashboard() {
     },
   });
 
-  // 3. Fetch Helpdesk Tickets
+  // 3. Fetch Helpdesk Tickets directly from Supabase
   const { data: tickets = [] } = useQuery({
     queryKey: ['ict-tickets-kpi', schoolId],
     queryFn: async () => {
@@ -81,7 +74,7 @@ export default function IctDashboard() {
     },
   });
 
-  // 4. Fetch Today's Lab Bookings
+  // 4. Fetch Today's Lab Bookings directly from Supabase
   const todayIso = new Date().toISOString().slice(0, 10);
   const { data: schedules = [] } = useQuery({
     queryKey: ['ict-schedules-kpi', schoolId, todayIso],
@@ -97,7 +90,7 @@ export default function IctDashboard() {
     },
   });
 
-  // 5. Fetch Network Nodes
+  // 5. Fetch Network Nodes directly from Supabase
   const { data: networkNodes = [] } = useQuery({
     queryKey: ['ict-network-kpi', schoolId],
     queryFn: async () => {
@@ -228,18 +221,24 @@ export default function IctDashboard() {
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{operationalStations}</span>
-            <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">/ {totalStations} Ready</span>
+            <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">/ {totalStations} Registered</span>
           </div>
           <div className="mt-3 flex items-center gap-2 text-xs">
-            <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-semibold">
-              <CheckCircle2 className="h-3 w-3" />
-              {totalStations > 0 ? Math.round((operationalStations / totalStations) * 100) : 0}% Operational
-            </span>
-            {faultyStations > 0 && (
-              <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400 font-semibold">
-                <AlertTriangle className="h-3 w-3" />
-                {faultyStations} Attention
-              </span>
+            {totalStations > 0 ? (
+              <>
+                <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-semibold">
+                  <CheckCircle2 className="h-3 w-3" />
+                  {Math.round((operationalStations / totalStations) * 100)}% Operational
+                </span>
+                {faultyStations > 0 && (
+                  <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400 font-semibold">
+                    <AlertTriangle className="h-3 w-3" />
+                    {faultyStations} Attention
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="text-slate-500 dark:text-slate-400 text-xs">No workstations registered</span>
             )}
           </div>
         </div>
@@ -257,14 +256,18 @@ export default function IctDashboard() {
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{activeBiometric}</span>
             <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">
-              / {totalBiometric > 0 ? totalBiometric : 2} Online
+              / {totalBiometric} Online
             </span>
           </div>
           <div className="mt-3 flex items-center gap-2 text-xs">
-            <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-semibold">
-              <CheckCircle2 className="h-3 w-3" />
-              Gate &amp; Staff Terminals Active
-            </span>
+            {totalBiometric > 0 ? (
+              <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-semibold">
+                <CheckCircle2 className="h-3 w-3" />
+                {activeBiometric} Active Terminals
+              </span>
+            ) : (
+              <span className="text-slate-500 dark:text-slate-400 text-xs">No terminals registered</span>
+            )}
           </div>
         </div>
 
@@ -285,7 +288,7 @@ export default function IctDashboard() {
           <div className="mt-3 flex items-center gap-2 text-xs">
             <span className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-400 font-medium">
               <Clock className="h-3 w-3" />
-              Hardware, Network &amp; Printers
+              {tickets.length} Total Logged
             </span>
           </div>
         </div>
@@ -303,14 +306,18 @@ export default function IctDashboard() {
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{onlineNodes}</span>
             <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">
-              / {networkNodes.length > 0 ? networkNodes.length : 10} Online
+              / {networkNodes.length} Online
             </span>
           </div>
           <div className="mt-3 flex items-center gap-2 text-xs">
-            <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-semibold">
-              <ShieldCheck className="h-3 w-3" />
-              Main ISP Fiber Healthy
-            </span>
+            {networkNodes.length > 0 ? (
+              <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-semibold">
+                <ShieldCheck className="h-3 w-3" />
+                {onlineNodes} Active Nodes
+              </span>
+            ) : (
+              <span className="text-slate-500 dark:text-slate-400 text-xs">No nodes configured</span>
+            )}
           </div>
         </div>
       </div>
@@ -331,41 +338,60 @@ export default function IctDashboard() {
               onClick={() => navigate('/dashboard/ict/workstations')}
               className="flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors"
             >
-              View All <ArrowRight className="h-3.5 w-3.5" />
+              Manage Workstations <ArrowRight className="h-3.5 w-3.5" />
             </button>
           </div>
 
-          <div className="mt-4 grid grid-cols-5 sm:grid-cols-6 md:grid-cols-10 gap-2">
-            {workstations.slice(0, 30).map((st) => {
-              const isOk = st.overall_status === 'operational';
-              return (
-                <div
-                  key={st.id}
-                  className={`flex flex-col items-center justify-center p-2 rounded-lg border text-center transition-all ${
-                    isOk
-                      ? 'border-emerald-300 dark:border-emerald-500/30 bg-emerald-50/80 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 hover:border-emerald-500'
-                      : 'border-amber-300 dark:border-amber-500/30 bg-amber-50/80 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 hover:border-amber-500'
-                  }`}
-                  title={`${st.station_code}: ${st.overall_status}`}
-                >
-                  <Monitor className="h-4 w-4 mb-1" />
-                  <span className="text-[10px] font-extrabold">{st.station_code}</span>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="mt-4 pt-3 border-t border-slate-200 dark:border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-400">
-            <div className="flex items-center gap-4">
-              <span className="flex items-center gap-1.5 font-medium">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Operational
-              </span>
-              <span className="flex items-center gap-1.5 font-medium">
-                <span className="h-2.5 w-2.5 rounded-full bg-amber-500" /> Maintenance Needed
-              </span>
+          {workstations.length === 0 ? (
+            <div className="py-12 text-center text-slate-500 dark:text-slate-400">
+              <Monitor className="h-8 w-8 mx-auto mb-2 text-slate-400 dark:text-slate-500" />
+              <p className="text-xs font-semibold text-slate-900 dark:text-white">No Lab Workstations Registered</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                Add lab PCs to monitor hardware status and readiness.
+              </p>
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard/ict/workstations')}
+                className="mt-3 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-sm"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add Workstation
+              </button>
             </div>
-            <span className="font-medium">Standard Lab Capacity: 30 Stations</span>
-          </div>
+          ) : (
+            <>
+              <div className="mt-4 grid grid-cols-5 sm:grid-cols-6 md:grid-cols-10 gap-2">
+                {workstations.map((st) => {
+                  const isOk = st.overall_status === 'operational';
+                  return (
+                    <div
+                      key={st.id}
+                      className={`flex flex-col items-center justify-center p-2 rounded-lg border text-center transition-all ${
+                        isOk
+                          ? 'border-emerald-300 dark:border-emerald-500/30 bg-emerald-50/80 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 hover:border-emerald-500'
+                          : 'border-amber-300 dark:border-amber-500/30 bg-amber-50/80 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 hover:border-amber-500'
+                      }`}
+                      title={`${st.station_code}: ${st.overall_status}`}
+                    >
+                      <Monitor className="h-4 w-4 mb-1" />
+                      <span className="text-[10px] font-extrabold">{st.station_code}</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-slate-200 dark:border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-400">
+                <div className="flex items-center gap-4">
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Operational
+                  </span>
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <span className="h-2.5 w-2.5 rounded-full bg-amber-500" /> Maintenance Needed
+                  </span>
+                </div>
+                <span className="font-medium">Total Registered: {totalStations} Stations</span>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Right Column (1 col): Today's Lab Sessions */}
@@ -435,12 +461,12 @@ export default function IctDashboard() {
           {tickets.length === 0 ? (
             <div className="text-center py-8 text-slate-500 dark:text-slate-400 text-xs">
               <Wrench className="h-8 w-8 mx-auto mb-2 text-slate-400 dark:text-slate-500" />
-              No support tickets currently open. All campus systems running smoothly.
+              No support tickets currently open.
             </div>
           ) : (
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 uppercase text-[10px] tracking-wider">
+                <tr className="border-b border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 uppercase text-[10px] tracking-wider font-bold">
                   <th className="pb-2">Ticket #</th>
                   <th className="pb-2">Location / Dept</th>
                   <th className="pb-2">Category</th>
@@ -449,7 +475,7 @@ export default function IctDashboard() {
                   <th className="pb-2">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-white/5">
+              <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                 {tickets.map((t) => (
                   <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-white/5">
                     <td className="py-2.5 font-mono font-bold text-slate-900 dark:text-white">{t.ticket_number}</td>

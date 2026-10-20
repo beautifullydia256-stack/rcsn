@@ -3,16 +3,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Wifi,
   Server,
-  ShieldCheck,
   Eye,
-  CheckCircle2,
-  AlertTriangle,
   Plus,
   RefreshCw,
-  Search,
-  MapPin,
-  Clock,
-  Radio,
+  Trash2,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
@@ -44,73 +38,34 @@ export default function IctNetworkPage() {
   const [location, setLocation] = useState('');
   const [ipAddress, setIpAddress] = useState('192.168.1.');
 
-const NETWORK_LOCAL_KEY = 'rcsn_ict_network_nodes';
-
-function getInitialLocalNetworkNodes(): NetworkNode[] {
-  try {
-    const raw = localStorage.getItem(NETWORK_LOCAL_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch {}
-  const sample: NetworkNode[] = [
-    { id: 'local-net-1', name: 'Main Gateway Router (Fiber)', device_type: 'router', location: 'Server Room', ip_address: '192.168.1.1', mac_address: 'E4:8D:8C:11:22:33', status: 'online', last_ping_at: new Date().toISOString(), notes: 'Primary fiber ISP backbone' },
-    { id: 'local-net-2', name: 'Core 24-Port Switch A', device_type: 'switch', location: 'Server Room', ip_address: '192.168.1.2', mac_address: 'E4:8D:8C:11:22:34', status: 'online', last_ping_at: new Date().toISOString(), notes: 'Gigabit PoE switch for labs' },
-    { id: 'local-net-3', name: 'Admin Block Wi-Fi AP', device_type: 'access_point', location: 'Admin Block Corridor', ip_address: '192.168.1.10', mac_address: 'E4:8D:8C:11:22:35', status: 'online', last_ping_at: new Date().toISOString(), notes: 'Dual-band Wi-Fi 6 AP' },
-    { id: 'local-net-4', name: 'Computer Lab High-Density AP', device_type: 'access_point', location: 'Computer Lab', ip_address: '192.168.1.11', mac_address: 'E4:8D:8C:11:22:36', status: 'online', last_ping_at: new Date().toISOString(), notes: 'Supports 100+ concurrent clients' },
-    { id: 'local-net-5', name: 'Library Wi-Fi AP', device_type: 'access_point', location: 'Library Reading Hall', ip_address: '192.168.1.12', mac_address: 'E4:8D:8C:11:22:37', status: 'online', last_ping_at: new Date().toISOString(), notes: 'Coverage across e-library hall' },
-    { id: 'local-net-6', name: 'Lecture Hall 1 Wi-Fi AP', device_type: 'access_point', location: 'Lecture Block A', ip_address: '192.168.1.13', mac_address: 'E4:8D:8C:11:22:38', status: 'online', last_ping_at: new Date().toISOString(), notes: 'Nursing lecture hall coverage' },
-    { id: 'local-net-7', name: 'CCTV 01 - Campus Main Gate', device_type: 'cctv_camera', location: 'Security Gatehouse', ip_address: '192.168.1.51', mac_address: 'A0:B1:C2:01:02:03', status: 'online', last_ping_at: new Date().toISOString(), notes: '4K License plate recognition' },
-    { id: 'local-net-8', name: 'CCTV 02 - Admin Reception', device_type: 'cctv_camera', location: 'Admin Foyer', ip_address: '192.168.1.52', mac_address: 'A0:B1:C2:01:02:04', status: 'online', last_ping_at: new Date().toISOString(), notes: 'Wide-angle dome camera' },
-    { id: 'local-net-9', name: 'CCTV 03 - Computer Laboratory', device_type: 'cctv_camera', location: 'Computer Lab Interior', ip_address: '192.168.1.53', mac_address: 'A0:B1:C2:01:02:05', status: 'online', last_ping_at: new Date().toISOString(), notes: 'Full lab coverage 30 workstations' },
-    { id: 'local-net-10', name: 'CCTV 04 - Skills Laboratory', device_type: 'cctv_camera', location: 'Skills Lab Entrance', ip_address: '192.168.1.54', mac_address: 'A0:B1:C2:01:02:06', status: 'online', last_ping_at: new Date().toISOString(), notes: 'Hospital ward & mannequins view' },
-  ];
-  try { localStorage.setItem(NETWORK_LOCAL_KEY, JSON.stringify(sample)); } catch {}
-  return sample;
-}
-
+  // Fetch real nodes from Supabase
   const { data: nodes = [], isLoading, refetch } = useQuery({
     queryKey: ['ict-network-nodes', schoolId],
     queryFn: async () => {
-      try {
-        const { data, error } = await supabase
-          .from('ict_network_nodes')
-          .select('*')
-          .eq('school_id', schoolId)
-          .order('name', { ascending: true });
-        if (!error && Array.isArray(data) && data.length > 0) return data as NetworkNode[];
-      } catch {}
-      return getInitialLocalNetworkNodes();
+      const { data, error } = await supabase
+        .from('ict_network_nodes')
+        .select('*')
+        .eq('school_id', schoolId)
+        .order('name', { ascending: true });
+      if (error) {
+        console.error('Error fetching network nodes:', error);
+        return [];
+      }
+      return (data || []) as NetworkNode[];
     },
   });
 
   const addNodeMutation = useMutation({
     mutationFn: async () => {
-      const newNode: NetworkNode = {
-        id: `local-net-${Date.now()}`,
-        name,
+      const { error } = await supabase.from('ict_network_nodes').insert({
+        school_id: schoolId,
+        name: name.trim(),
         device_type: deviceType,
-        location,
-        ip_address: ipAddress,
-        mac_address: null,
+        location: location.trim(),
+        ip_address: ipAddress.trim() || null,
         status: 'online',
-        last_ping_at: new Date().toISOString(),
-        notes: null,
-      };
-      try {
-        await supabase.from('ict_network_nodes').insert({
-          school_id: schoolId,
-          name: newNode.name,
-          device_type: newNode.device_type,
-          location: newNode.location,
-          ip_address: newNode.ip_address,
-          status: 'online',
-        });
-      } catch {}
-      const current = getInitialLocalNetworkNodes();
-      current.push(newNode);
-      try { localStorage.setItem(NETWORK_LOCAL_KEY, JSON.stringify(current)); } catch {}
+      });
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ict-network-nodes', schoolId] });
@@ -123,15 +78,22 @@ function getInitialLocalNetworkNodes(): NetworkNode[] {
 
   const toggleStatusMutation = useMutation({
     mutationFn: async ({ id, newStatus }: { id: string; newStatus: string }) => {
-      try {
-        await supabase
-          .from('ict_network_nodes')
-          .update({ status: newStatus, last_ping_at: new Date().toISOString() })
-          .eq('id', id);
-      } catch {}
-      const current = getInitialLocalNetworkNodes();
-      const next = current.map((n) => (n.id === id ? { ...n, status: newStatus, last_ping_at: new Date().toISOString() } : n));
-      try { localStorage.setItem(NETWORK_LOCAL_KEY, JSON.stringify(next)); } catch {}
+      const { error } = await supabase
+        .from('ict_network_nodes')
+        .update({ status: newStatus, last_ping_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ict-network-nodes', schoolId] });
+      queryClient.invalidateQueries({ queryKey: ['ict-network-kpi', schoolId] });
+    },
+  });
+
+  const deleteNodeMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('ict_network_nodes').delete().eq('id', id);
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ict-network-nodes', schoolId] });
@@ -141,6 +103,7 @@ function getInitialLocalNetworkNodes(): NetworkNode[] {
 
   const networkNodes = nodes.filter((n) => n.device_type !== 'cctv_camera' && n.device_type !== 'nvr_server');
   const cctvNodes = nodes.filter((n) => n.device_type === 'cctv_camera' || n.device_type === 'nvr_server');
+  const activeList = activeTab === 'network' ? networkNodes : cctvNodes;
 
   return (
     <AdminPageWrapper
@@ -160,7 +123,7 @@ function getInitialLocalNetworkNodes(): NetworkNode[] {
                 : 'border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:text-white'
             }`}
           >
-            <Wifi className="h-4 w-4" /> Campus Network & APs ({networkNodes.length})
+            <Wifi className="h-4 w-4" /> Campus Network &amp; APs ({networkNodes.length})
           </button>
           <button
             type="button"
@@ -180,13 +143,16 @@ function getInitialLocalNetworkNodes(): NetworkNode[] {
             type="button"
             onClick={() => refetch()}
             className="p-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100"
-            title="Ping Nodes"
+            title="Refresh Nodes"
           >
             <RefreshCw className="h-4 w-4" />
           </button>
           <button
             type="button"
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => {
+              setDeviceType(activeTab === 'cctv' ? 'cctv_camera' : 'access_point');
+              setIsModalOpen(true);
+            }}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-sm"
           >
             <Plus className="h-4 w-4" /> Add Node
@@ -194,74 +160,121 @@ function getInitialLocalNetworkNodes(): NetworkNode[] {
         </div>
       </div>
 
-      {/* Nodes Display */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {(activeTab === 'network' ? networkNodes : cctvNodes).map((node) => {
-          const isOnline = node.status === 'online';
-          return (
-            <div
-              key={node.id}
-              className={`rounded-2xl border p-4 space-y-3 transition-all shadow-sm ${
-                isOnline
-                  ? 'border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/40 hover:border-emerald-500/50'
-                  : 'border-rose-300 dark:border-rose-500/30 bg-rose-50/60 dark:bg-rose-950/20 hover:border-rose-500'
-              }`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`flex h-10 w-10 items-center justify-center rounded-xl border ${
-                      isOnline
-                        ? 'border-emerald-300 dark:border-emerald-500/30 bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400'
-                        : 'border-rose-300 dark:border-rose-500/30 bg-rose-100 dark:bg-rose-500/10 text-rose-800 dark:text-rose-400'
-                    }`}
-                  >
-                    {node.device_type === 'access_point' ? (
-                      <Wifi className="h-5 w-5" />
-                    ) : node.device_type === 'cctv_camera' ? (
-                      <Eye className="h-5 w-5" />
-                    ) : (
-                      <Server className="h-5 w-5" />
-                    )}
+      {/* Nodes Display or Empty State */}
+      {isLoading ? (
+        <div className={`${adminCardClass} py-16 text-center text-slate-500 dark:text-slate-400 text-sm`}>
+          Loading infrastructure nodes...
+        </div>
+      ) : activeList.length === 0 ? (
+        <div className={`${adminCardClass} py-16 text-center text-slate-500 dark:text-slate-400`}>
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mb-3">
+            {activeTab === 'network' ? <Wifi className="h-7 w-7" /> : <Eye className="h-7 w-7" />}
+          </div>
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+            {activeTab === 'network' ? 'No Campus Network Nodes Registered' : 'No CCTV Cameras Configured'}
+          </h3>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+            {activeTab === 'network'
+              ? 'Register campus Wi-Fi access points, core routers, and ethernet switches to monitor live connectivity.'
+              : 'Add security cameras and NVR servers to monitor campus coverage points.'}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setDeviceType(activeTab === 'cctv' ? 'cctv_camera' : 'access_point');
+              setIsModalOpen(true);
+            }}
+            className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-sm"
+          >
+            <Plus className="h-4 w-4" /> {activeTab === 'network' ? 'Add Network Device' : 'Add Security Camera'}
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {activeList.map((node) => {
+            const isOnline = node.status === 'online';
+            return (
+              <div
+                key={node.id}
+                className={`rounded-2xl border p-4 space-y-3 transition-all shadow-sm ${
+                  isOnline
+                    ? 'border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/40 hover:border-emerald-500/50'
+                    : 'border-rose-300 dark:border-rose-500/30 bg-rose-50/60 dark:bg-rose-950/20 hover:border-rose-500'
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`flex h-10 w-10 items-center justify-center rounded-xl border ${
+                        isOnline
+                          ? 'border-emerald-300 dark:border-emerald-500/30 bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400'
+                          : 'border-rose-300 dark:border-rose-500/30 bg-rose-100 dark:bg-rose-500/10 text-rose-800 dark:text-rose-400'
+                      }`}
+                    >
+                      {node.device_type === 'access_point' ? (
+                        <Wifi className="h-5 w-5" />
+                      ) : node.device_type === 'cctv_camera' ? (
+                        <Eye className="h-5 w-5" />
+                      ) : (
+                        <Server className="h-5 w-5" />
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-sm text-slate-900 dark:text-white">{node.name}</h3>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">
+                        {node.device_type.replace(/_/g, ' ')}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">{node.name}</h3>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">{node.device_type.replace(/_/g, ' ')}</p>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        toggleStatusMutation.mutate({
+                          id: node.id,
+                          newStatus: isOnline ? 'offline' : 'online',
+                        })
+                      }
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
+                        isOnline
+                          ? 'border-emerald-300 dark:border-emerald-500/30 bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300'
+                          : 'border-rose-300 dark:border-rose-500/30 bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300'
+                      }`}
+                    >
+                      {node.status}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirm(`Remove node "${node.name}"?`)) {
+                          deleteNodeMutation.mutate(node.id);
+                        }
+                      }}
+                      className="p-1 rounded text-slate-400 hover:text-rose-500 transition-colors"
+                      title="Delete Node"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    toggleStatusMutation.mutate({
-                      id: node.id,
-                      newStatus: isOnline ? 'offline' : 'online',
-                    })
-                  }
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
-                    isOnline
-                      ? 'border-emerald-300 dark:border-emerald-500/30 bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300'
-                      : 'border-rose-300 dark:border-rose-500/30 bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300'
-                  }`}
-                >
-                  {node.status}
-                </button>
-              </div>
-
-              <div className="space-y-1.5 border-t border-slate-100 dark:border-white/5 pt-2 text-xs text-slate-700 dark:text-slate-300">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500 dark:text-slate-400">Campus Location:</span>
-                  <span className="text-slate-900 dark:text-white font-medium">{node.location}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500 dark:text-slate-400">IP Address:</span>
-                  <span className="font-mono text-emerald-700 dark:text-emerald-400 font-bold">{node.ip_address || 'DHCP'}</span>
+                <div className="space-y-1.5 border-t border-slate-100 dark:border-white/5 pt-2 text-xs text-slate-700 dark:text-slate-300">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500 dark:text-slate-400">Campus Location:</span>
+                    <span className="text-slate-900 dark:text-white font-medium">{node.location}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500 dark:text-slate-400">IP Address:</span>
+                    <span className="font-mono text-emerald-700 dark:text-emerald-400 font-bold">{node.ip_address || 'DHCP'}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Add Device Modal */}
       {isModalOpen && (

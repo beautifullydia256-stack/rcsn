@@ -2,17 +2,10 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Wrench,
-  CheckCircle2,
-  AlertTriangle,
-  Clock,
   Plus,
   Search,
-  Filter,
-  Check,
   Edit2,
-  FileText,
-  Building2,
-  MapPin,
+  Trash2,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
@@ -26,11 +19,11 @@ interface Ticket {
   department: string;
   location: string;
   category: string; // 'hardware', 'software', 'network', 'printer', 'projector', 'biometric'
-  priority: string; // 'urgent', 'normal', 'low'
+  priority: string; // 'low', 'normal', 'urgent'
   status: string; // 'open', 'in_progress', 'resolved', 'closed'
   description: string;
   resolution_notes: string | null;
-  assigned_to: string;
+  assigned_to: string | null;
   created_at: string;
   resolved_at: string | null;
 }
@@ -40,9 +33,9 @@ export default function IctHelpdeskPage() {
   const schoolId = useAuthStore((s) => s.schoolId) || 'e1b10000-0000-4000-a000-000000000001';
 
   const [search, setSearch] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [isNewModalOpen, setIsNewModalOpen] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<string>('all');
   const [activeTicket, setActiveTicket] = useState<Ticket | null>(null);
+  const [isNewModalOpen, setIsNewModalOpen] = useState(false);
 
   // New Ticket Form State
   const [reporterName, setReporterName] = useState('');
@@ -56,117 +49,39 @@ export default function IctHelpdeskPage() {
   const [resolutionStatus, setResolutionStatus] = useState('resolved');
   const [resolutionNotes, setResolutionNotes] = useState('');
 
-const HELPDESK_LOCAL_KEY = 'rcsn_ict_helpdesk_tickets';
-
-function getInitialLocalTickets(): Ticket[] {
-  try {
-    const raw = localStorage.getItem(HELPDESK_LOCAL_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch {}
-  const sampleTickets: Ticket[] = [
-    {
-      id: 'local-tkt-1',
-      ticket_number: 'TKT-1042',
-      reporter_name: 'Sr. Nakato Agnes',
-      department: 'Nursing Faculty',
-      location: 'Lecture Hall 1',
-      category: 'projector',
-      priority: 'urgent',
-      status: 'in_progress',
-      description: 'HDMI display cable flickering during clinical simulations.',
-      resolution_notes: 'Replacement 10m high-speed HDMI cable tested and deployed.',
-      assigned_to: 'ICT Department',
-      created_at: new Date(Date.now() - 3600000 * 2).toISOString(),
-      resolved_at: null,
-    },
-    {
-      id: 'local-tkt-2',
-      ticket_number: 'TKT-1088',
-      reporter_name: 'Mr. Kato Joseph',
-      department: 'Library',
-      location: 'Library Reading Hall',
-      category: 'network',
-      priority: 'normal',
-      status: 'open',
-      description: 'Wi-Fi AP latency high during evening e-library revision hour.',
-      resolution_notes: null,
-      assigned_to: 'ICT Department',
-      created_at: new Date(Date.now() - 3600000 * 5).toISOString(),
-      resolved_at: null,
-    },
-    {
-      id: 'local-tkt-3',
-      ticket_number: 'TKT-1095',
-      reporter_name: 'Matron Babirye',
-      department: 'Hostels',
-      location: 'Female Hostel Reception',
-      category: 'biometric',
-      priority: 'normal',
-      status: 'resolved',
-      description: 'Biometric gate scanner clock was off by 4 minutes.',
-      resolution_notes: 'Re-synced NTP server settings to africa.pool.ntp.org.',
-      assigned_to: 'ICT Department',
-      created_at: new Date(Date.now() - 86400000).toISOString(),
-      resolved_at: new Date().toISOString(),
-    },
-  ];
-  try { localStorage.setItem(HELPDESK_LOCAL_KEY, JSON.stringify(sampleTickets)); } catch {}
-  return sampleTickets;
-}
-
+  // Fetch real tickets from Supabase
   const { data: tickets = [], isLoading } = useQuery({
     queryKey: ['ict-helpdesk-tickets', schoolId],
     queryFn: async () => {
-      try {
-        const { data, error } = await supabase
-          .from('ict_helpdesk_tickets')
-          .select('*')
-          .eq('school_id', schoolId)
-          .order('created_at', { ascending: false });
-        if (!error && Array.isArray(data) && data.length > 0) return data as Ticket[];
-      } catch {}
-      return getInitialLocalTickets();
+      const { data, error } = await supabase
+        .from('ict_helpdesk_tickets')
+        .select('*')
+        .eq('school_id', schoolId)
+        .order('created_at', { ascending: false });
+      if (error) {
+        console.error('Error loading tickets:', error);
+        return [];
+      }
+      return (data || []) as Ticket[];
     },
   });
 
   const createTicketMutation = useMutation({
     mutationFn: async () => {
       const ticketNum = `TKT-${Math.floor(1000 + Math.random() * 9000)}`;
-      const newTicket: Ticket = {
-        id: `local-tkt-${Date.now()}`,
+      const { error } = await supabase.from('ict_helpdesk_tickets').insert({
+        school_id: schoolId,
         ticket_number: ticketNum,
-        reporter_name: reporterName,
+        reporter_name: reporterName.trim(),
         department,
-        location,
+        location: location.trim(),
         category,
         priority,
         status: 'open',
-        description,
-        resolution_notes: null,
+        description: description.trim(),
         assigned_to: 'ICT Department',
-        created_at: new Date().toISOString(),
-        resolved_at: null,
-      };
-      try {
-        await supabase.from('ict_helpdesk_tickets').insert({
-          school_id: schoolId,
-          ticket_number: newTicket.ticket_number,
-          reporter_name: newTicket.reporter_name,
-          department: newTicket.department,
-          location: newTicket.location,
-          category: newTicket.category,
-          priority: newTicket.priority,
-          status: 'open',
-          description: newTicket.description,
-          assigned_to: 'ICT Department',
-        });
-      } catch {}
-      const current = getInitialLocalTickets();
-      current.unshift(newTicket);
-      try { localStorage.setItem(HELPDESK_LOCAL_KEY, JSON.stringify(current)); } catch {}
+      });
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ict-helpdesk-tickets', schoolId] });
@@ -180,29 +95,28 @@ function getInitialLocalTickets(): Ticket[] {
   const updateTicketMutation = useMutation({
     mutationFn: async () => {
       if (!activeTicket) return;
-      const isResolved = resolutionStatus === 'resolved' || resolutionStatus === 'closed';
-      try {
-        await supabase
-          .from('ict_helpdesk_tickets')
-          .update({
-            status: resolutionStatus,
-            resolution_notes: resolutionNotes,
-            resolved_at: isResolved ? new Date().toISOString() : null,
-          })
-          .eq('id', activeTicket.id);
-      } catch {}
-      const current = getInitialLocalTickets();
-      const next = current.map((t) =>
-        t.id === activeTicket.id
-          ? {
-              ...t,
-              status: resolutionStatus,
-              resolution_notes: resolutionNotes,
-              resolved_at: isResolved ? new Date().toISOString() : null,
-            }
-          : t
-      );
-      try { localStorage.setItem(HELPDESK_LOCAL_KEY, JSON.stringify(next)); } catch {}
+      const isNowResolved = resolutionStatus === 'resolved' || resolutionStatus === 'closed';
+      const { error } = await supabase
+        .from('ict_helpdesk_tickets')
+        .update({
+          status: resolutionStatus,
+          resolution_notes: resolutionNotes.trim() || null,
+          resolved_at: isNowResolved ? new Date().toISOString() : null,
+        })
+        .eq('id', activeTicket.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ict-helpdesk-tickets', schoolId] });
+      queryClient.invalidateQueries({ queryKey: ['ict-tickets-kpi', schoolId] });
+      setActiveTicket(null);
+    },
+  });
+
+  const deleteTicketMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('ict_helpdesk_tickets').delete().eq('id', id);
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ict-helpdesk-tickets', schoolId] });
@@ -213,100 +127,126 @@ function getInitialLocalTickets(): Ticket[] {
 
   const filtered = tickets.filter((t) => {
     const term = search.toLowerCase().trim();
-    const matchSearch =
+    const matchesSearch =
       !term ||
       t.ticket_number.toLowerCase().includes(term) ||
       t.reporter_name.toLowerCase().includes(term) ||
-      t.location.toLowerCase().includes(term) ||
-      t.description.toLowerCase().includes(term);
-
-    const matchStatus = filterStatus === 'all' || t.status === filterStatus;
-    return matchSearch && matchStatus;
+      t.description.toLowerCase().includes(term) ||
+      t.location.toLowerCase().includes(term);
+    const matchesStatus = filterStatus === 'all' || t.status === filterStatus;
+    return matchesSearch && matchesStatus;
   });
+
+  const openCount = tickets.filter((t) => t.status === 'open').length;
+  const inProgressCount = tickets.filter((t) => t.status === 'in_progress').length;
+  const resolvedCount = tickets.filter((t) => t.status === 'resolved' || t.status === 'closed').length;
 
   return (
     <AdminPageWrapper
-      eyebrow="SUPPORT & HARDWARE REPAIRS"
-      title="ICT Helpdesk & Repair Tickets"
-      subtitle="Track faculty tech support requests, printer servicing, projector fixes, and lab maintenance."
+      eyebrow="SUPPORT & MAINTENANCE"
+      title="Hardware & Helpdesk Requests"
+      subtitle="Track IT support requests, classroom audiovisual repairs, lab workstation issues, and biometric maintenance."
     >
-      {/* Controls Bar */}
-      <div className={`${adminCardClass} flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3`}>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 sm:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+      {/* Action & Filter Bar */}
+      <div className={`${adminCardClass} flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3`}>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setFilterStatus('all')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              filterStatus === 'all'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:text-white'
+            }`}
+          >
+            All Tickets ({tickets.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterStatus('open')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              filterStatus === 'open'
+                ? 'bg-amber-600 text-white shadow-sm'
+                : 'border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:text-white'
+            }`}
+          >
+            Open ({openCount})
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterStatus('in_progress')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              filterStatus === 'in_progress'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:text-white'
+            }`}
+          >
+            In Progress ({inProgressCount})
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterStatus('resolved')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              filterStatus === 'resolved'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:text-white'
+            }`}
+          >
+            Resolved ({resolvedCount})
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 sm:w-64">
+            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
             <input
               type="text"
-              placeholder="Search tickets, reporter, issue..."
+              placeholder="Search ticket #, reporter..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900/60 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-emerald-500"
+              className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900/60 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-emerald-500"
             />
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setFilterStatus('all')}
-              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-                filterStatus === 'all'
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:text-white'
-              }`}
-            >
-              All ({tickets.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilterStatus('open')}
-              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-                filterStatus === 'open'
-                  ? 'bg-amber-600 text-white shadow-sm'
-                  : 'border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:text-white'
-              }`}
-            >
-              Open
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilterStatus('resolved')}
-              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-                filterStatus === 'resolved'
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:text-white'
-              }`}
-            >
-              Resolved
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setIsNewModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-sm whitespace-nowrap"
+          >
+            <Plus className="h-3.5 w-3.5" /> Log New Ticket
+          </button>
         </div>
-
-        <button
-          type="button"
-          onClick={() => setIsNewModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors shadow-sm"
-        >
-          <Plus className="h-4 w-4" /> Log Support Ticket
-        </button>
       </div>
 
-      {/* Tickets List */}
+      {/* Tickets Table */}
       <div className={adminCardClass}>
         <div className="overflow-x-auto">
           {isLoading ? (
-            <div className="py-12 text-center text-slate-600 dark:text-slate-400 text-sm">Loading tickets...</div>
+            <div className="py-12 text-center text-slate-500 dark:text-slate-400 text-sm">Loading tickets...</div>
           ) : filtered.length === 0 ? (
-            <div className="py-12 text-center text-slate-600 dark:text-slate-400 text-sm">
-              <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-600 dark:text-emerald-400" />
-              No tickets found matching current filter.
+            <div className="py-16 text-center text-slate-500 dark:text-slate-400">
+              <Wrench className="h-10 w-10 mx-auto mb-2 text-slate-400 dark:text-slate-600" />
+              <p className="font-semibold text-slate-900 dark:text-white text-sm">No Helpdesk Tickets Logged</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
+                {search ? 'No tickets match your search criteria.' : 'No active support requests. Click "Log New Ticket" to report a hardware, network, or printer issue.'}
+              </p>
+              {!search && (
+                <button
+                  type="button"
+                  onClick={() => setIsNewModalOpen(true)}
+                  className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-sm"
+                >
+                  <Plus className="h-4 w-4" /> Log Tech Request
+                </button>
+              )}
             </div>
           ) : (
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 uppercase text-[10px] tracking-wider font-bold">
+                <tr className="border-b border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-wider font-bold">
                   <th className="pb-3">Ticket #</th>
-                  <th className="pb-3">Reporter / Dept</th>
-                  <th className="pb-3">Location</th>
+                  <th className="pb-3">Reporter</th>
+                  <th className="pb-3">Location / Dept</th>
                   <th className="pb-3">Category</th>
                   <th className="pb-3">Priority</th>
                   <th className="pb-3">Description</th>
@@ -314,23 +254,21 @@ function getInitialLocalTickets(): Ticket[] {
                   <th className="pb-3 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-white/5">
+              <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                 {filtered.map((t) => (
                   <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
                     <td className="py-3 font-mono font-bold text-slate-900 dark:text-white">{t.ticket_number}</td>
-                    <td className="py-3">
-                      <p className="font-bold text-slate-900 dark:text-white">{t.reporter_name}</p>
-                      <p className="text-[10.5px] text-slate-500 dark:text-slate-400">{t.department}</p>
+                    <td className="py-3 font-medium text-slate-800 dark:text-slate-200">{t.reporter_name}</td>
+                    <td className="py-3 text-slate-700 dark:text-slate-300">
+                      <div>{t.location}</div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400">{t.department}</div>
                     </td>
-                    <td className="py-3 text-slate-700 dark:text-slate-300 font-medium">{t.location}</td>
-                    <td className="py-3">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-slate-200 uppercase tracking-wide border border-slate-200 dark:border-transparent">
-                        {t.category}
-                      </span>
+                    <td className="py-3 uppercase text-[10px] font-semibold text-slate-600 dark:text-slate-400">
+                      {t.category}
                     </td>
                     <td className="py-3">
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                           t.priority === 'urgent'
                             ? 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300'
                             : 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300'
@@ -342,7 +280,7 @@ function getInitialLocalTickets(): Ticket[] {
                     <td className="py-3 text-slate-700 dark:text-slate-300 max-w-xs truncate">{t.description}</td>
                     <td className="py-3">
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                           t.status === 'open'
                             ? 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300'
                             : t.status === 'in_progress'
@@ -523,21 +461,35 @@ function getInitialLocalTickets(): Ticket[] {
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-white/5">
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-white/5">
               <button
                 type="button"
-                onClick={() => setActiveTicket(null)}
-                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                onClick={() => {
+                  if (confirm(`Delete ticket ${activeTicket.ticket_number}?`)) {
+                    deleteTicketMutation.mutate(activeTicket.id);
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-300 dark:border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-xs font-semibold transition-colors"
               >
-                Cancel
+                <Trash2 className="h-3.5 w-3.5" /> Delete Ticket
               </button>
-              <button
-                type="button"
-                onClick={() => updateTicketMutation.mutate()}
-                className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-sm"
-              >
-                Save Resolution
-              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveTicket(null)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateTicketMutation.mutate()}
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-sm"
+                >
+                  Save Resolution
+                </button>
+              </div>
             </div>
           </div>
         </NativeModal>
