@@ -154,10 +154,10 @@ function getInitialLocalNetworkNodes(): NetworkNode[] {
           <button
             type="button"
             onClick={() => setActiveTab('network')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
               activeTab === 'network'
-                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                : 'border border-white/10 text-slate-400 hover:text-white'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:text-white'
             }`}
           >
             <Wifi className="h-4 w-4" /> Campus Network & APs ({networkNodes.length})
@@ -165,10 +165,10 @@ function getInitialLocalNetworkNodes(): NetworkNode[] {
           <button
             type="button"
             onClick={() => setActiveTab('cctv')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
               activeTab === 'cctv'
-                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                : 'border border-white/10 text-slate-400 hover:text-white'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:text-white'
             }`}
           >
             <Eye className="h-4 w-4" /> CCTV Surveillance ({cctvNodes.length})
@@ -179,7 +179,7 @@ function getInitialLocalNetworkNodes(): NetworkNode[] {
           <button
             type="button"
             onClick={() => refetch()}
-            className="p-2 rounded-xl border border-white/10 text-slate-400 hover:text-white"
+            className="p-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100"
             title="Ping Nodes"
           >
             <RefreshCw className="h-4 w-4" />
@@ -201,10 +201,10 @@ function getInitialLocalNetworkNodes(): NetworkNode[] {
           return (
             <div
               key={node.id}
-              className={`rounded-2xl border p-4 space-y-3 transition-all ${
+              className={`rounded-2xl border p-4 space-y-3 transition-all shadow-sm ${
                 isOnline
-                  ? 'border-white/10 bg-slate-900/40 hover:border-emerald-500/30'
-                  : 'border-rose-500/30 bg-rose-950/10 hover:border-rose-500/50'
+                  ? 'border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/40 hover:border-emerald-500/50'
+                  : 'border-rose-300 dark:border-rose-500/30 bg-rose-50/60 dark:bg-rose-950/20 hover:border-rose-500'
               }`}
             >
               <div className="flex items-start justify-between">
@@ -212,8 +212,8 @@ function getInitialLocalNetworkNodes(): NetworkNode[] {
                   <div
                     className={`flex h-10 w-10 items-center justify-center rounded-xl border ${
                       isOnline
-                        ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
-                        : 'border-rose-500/30 bg-rose-500/10 text-rose-400'
+                        ? 'border-emerald-300 dark:border-emerald-500/30 bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400'
+                        : 'border-rose-300 dark:border-rose-500/30 bg-rose-100 dark:bg-rose-500/10 text-rose-800 dark:text-rose-400'
                     }`}
                   >
                     {node.device_type === 'access_point' ? (
@@ -225,8 +225,8 @@ function getInitialLocalNetworkNodes(): NetworkNode[] {
                     )}
                   </div>
                   <div>
-                    <h3 className="font-bold text-sm text-white">{node.name}</h3>
-                    <p className="text-[11px] text-slate-400 uppercase tracking-wider">{node.device_type.replace(/_/g, ' ')}</p>
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">{node.name}</h3>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">{node.device_type.replace(/_/g, ' ')}</p>
                   </div>
                 </div>
 
@@ -240,22 +240,22 @@ function getInitialLocalNetworkNodes(): NetworkNode[] {
                   }
                   className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
                     isOnline
-                      ? 'border-emerald-500/30 bg-emerald-500/20 text-emerald-300'
-                      : 'border-rose-500/30 bg-rose-500/20 text-rose-300'
+                      ? 'border-emerald-300 dark:border-emerald-500/30 bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300'
+                      : 'border-rose-300 dark:border-rose-500/30 bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300'
                   }`}
                 >
                   {node.status}
                 </button>
               </div>
 
-              <div className="space-y-1.5 border-t border-white/5 pt-2 text-xs text-slate-300">
+              <div className="space-y-1.5 border-t border-slate-100 dark:border-white/5 pt-2 text-xs text-slate-700 dark:text-slate-300">
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Campus Location:</span>
-                  <span className="text-white font-medium">{node.location}</span>
+                  <span className="text-slate-500 dark:text-slate-400">Campus Location:</span>
+                  <span className="text-slate-900 dark:text-white font-medium">{node.location}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400">IP Address:</span>
-                  <span className="font-mono text-emerald-400">{node.ip_address || 'DHCP'}</span>
+                  <span className="text-slate-500 dark:text-slate-400">IP Address:</span>
+                  <span className="font-mono text-emerald-700 dark:text-emerald-400 font-bold">{node.ip_address || 'DHCP'}</span>
                 </div>
               </div>
             </div>
@@ -273,23 +273,23 @@ function getInitialLocalNetworkNodes(): NetworkNode[] {
         >
           <div className="space-y-3 py-2">
             <div>
-              <label className="text-xs font-semibold text-slate-300">Node Name</label>
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Node Name</label>
               <input
                 type="text"
                 placeholder="e.g. Hostels Wi-Fi AP 1"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="mt-1 w-full px-3 py-2 rounded-xl border border-white/10 bg-slate-900 text-xs text-white"
+                className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900 text-xs text-slate-900 dark:text-white placeholder:text-slate-400"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-semibold text-slate-300">Device Type</label>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Device Type</label>
                 <select
                   value={deviceType}
                   onChange={(e) => setDeviceType(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 rounded-xl border border-white/10 bg-slate-900 text-xs text-white"
+                  className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900 text-xs text-slate-900 dark:text-white"
                 >
                   <option value="access_point">Wi-Fi Access Point</option>
                   <option value="router">Gateway Router</option>
@@ -299,33 +299,33 @@ function getInitialLocalNetworkNodes(): NetworkNode[] {
                 </select>
               </div>
               <div>
-                <label className="text-xs font-semibold text-slate-300">Static / Reserved IP</label>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Static / Reserved IP</label>
                 <input
                   type="text"
                   placeholder="192.168.1.X"
                   value={ipAddress}
                   onChange={(e) => setIpAddress(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 rounded-xl border border-white/10 bg-slate-900 text-xs font-mono text-white"
+                  className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900 text-xs font-mono text-slate-900 dark:text-white placeholder:text-slate-400"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-slate-300">Campus Location</label>
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Campus Location</label>
               <input
                 type="text"
                 placeholder="e.g. Block B, First Floor Corridor"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                className="mt-1 w-full px-3 py-2 rounded-xl border border-white/10 bg-slate-900 text-xs text-white"
+                className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900 text-xs text-slate-900 dark:text-white placeholder:text-slate-400"
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-3">
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-white/5">
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 rounded-xl border border-white/10 text-xs font-medium text-slate-400 hover:text-white"
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
               >
                 Cancel
               </button>
@@ -333,7 +333,7 @@ function getInitialLocalNetworkNodes(): NetworkNode[] {
                 type="button"
                 disabled={!name.trim() || !location.trim()}
                 onClick={() => addNodeMutation.mutate()}
-                className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs"
+                className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs shadow-sm"
               >
                 Register Node
               </button>

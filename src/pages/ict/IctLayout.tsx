@@ -1,5 +1,5 @@
-import { Suspense, useEffect, useState, useRef, type ReactNode } from 'react';
-import { Navigate, Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { Suspense, useEffect, useState, type ReactNode } from 'react';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Mail,
@@ -29,6 +29,7 @@ import { useUIStore } from '@/store/uiStore';
 import { POS_SIDEBAR_SHARED_CSS } from '@/lib/pwShellCss';
 import { hasRole, ROLE_GROUPS } from '@/lib/rbac';
 import AdminContentSkeleton from '@/components/layout/AdminContentSkeleton';
+import IctMobileBottomNav from '@/components/layout/IctMobileBottomNav';
 
 const ICT_BASE = '/dashboard/ict';
 
@@ -76,337 +77,420 @@ export default function IctLayout() {
   const theme = useUIStore((s) => s.theme);
   const setTheme = useUIStore((s) => s.setTheme);
 
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
-  const [schoolName, setSchoolName] = useState<string>('Rakai Community School of Nursing');
+  /** Synchronize theme on document root so POS Light and Dark modes render accurately */
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.remove('light', 'dark');
+    root.classList.add(theme);
+    root.setAttribute('data-theme', theme);
+    localStorage.setItem('pwezacore-theme', theme);
+  }, [theme]);
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userName, setUserName] = useState<string>('ICT Officer');
   const [userInitials, setUserInitials] = useState<string>('IT');
   const [hasMultipleRoles, setHasMultipleRoles] = useState(false);
+  const [openTicketCount, setOpenTicketCount] = useState<number>(0);
+  const [unreadEmailCount, setUnreadEmailCount] = useState<number>(0);
 
   const unreadChatTotal = useSchoolChatUnreadTotal(user?.id);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close sidebar on route change
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
 
   // Authorization check
   const isAuthorized = hasRole(role, ROLE_GROUPS.ICT_DASHBOARD);
 
   useEffect(() => {
-    if (!schoolId) return;
-    const fetchSchoolInfo = async () => {
+    async function loadUserData() {
       try {
-        const { data } = await supabase
-          .from('schools')
-          .select('name')
-          .eq('school_id', schoolId)
-          .maybeSingle();
-        if (data?.name) setSchoolName(data.name);
-      } catch {
-        // Fallback to institutional default
-      }
-    };
-    void fetchSchoolInfo();
-  }, [schoolId]);
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (!authUser) return;
 
-  useEffect(() => {
-    if (!user?.id) return;
-    const fetchUserProfile = async () => {
-      try {
-        const { data } = await supabase
+        const { data: userData } = await supabase
           .from('users')
           .select('name, email, role, extra_roles')
-          .eq('user_id', user.id)
+          .eq('user_id', authUser.id)
           .maybeSingle();
 
-        if (data) {
-          const displayName = data.name || data.email || 'ICT Officer';
-          setUserName(displayName);
-          const parts = displayName.trim().split(/\s+/);
-          if (parts.length >= 2) {
-            setUserInitials((parts[0][0] + parts[parts.length - 1][0]).toUpperCase());
-          } else {
-            setUserInitials(displayName.slice(0, 2).toUpperCase());
-          }
+        const name = userData?.name || authUser.email?.split('@')[0] || 'ICT Officer';
+        const initials = name
+          .split(' ')
+          .filter(Boolean)
+          .map((w: string) => w[0])
+          .join('')
+          .slice(0, 2)
+          .toUpperCase() || 'IT';
 
-          const extras = Array.isArray(data.extra_roles) ? data.extra_roles : [];
-          setHasMultipleRoles(extras.length > 0);
+        setUserName(name);
+        setUserInitials(initials);
+
+        const extras = Array.isArray(userData?.extra_roles) ? userData.extra_roles : [];
+        setHasMultipleRoles(extras.length > 0 || ['admin', 'owner', 'super_admin'].includes(role || ''));
+
+        // Load open tickets count for mobile badge
+        if (schoolId) {
+          const { count } = await supabase
+            .from('ict_helpdesk_tickets')
+            .select('id', { count: 'exact', head: true })
+            .eq('school_id', schoolId)
+            .in('status', ['open', 'in_progress']);
+          setOpenTicketCount(count || 0);
         }
-      } catch {
-        // ignore
-      }
-    };
-    void fetchUserProfile();
-  }, [user]);
 
-  // Close dropdown on outside click
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setUserDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+        // Load unread emails count for mobile badge
+        const { count: emailCount } = await supabase
+          .from('institutional_emails')
+          .select('id', { count: 'exact', head: true })
+          .eq('direction', 'inbound')
+          .eq('is_read', false);
+        setUnreadEmailCount(emailCount || 0);
 
-  if (!isAuthorized) {
-    return <Navigate to="/dashboard" replace />;
+      } catch (err) {
+        console.error('ICT user load error:', err);
+      }
+    }
+    void loadUserData();
+  }, [schoolId, role]);
+
+  function handleLogout() {
+    void logoutWithSyncCheck(() => {
+      useAuthStore.getState().logout();
+      navigate('/');
+    });
   }
 
-  const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark');
-  };
+  function toggleTheme() {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
+  }
 
-  const handleLogout = () => {
-    void logoutWithSyncCheck(() => {
-      navigate('/login', { replace: true });
-    });
-  };
+  const closeSidebar = () => setSidebarOpen(false);
+
+  if (!isAuthorized) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-900 p-4 text-center">
+        <div className="max-w-md rounded-2xl border border-white/10 bg-slate-800/80 p-8 shadow-2xl backdrop-blur-xl">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-400">
+            <ShieldCheck className="h-7 w-7" />
+          </div>
+          <h2 className="mt-4 text-xl font-bold text-white">Access Restricted</h2>
+          <p className="mt-2 text-sm text-slate-400">
+            The ICT & Systems Centre is restricted to the ICT Department and Systems Administrators.
+          </p>
+          <div className="mt-6 flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => navigate('/role-picker')}
+              className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-500"
+            >
+              Switch Role
+            </button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-medium text-slate-300 hover:bg-white/5"
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
       <style>{POS_SIDEBAR_SHARED_CSS}</style>
-      <div className="pw-shell flex h-screen w-full overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-        {/* Mobile menu backdrop */}
-        {mobileMenuOpen && (
-          <div
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
-            onClick={() => setMobileMenuOpen(false)}
-          />
-        )}
+      <style>{`
+        /* Hide all scrollbars on the sidebar completely */
+        .pw-sidebar .pw-nav-scroll-area {
+          scrollbar-width: none !important;
+          -ms-overflow-style: none !important;
+        }
+        .pw-sidebar .pw-nav-scroll-area::-webkit-scrollbar {
+          display: none !important;
+          width: 0 !important;
+          height: 0 !important;
+        }
 
-        {/* Sidebar */}
-        <aside
-          className={`pw-sidebar fixed inset-y-0 left-0 z-50 flex w-72 flex-col transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 ${
-            mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}
+        /* ICT Layout header styling */
+        .ict-topbar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 12px 24px;
+          border-bottom: 1px solid var(--pos-border);
+          background: var(--pos-header-bg);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          position: sticky;
+          top: 0;
+          z-index: 50;
+        }
+
+        .ict-theme-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          padding: 6px 14px;
+          border-radius: 9999px;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          border: 1px solid var(--pos-border);
+          background: var(--pos-field-bg);
+          color: var(--pos-ink);
+        }
+
+        .ict-theme-btn:hover {
+          background: var(--pos-hover-bg);
+          border-color: var(--pos-brand);
+        }
+
+        /* Ensure .pw-main has correct margin on desktop */
+        @media (min-width: 769px) {
+          .pw-layout .pw-main {
+            margin-left: 220px !important;
+            width: calc(100% - 220px) !important;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+          }
+        }
+
+        /* Clearance on mobile for hamburger button */
+        @media (max-width: 768px) {
+          .ict-topbar {
+            padding: 10px 54px 10px 14px;
+          }
+        }
+      `}</style>
+
+      <div className="pw-layout" data-theme={theme}>
+        {/* Mobile Hamburger toggle */}
+        <button
+          type="button"
+          className="pw-hamburger"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          aria-label="Toggle sidebar"
         >
-          {/* Header */}
-          <div className="flex h-16 items-center justify-between border-b border-white/10 px-5">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white font-bold shadow-md shadow-emerald-500/20">
-                <ShieldCheck className="h-5 w-5" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-bold text-white tracking-wide uppercase">
-                  {schoolName}
-                </p>
-                <p className="truncate text-[11px] font-medium text-emerald-400">
-                  ICT & Systems Centre
-                </p>
-              </div>
+          {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </button>
+
+        {/* Mobile backdrop */}
+        {sidebarOpen && <div className="pw-sidebar-overlay" onClick={closeSidebar} />}
+
+        {/* Sidebar Rail */}
+        <aside className={`pw-sidebar ${sidebarOpen ? 'pw-sidebar--open' : ''}`}>
+          <div className="pw-brand">
+            <div className="pw-brand-name">RCSN</div>
+            <div className="pw-brand-subtitle">Rakai Community School of Nursing</div>
+            <div className="pw-brand-pill">ICT &amp; Systems Department</div>
+          </div>
+
+          <div className="pw-nav-scroll-area">
+            {/* 1. Core Systems */}
+            <div className="pw-nav-section">
+              <span className="pw-nav-label">Core Systems</span>
+              <NavItem
+                to={ICT_BASE}
+                end
+                icon={<LayoutDashboard className="w-4 h-4" />}
+                label="Control Centre"
+                onClick={closeSidebar}
+              />
+              <NavItem
+                to={`${ICT_BASE}/email`}
+                icon={<Mail className="w-4 h-4 text-emerald-400" />}
+                label="Official Mailbox"
+                badge={unreadEmailCount > 0 ? unreadEmailCount : undefined}
+                badgeColor="rose"
+                onClick={closeSidebar}
+              />
+              <NavItem
+                to={`${ICT_BASE}/accounts`}
+                icon={<KeyRound className="w-4 h-4 text-indigo-400" />}
+                label="Account &amp; Passwords"
+                onClick={closeSidebar}
+              />
             </div>
+
+            {/* 2. Lab & Infrastructure */}
+            <div className="pw-nav-section">
+              <span className="pw-nav-label">Lab &amp; Infrastructure</span>
+              <NavItem
+                to={`${ICT_BASE}/workstations`}
+                icon={<Monitor className="w-4 h-4" />}
+                label="Lab Workstations"
+                onClick={closeSidebar}
+              />
+              <NavItem
+                to={`${ICT_BASE}/schedule`}
+                icon={<CalendarCheck className="w-4 h-4 text-teal-400" />}
+                label="Lab Timetable &amp; Bookings"
+                onClick={closeSidebar}
+              />
+              <NavItem
+                to={`${ICT_BASE}/biometrics`}
+                icon={<Fingerprint className="w-4 h-4 text-cyan-400" />}
+                label="Biometric Terminals"
+                onClick={closeSidebar}
+              />
+              <NavItem
+                to={`${ICT_BASE}/network`}
+                icon={<Wifi className="w-4 h-4 text-emerald-400" />}
+                label="Campus Wi-Fi &amp; CCTV"
+                onClick={closeSidebar}
+              />
+              <NavItem
+                to={`${ICT_BASE}/helpdesk`}
+                icon={<Wrench className="w-4 h-4 text-amber-400" />}
+                label="Hardware &amp; Helpdesk"
+                badge={openTicketCount > 0 ? openTicketCount : undefined}
+                badgeColor="amber"
+                onClick={closeSidebar}
+              />
+            </div>
+
+            {/* 3. Procurement & Store */}
+            <div className="pw-nav-section">
+              <span className="pw-nav-label">Procurement &amp; Store</span>
+              <NavItem
+                to={`${ICT_BASE}/requisitions`}
+                icon={<Wallet className="w-4 h-4" />}
+                label="Budget Requisitions"
+                onClick={closeSidebar}
+              />
+              <NavItem
+                to={`${ICT_BASE}/store-indent`}
+                icon={<Package className="w-4 h-4" />}
+                label="Store Indents"
+                onClick={closeSidebar}
+              />
+            </div>
+
+            {/* 4. Communication */}
+            <div className="pw-nav-section">
+              <span className="pw-nav-label">Communication</span>
+              <NavItem
+                to={`${ICT_BASE}/messages`}
+                icon={<MessageSquare className="w-4 h-4" />}
+                label="Staff Messages"
+                badge={unreadChatTotal > 0 ? unreadChatTotal : undefined}
+                badgeColor="rose"
+                onClick={closeSidebar}
+              />
+              <NavItem
+                to={`${ICT_BASE}/calendar`}
+                icon={<CalendarDays className="w-4 h-4 text-teal-400" />}
+                label="School Calendar"
+                onClick={closeSidebar}
+              />
+            </div>
+          </div>
+
+          {/* Theme Switcher in Sidebar Tools */}
+          <div className="pw-sidebar-tools">
             <button
               type="button"
-              onClick={() => setMobileMenuOpen(false)}
-              className="rounded-lg p-1 text-slate-400 hover:bg-white/10 hover:text-white lg:hidden"
-              aria-label="Close menu"
+              onClick={toggleTheme}
+              title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to White Mode'}
             >
-              <X className="h-5 w-5" />
+              {theme === 'light' ? <Moon className="h-4 w-4 shrink-0" /> : <Sun className="h-4 w-4 shrink-0" />}
+              <span>{theme === 'light' ? 'Dark Mode' : 'White Mode'}</span>
             </button>
           </div>
 
-          {/* Navigation Items */}
-          <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-            <div className="px-3 pb-2 pt-1 text-[10px] font-bold tracking-wider text-slate-400 uppercase">
-              Core Systems
-            </div>
-
-            <NavItem
-              to={ICT_BASE}
-              end
-              icon={<LayoutDashboard className="h-4 w-4" />}
-              label="Control Centre"
-              onClick={() => setMobileMenuOpen(false)}
-            />
-
-            <NavItem
-              to={`${ICT_BASE}/email`}
-              icon={<Mail className="h-4 w-4" />}
-              label="Official Mailbox"
-              onClick={() => setMobileMenuOpen(false)}
-            />
-
-            <NavItem
-              to={`${ICT_BASE}/accounts`}
-              icon={<KeyRound className="h-4 w-4" />}
-              label="Account & Password Help"
-              onClick={() => setMobileMenuOpen(false)}
-            />
-
-            <div className="px-3 pb-2 pt-4 text-[10px] font-bold tracking-wider text-slate-400 uppercase">
-              Lab & Infrastructure
-            </div>
-
-            <NavItem
-              to={`${ICT_BASE}/workstations`}
-              icon={<Monitor className="h-4 w-4" />}
-              label="Lab Workstations"
-              onClick={() => setMobileMenuOpen(false)}
-            />
-
-            <NavItem
-              to={`${ICT_BASE}/schedule`}
-              icon={<CalendarCheck className="h-4 w-4" />}
-              label="Lab Timetable & Bookings"
-              onClick={() => setMobileMenuOpen(false)}
-            />
-
-            <NavItem
-              to={`${ICT_BASE}/biometrics`}
-              icon={<Fingerprint className="h-4 w-4" />}
-              label="Biometric Terminals"
-              onClick={() => setMobileMenuOpen(false)}
-            />
-
-            <NavItem
-              to={`${ICT_BASE}/network`}
-              icon={<Wifi className="h-4 w-4" />}
-              label="Campus Wi-Fi & CCTV"
-              onClick={() => setMobileMenuOpen(false)}
-            />
-
-            <NavItem
-              to={`${ICT_BASE}/helpdesk`}
-              icon={<Wrench className="h-4 w-4" />}
-              label="Hardware & Helpdesk"
-              onClick={() => setMobileMenuOpen(false)}
-            />
-
-            <div className="px-3 pb-2 pt-4 text-[10px] font-bold tracking-wider text-slate-400 uppercase">
-              Procurement & Store
-            </div>
-
-            <NavItem
-              to={`${ICT_BASE}/requisitions`}
-              icon={<Wallet className="h-4 w-4" />}
-              label="Budget Requisitions"
-              onClick={() => setMobileMenuOpen(false)}
-            />
-
-            <NavItem
-              to={`${ICT_BASE}/store-indent`}
-              icon={<Package className="h-4 w-4" />}
-              label="Store Indents"
-              onClick={() => setMobileMenuOpen(false)}
-            />
-
-            <div className="px-3 pb-2 pt-4 text-[10px] font-bold tracking-wider text-slate-400 uppercase">
-              Communication
-            </div>
-
-            <NavItem
-              to={`${ICT_BASE}/messages`}
-              icon={<MessageSquare className="h-4 w-4" />}
-              label="Staff Messages"
-              badge={unreadChatTotal > 0 ? unreadChatTotal : undefined}
-              badgeColor="rose"
-              onClick={() => setMobileMenuOpen(false)}
-            />
-
-            <NavItem
-              to={`${ICT_BASE}/calendar`}
-              icon={<CalendarDays className="h-4 w-4" />}
-              label="School Calendar"
-              onClick={() => setMobileMenuOpen(false)}
-            />
-          </nav>
-
-          {/* Footer User Profile & Theme */}
-          <div className="border-t border-white/10 p-3">
-            <div className="relative" ref={dropdownRef}>
-              <div
-                onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                className="flex items-center gap-3 rounded-xl p-2 cursor-pointer transition-colors hover:bg-white/10"
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-600/30 text-emerald-400 font-bold border border-emerald-500/30">
-                  {userInitials}
-                </div>
-                <div className="min-w-0 flex-1 text-left">
-                  <p className="truncate text-xs font-semibold text-white">{userName}</p>
-                  <p className="truncate text-[10px] text-slate-400">ICT & Systems Officer</p>
-                </div>
+          {/* Sidebar Footer User Info */}
+          <div className="pw-sidebar-bottom">
+            <div className="pw-admin-card">
+              <div className="pw-admin-av">{userInitials}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="pw-admin-name">{userName}</div>
+                <div className="pw-admin-role">ICT &amp; Systems Officer</div>
               </div>
-
-              {userDropdownOpen && (
-                <div className="absolute bottom-full left-0 mb-2 w-full rounded-xl bg-slate-900 border border-white/15 p-1.5 shadow-xl backdrop-blur-md z-50">
-                  {hasMultipleRoles && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setUserDropdownOpen(false);
-                        navigate('/role-picker');
-                      }}
-                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-slate-300 hover:bg-white/10 hover:text-white"
-                    >
-                      <ArrowLeftRight className="h-4 w-4 text-emerald-400" />
-                      Switch Role
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setUserDropdownOpen(false);
-                      toggleTheme();
-                    }}
-                    className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-slate-300 hover:bg-white/10 hover:text-white"
-                  >
-                    {theme === 'dark' ? (
-                      <>
-                        <Sun className="h-4 w-4 text-amber-400" />
-                        Light Theme
-                      </>
-                    ) : (
-                      <>
-                        <Moon className="h-4 w-4 text-indigo-400" />
-                        Dark Theme
-                      </>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-rose-400 hover:bg-rose-500/10"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Sign Out
-                  </button>
-                </div>
-              )}
             </div>
+            {hasMultipleRoles && (
+              <button
+                type="button"
+                className="pw-footer-action"
+                onClick={() => navigate('/role-picker')}
+              >
+                <ArrowLeftRight className="w-4 h-4" />
+                <span>Switch Role</span>
+              </button>
+            )}
+            <button type="button" className="pw-logout-btn" onClick={handleLogout}>
+              <LogOut className="w-4 h-4" />
+              <span>Logout</span>
+            </button>
           </div>
         </aside>
 
         {/* Main Content Area */}
-        <div className="flex flex-1 flex-col overflow-hidden min-w-0">
-          {/* Topbar for mobile */}
-          <header className="flex h-14 items-center justify-between border-b border-slate-200 dark:border-white/10 bg-white/70 dark:bg-slate-900/60 backdrop-blur-md px-4 lg:hidden">
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(true)}
-              className="rounded-lg p-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10"
-              aria-label="Open menu"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-              RCSN ICT Portal
-            </span>
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="rounded-lg p-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10"
-              aria-label="Toggle theme"
-            >
-              {theme === 'dark' ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4" />}
-            </button>
+        <main className="pw-main flex-1 flex flex-col min-w-0">
+          {/* Universal Sticky Topbar with Theme Toggle */}
+          <header className="ict-topbar">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                  RCSN Digital Systems Hub
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {/* Prominent Theme Switcher Button */}
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="ict-theme-btn"
+                title={theme === 'light' ? 'Switch to Dark Theme' : 'Switch to White Theme'}
+              >
+                {theme === 'light' ? (
+                  <>
+                    <Moon className="h-3.5 w-3.5 text-indigo-500" />
+                    <span>Dark Mode</span>
+                  </>
+                ) : (
+                  <>
+                    <Sun className="h-3.5 w-3.5 text-amber-400" />
+                    <span>White Mode</span>
+                  </>
+                )}
+              </button>
+
+              {/* User Initials Badge */}
+              <div
+                onClick={() => hasMultipleRoles && navigate('/role-picker')}
+                className={`flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white shadow-sm ${
+                  hasMultipleRoles ? 'cursor-pointer hover:opacity-90' : ''
+                }`}
+                title={hasMultipleRoles ? 'Click to switch role' : userName}
+              >
+                {userInitials}
+              </div>
+            </div>
           </header>
 
-          {/* Page Body */}
-          <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+          {/* Page Content Body */}
+          <div className="flex-1 p-4 sm:p-6 lg:p-8">
             <Suspense fallback={<AdminContentSkeleton />}>
               <Outlet />
             </Suspense>
-          </main>
-        </div>
+          </div>
+        </main>
+
+        {/* Mobile Bottom Navigation (Same as Admin) */}
+        <IctMobileBottomNav
+          openTicketCount={openTicketCount}
+          unreadEmailCount={unreadEmailCount}
+        />
       </div>
     </>
   );

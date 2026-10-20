@@ -197,7 +197,7 @@ export default function IctAccountsPage() {
               className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
                 roleFilter === 'all'
                   ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                  : 'border border-white/10 bg-slate-900/40 text-slate-400 hover:text-white'
+                  : 'border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900/40 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:text-white'
               }`}
             >
               All Accounts
@@ -207,8 +207,8 @@ export default function IctAccountsPage() {
               onClick={() => setRoleFilter('student')}
               className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
                 roleFilter === 'student'
-                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                  : 'border border-white/10 bg-slate-900/40 text-slate-400 hover:text-white'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900/40 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:text-white'
               }`}
             >
               Students Only
@@ -218,8 +218,8 @@ export default function IctAccountsPage() {
               onClick={() => setRoleFilter('teacher')}
               className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
                 roleFilter === 'teacher'
-                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                  : 'border border-white/10 bg-slate-900/40 text-slate-400 hover:text-white'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900/40 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:text-white'
               }`}
             >
               Tutors Only
@@ -227,7 +227,7 @@ export default function IctAccountsPage() {
             <button
               type="button"
               onClick={() => refetch()}
-              className="p-2.5 rounded-xl border border-white/10 bg-slate-900/40 text-slate-400 hover:text-white"
+              className="p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900/40 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:text-white"
               title="Refresh users"
             >
               <RefreshCw className="h-4 w-4" />
@@ -240,18 +240,18 @@ export default function IctAccountsPage() {
       <div className={adminCardClass}>
         <div className="overflow-x-auto">
           {isLoading ? (
-            <div className="py-12 text-center text-slate-400 text-sm">
-              <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-emerald-400" />
+            <div className="py-12 text-center text-slate-600 dark:text-slate-400 text-sm">
+              <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-emerald-600 dark:text-emerald-400" />
               Loading institutional directory...
             </div>
           ) : filteredUsers.length === 0 ? (
-            <div className="py-12 text-center text-slate-400 text-sm">
+            <div className="py-12 text-center text-slate-600 dark:text-slate-400 text-sm">
               No matching accounts found for "{searchQuery}".
             </div>
           ) : (
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-white/10 text-slate-400 uppercase text-[10px] tracking-wider">
+                <tr className="border-b border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 uppercase text-[10px] tracking-wider font-bold">
                   <th className="pb-3">User</th>
                   <th className="pb-3">Designation</th>
                   <th className="pb-3">Contact</th>
@@ -260,50 +260,50 @@ export default function IctAccountsPage() {
                   <th className="pb-3 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-slate-200 dark:divide-white/5">
                 {filteredUsers.map((u) => {
                   const protectedAcc = isProtectedRole(u);
                   return (
-                    <tr key={u.user_id} className="hover:bg-white/5 transition-colors">
+                    <tr key={u.user_id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
                       <td className="py-3">
                         <div className="flex items-center gap-2.5">
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-bold border border-emerald-500/30">
                             {u.role === 'student' ? <GraduationCap className="h-4 w-4" /> : <BookOpen className="h-4 w-4" />}
                           </div>
                           <div>
-                            <p className="font-bold text-white text-xs">{u.name || 'Unnamed Account'}</p>
-                            <p className="text-[11px] text-slate-400 font-mono">{u.email}</p>
+                            <p className="font-bold text-slate-900 dark:text-white text-xs">{u.name || 'Unnamed Account'}</p>
+                            <p className="text-[11px] text-slate-600 dark:text-slate-400 font-mono">{u.email}</p>
                           </div>
                         </div>
                       </td>
 
                       <td className="py-3">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-white/10 text-slate-300 uppercase tracking-wide">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-slate-200 uppercase tracking-wide border border-slate-200 dark:border-transparent">
                           {u.role.replace(/_/g, ' ')}
                         </span>
                       </td>
 
-                      <td className="py-3 text-slate-300">
+                      <td className="py-3 text-slate-700 dark:text-slate-300">
                         {u.phone ? (
                           <span className="inline-flex items-center gap-1 font-mono text-[11px]">
-                            <Phone className="h-3 w-3 text-slate-400" /> {u.phone}
+                            <Phone className="h-3 w-3 text-slate-500 dark:text-slate-400" /> {u.phone}
                           </span>
                         ) : (
-                          <span className="text-slate-500">No phone</span>
+                          <span className="text-slate-400">No phone</span>
                         )}
                       </td>
 
-                      <td className="py-3 font-mono text-slate-400">
+                      <td className="py-3 font-mono text-slate-700 dark:text-slate-300 font-medium">
                         {u.student_id || u.employee_id || '—'}
                       </td>
 
                       <td className="py-3">
                         {u.is_active !== false ? (
-                          <span className="inline-flex items-center gap-1 text-emerald-400 font-medium">
+                          <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-semibold">
                             <CheckCircle2 className="h-3 w-3" /> Active
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-rose-400 font-medium">
+                          <span className="inline-flex items-center gap-1 text-rose-700 dark:text-rose-400 font-semibold">
                             <AlertTriangle className="h-3 w-3" /> Inactive
                           </span>
                         )}
@@ -311,7 +311,7 @@ export default function IctAccountsPage() {
 
                       <td className="py-3 text-right">
                         {protectedAcc ? (
-                          <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                             Admin Account
                           </span>
                         ) : (

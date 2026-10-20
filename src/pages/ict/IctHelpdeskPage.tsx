@@ -232,7 +232,7 @@ function getInitialLocalTickets(): Ticket[] {
     >
       {/* Controls Bar */}
       <div className={`${adminCardClass} flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3`}>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 sm:w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
@@ -240,7 +240,7 @@ function getInitialLocalTickets(): Ticket[] {
               placeholder="Search tickets, reporter, issue..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 rounded-xl border border-white/10 bg-slate-900/60 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500/50"
+              className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900/60 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-emerald-500"
             />
           </div>
 
@@ -248,10 +248,10 @@ function getInitialLocalTickets(): Ticket[] {
             <button
               type="button"
               onClick={() => setFilterStatus('all')}
-              className={`px-3 py-2 rounded-xl text-xs font-semibold ${
+              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${
                 filterStatus === 'all'
-                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                  : 'border border-white/10 text-slate-400 hover:text-white'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:text-white'
               }`}
             >
               All ({tickets.length})
@@ -259,10 +259,10 @@ function getInitialLocalTickets(): Ticket[] {
             <button
               type="button"
               onClick={() => setFilterStatus('open')}
-              className={`px-3 py-2 rounded-xl text-xs font-semibold ${
+              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${
                 filterStatus === 'open'
-                  ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                  : 'border border-white/10 text-slate-400 hover:text-white'
+                  ? 'bg-amber-600 text-white shadow-sm'
+                  : 'border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:text-white'
               }`}
             >
               Open
@@ -270,10 +270,10 @@ function getInitialLocalTickets(): Ticket[] {
             <button
               type="button"
               onClick={() => setFilterStatus('resolved')}
-              className={`px-3 py-2 rounded-xl text-xs font-semibold ${
+              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${
                 filterStatus === 'resolved'
-                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                  : 'border border-white/10 text-slate-400 hover:text-white'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:text-white'
               }`}
             >
               Resolved
@@ -294,16 +294,16 @@ function getInitialLocalTickets(): Ticket[] {
       <div className={adminCardClass}>
         <div className="overflow-x-auto">
           {isLoading ? (
-            <div className="py-12 text-center text-slate-400 text-sm">Loading tickets...</div>
+            <div className="py-12 text-center text-slate-600 dark:text-slate-400 text-sm">Loading tickets...</div>
           ) : filtered.length === 0 ? (
-            <div className="py-12 text-center text-slate-400 text-sm">
-              <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-400" />
+            <div className="py-12 text-center text-slate-600 dark:text-slate-400 text-sm">
+              <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-600 dark:text-emerald-400" />
               No tickets found matching current filter.
             </div>
           ) : (
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-white/10 text-slate-400 uppercase text-[10px] tracking-wider">
+                <tr className="border-b border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 uppercase text-[10px] tracking-wider font-bold">
                   <th className="pb-3">Ticket #</th>
                   <th className="pb-3">Reporter / Dept</th>
                   <th className="pb-3">Location</th>
@@ -314,17 +314,17 @@ function getInitialLocalTickets(): Ticket[] {
                   <th className="pb-3 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-slate-200 dark:divide-white/5">
                 {filtered.map((t) => (
-                  <tr key={t.id} className="hover:bg-white/5 transition-colors">
-                    <td className="py-3 font-mono font-bold text-white">{t.ticket_number}</td>
+                  <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                    <td className="py-3 font-mono font-bold text-slate-900 dark:text-white">{t.ticket_number}</td>
                     <td className="py-3">
-                      <p className="font-semibold text-white">{t.reporter_name}</p>
-                      <p className="text-[10.5px] text-slate-400">{t.department}</p>
+                      <p className="font-bold text-slate-900 dark:text-white">{t.reporter_name}</p>
+                      <p className="text-[10.5px] text-slate-500 dark:text-slate-400">{t.department}</p>
                     </td>
-                    <td className="py-3 text-slate-300 font-medium">{t.location}</td>
+                    <td className="py-3 text-slate-700 dark:text-slate-300 font-medium">{t.location}</td>
                     <td className="py-3">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-white/10 text-slate-300 uppercase tracking-wide">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-slate-200 uppercase tracking-wide border border-slate-200 dark:border-transparent">
                         {t.category}
                       </span>
                     </td>
@@ -332,32 +332,25 @@ function getInitialLocalTickets(): Ticket[] {
                       <span
                         className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
                           t.priority === 'urgent'
-                            ? 'bg-rose-500/20 text-rose-300'
-                            : 'bg-slate-700 text-slate-300'
+                            ? 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300'
+                            : 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300'
                         }`}
                       >
                         {t.priority}
                       </span>
                     </td>
-                    <td className="py-3 text-slate-300 max-w-sm">
-                      <p className="truncate">{t.description}</p>
-                      {t.resolution_notes && (
-                        <p className="text-[10px] text-emerald-400 italic truncate mt-0.5">
-                          Resolution: {t.resolution_notes}
-                        </p>
-                      )}
-                    </td>
+                    <td className="py-3 text-slate-700 dark:text-slate-300 max-w-xs truncate">{t.description}</td>
                     <td className="py-3">
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${
+                        className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
                           t.status === 'open'
-                            ? 'bg-amber-500/20 text-amber-300'
+                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300'
                             : t.status === 'in_progress'
-                            ? 'bg-blue-500/20 text-blue-300'
-                            : 'bg-emerald-500/20 text-emerald-300'
+                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300'
+                            : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300'
                         }`}
                       >
-                        {t.status.replace(/_/g, ' ')}
+                        {t.status}
                       </span>
                     </td>
                     <td className="py-3 text-right">
@@ -368,7 +361,7 @@ function getInitialLocalTickets(): Ticket[] {
                           setResolutionStatus(t.status);
                           setResolutionNotes(t.resolution_notes || '');
                         }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 text-xs font-medium"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 text-xs font-semibold"
                       >
                         <Edit2 className="h-3.5 w-3.5" /> Update
                       </button>
@@ -392,21 +385,21 @@ function getInitialLocalTickets(): Ticket[] {
           <div className="space-y-3 py-2">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-semibold text-slate-300">Reported By</label>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Reported By</label>
                 <input
                   type="text"
                   placeholder="e.g. Sr. Nakato Mary"
                   value={reporterName}
                   onChange={(e) => setReporterName(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 rounded-xl border border-white/10 bg-slate-900 text-xs text-white"
+                  className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900 text-xs text-slate-900 dark:text-white placeholder:text-slate-400"
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold text-slate-300">Department</label>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Department</label>
                 <select
                   value={department}
                   onChange={(e) => setDepartment(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 rounded-xl border border-white/10 bg-slate-900 text-xs text-white"
+                  className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900 text-xs text-slate-900 dark:text-white"
                 >
                   <option value="Nursing Faculty">Nursing Faculty</option>
                   <option value="Administration">Administration</option>
@@ -420,21 +413,21 @@ function getInitialLocalTickets(): Ticket[] {
 
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="text-xs font-semibold text-slate-300">Campus Location</label>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Campus Location</label>
                 <input
                   type="text"
                   placeholder="e.g. Hall 2"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 rounded-xl border border-white/10 bg-slate-900 text-xs text-white"
+                  className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900 text-xs text-slate-900 dark:text-white placeholder:text-slate-400"
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold text-slate-300">Category</label>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Category</label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 rounded-xl border border-white/10 bg-slate-900 text-xs text-white"
+                  className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900 text-xs text-slate-900 dark:text-white"
                 >
                   <option value="projector">Projector / AV</option>
                   <option value="printer">Printer / Copier</option>
@@ -445,11 +438,11 @@ function getInitialLocalTickets(): Ticket[] {
                 </select>
               </div>
               <div>
-                <label className="text-xs font-semibold text-slate-300">Priority</label>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Priority</label>
                 <select
                   value={priority}
                   onChange={(e) => setPriority(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 rounded-xl border border-white/10 bg-slate-900 text-xs text-white"
+                  className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900 text-xs text-slate-900 dark:text-white"
                 >
                   <option value="urgent">Urgent</option>
                   <option value="normal">Normal</option>
@@ -459,21 +452,21 @@ function getInitialLocalTickets(): Ticket[] {
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-slate-300">Issue Description</label>
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Issue Description</label>
               <textarea
                 rows={3}
                 placeholder="Describe the fault in detail..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="mt-1 w-full px-3 py-2 rounded-xl border border-white/10 bg-slate-900 text-xs text-white"
+                className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900 text-xs text-slate-900 dark:text-white placeholder:text-slate-400"
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-3">
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-white/5">
               <button
                 type="button"
                 onClick={() => setIsNewModalOpen(false)}
-                className="px-4 py-2 rounded-xl border border-white/10 text-xs font-medium text-slate-400 hover:text-white"
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
               >
                 Cancel
               </button>
@@ -481,7 +474,7 @@ function getInitialLocalTickets(): Ticket[] {
                 type="button"
                 disabled={!reporterName.trim() || !description.trim()}
                 onClick={() => createTicketMutation.mutate()}
-                className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs"
+                className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs shadow-sm"
               >
                 Submit Ticket
               </button>
@@ -499,18 +492,18 @@ function getInitialLocalTickets(): Ticket[] {
           size="md"
         >
           <div className="space-y-3 py-2">
-            <div className="rounded-xl border border-white/10 bg-slate-900/60 p-3 text-xs space-y-1">
-              <p className="text-slate-400">Reporter: <strong className="text-white">{activeTicket.reporter_name}</strong> ({activeTicket.department})</p>
-              <p className="text-slate-400">Location: <span className="text-white">{activeTicket.location}</span></p>
-              <p className="text-slate-400">Issue: <span className="text-white">{activeTicket.description}</span></p>
+            <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900/60 p-3 text-xs space-y-1">
+              <p className="text-slate-600 dark:text-slate-400">Reporter: <strong className="text-slate-900 dark:text-white">{activeTicket.reporter_name}</strong> ({activeTicket.department})</p>
+              <p className="text-slate-600 dark:text-slate-400">Location: <span className="text-slate-900 dark:text-white font-medium">{activeTicket.location}</span></p>
+              <p className="text-slate-600 dark:text-slate-400">Issue: <span className="text-slate-900 dark:text-white font-medium">{activeTicket.description}</span></p>
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-slate-300">Ticket Status</label>
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Ticket Status</label>
               <select
                 value={resolutionStatus}
                 onChange={(e) => setResolutionStatus(e.target.value)}
-                className="mt-1 w-full px-3 py-2 rounded-xl border border-white/10 bg-slate-900 text-xs text-white"
+                className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900 text-xs text-slate-900 dark:text-white"
               >
                 <option value="open">Open (Awaiting Technician)</option>
                 <option value="in_progress">In Progress (Work underway)</option>
@@ -520,28 +513,28 @@ function getInitialLocalTickets(): Ticket[] {
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-slate-300">Technician Resolution Notes</label>
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Technician Resolution Notes</label>
               <textarea
                 rows={3}
                 placeholder="Details of action taken, replacement parts used, or tests conducted..."
                 value={resolutionNotes}
                 onChange={(e) => setResolutionNotes(e.target.value)}
-                className="mt-1 w-full px-3 py-2 rounded-xl border border-white/10 bg-slate-900 text-xs text-white"
+                className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900 text-xs text-slate-900 dark:text-white placeholder:text-slate-400"
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-3">
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-white/5">
               <button
                 type="button"
                 onClick={() => setActiveTicket(null)}
-                className="px-4 py-2 rounded-xl border border-white/10 text-xs font-medium text-slate-400 hover:text-white"
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={() => updateTicketMutation.mutate()}
-                className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs"
+                className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-sm"
               >
                 Save Resolution
               </button>

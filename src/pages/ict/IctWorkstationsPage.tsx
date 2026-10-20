@@ -198,7 +198,7 @@ function getInitialLocalWorkstations(): Workstation[] {
       {/* Top Header Controls */}
       <div className={`${adminCardClass} space-y-4`}>
         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="relative flex-1 sm:w-72">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <input
@@ -206,7 +206,7 @@ function getInitialLocalWorkstations(): Workstation[] {
                 placeholder="Search station (e.g. PC-05)..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 rounded-xl border border-white/10 bg-slate-900/60 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500/50"
+                className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900/60 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-emerald-500"
               />
             </div>
 
@@ -214,10 +214,10 @@ function getInitialLocalWorkstations(): Workstation[] {
               <button
                 type="button"
                 onClick={() => setFilterStatus('all')}
-                className={`px-3 py-2 rounded-xl text-xs font-semibold ${
+                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${
                   filterStatus === 'all'
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                    : 'border border-white/10 text-slate-400 hover:text-white'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:text-white'
                 }`}
               >
                 All ({workstations.length})
@@ -225,10 +225,10 @@ function getInitialLocalWorkstations(): Workstation[] {
               <button
                 type="button"
                 onClick={() => setFilterStatus('operational')}
-                className={`px-3 py-2 rounded-xl text-xs font-semibold ${
+                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${
                   filterStatus === 'operational'
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                    : 'border border-white/10 text-slate-400 hover:text-white'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:text-white'
                 }`}
               >
                 Operational ({operationalCount})
@@ -236,10 +236,10 @@ function getInitialLocalWorkstations(): Workstation[] {
               <button
                 type="button"
                 onClick={() => setFilterStatus('faulty_component')}
-                className={`px-3 py-2 rounded-xl text-xs font-semibold ${
+                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${
                   filterStatus === 'faulty_component'
-                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                    : 'border border-white/10 text-slate-400 hover:text-white'
+                    ? 'bg-amber-600 text-white shadow-sm'
+                    : 'border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:text-white'
                 }`}
               >
                 Attention ({issueCount})
@@ -266,10 +266,10 @@ function getInitialLocalWorkstations(): Workstation[] {
           return (
             <div
               key={w.id}
-              className={`rounded-2xl border p-4 transition-all ${
+              className={`rounded-2xl border p-4 transition-all shadow-sm ${
                 hasIssue
-                  ? 'border-amber-500/30 bg-amber-950/10 hover:border-amber-500/50'
-                  : 'border-white/10 bg-slate-900/40 hover:border-emerald-500/30'
+                  ? 'border-amber-300 dark:border-amber-500/30 bg-amber-50/60 dark:bg-amber-950/20 hover:border-amber-500'
+                  : 'border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/40 hover:border-emerald-500/50'
               }`}
             >
               <div className="flex items-start justify-between">
@@ -277,22 +277,22 @@ function getInitialLocalWorkstations(): Workstation[] {
                   <div
                     className={`flex h-9 w-9 items-center justify-center rounded-xl font-bold border ${
                       hasIssue
-                        ? 'border-amber-500/30 bg-amber-500/20 text-amber-300'
-                        : 'border-emerald-500/30 bg-emerald-500/20 text-emerald-300'
+                        ? 'border-amber-300 dark:border-amber-500/30 bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300'
+                        : 'border-emerald-300 dark:border-emerald-500/30 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300'
                     }`}
                   >
                     <Monitor className="h-4 w-4" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-sm text-white">{w.station_code}</h3>
-                    <p className="text-[11px] text-slate-400">{w.row_number}</p>
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">{w.station_code}</h3>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">{w.row_number}</p>
                   </div>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => setEditingStation(w)}
-                  className="p-1.5 rounded-lg border border-white/10 text-slate-400 hover:text-white hover:bg-white/10"
+                  className="p-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10"
                   title="Configure station"
                 >
                   <Edit2 className="h-3.5 w-3.5" />
@@ -300,32 +300,32 @@ function getInitialLocalWorkstations(): Workstation[] {
               </div>
 
               {/* Hardware Specs */}
-              <div className="mt-3.5 space-y-1.5 border-t border-white/5 pt-3 text-[11px] text-slate-300">
+              <div className="mt-3.5 space-y-1.5 border-t border-slate-200 dark:border-white/5 pt-3 text-[11px] text-slate-700 dark:text-slate-300">
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400">CPU / RAM:</span>
-                  <span className="font-mono text-white">{w.cpu_specs} ({w.ram_gb}GB)</span>
+                  <span className="text-slate-500 dark:text-slate-400">CPU / RAM:</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-white">{w.cpu_specs} ({w.ram_gb}GB)</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Storage / OS:</span>
-                  <span className="font-mono text-white">{w.storage_specs}</span>
+                  <span className="text-slate-500 dark:text-slate-400">Storage / OS:</span>
+                  <span className="font-mono text-slate-700 dark:text-slate-200">{w.storage_specs}</span>
                 </div>
               </div>
 
               {/* Peripherals Health Chips */}
-              <div className="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between text-[10px]">
-                <span className={`px-2 py-0.5 rounded font-medium ${w.monitor_status === 'working' ? 'bg-emerald-500/10 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
+              <div className="mt-3 pt-2.5 border-t border-slate-200 dark:border-white/5 flex items-center justify-between text-[10px]">
+                <span className={`px-2 py-0.5 rounded font-bold ${w.monitor_status === 'working' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300'}`}>
                   Screen
                 </span>
-                <span className={`px-2 py-0.5 rounded font-medium ${w.keyboard_status === 'working' ? 'bg-emerald-500/10 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
+                <span className={`px-2 py-0.5 rounded font-bold ${w.keyboard_status === 'working' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300'}`}>
                   Keyboard
                 </span>
-                <span className={`px-2 py-0.5 rounded font-medium ${w.mouse_status === 'working' ? 'bg-emerald-500/10 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
+                <span className={`px-2 py-0.5 rounded font-bold ${w.mouse_status === 'working' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300'}`}>
                   Mouse
                 </span>
               </div>
 
               {w.notes && (
-                <p className="mt-2.5 pt-2 border-t border-white/5 text-[10.5px] text-amber-300/80 italic truncate">
+                <p className="mt-2.5 pt-2 border-t border-slate-200 dark:border-white/5 text-[10.5px] text-amber-800 dark:text-amber-300 italic truncate">
                   {w.notes}
                 </p>
               )}
