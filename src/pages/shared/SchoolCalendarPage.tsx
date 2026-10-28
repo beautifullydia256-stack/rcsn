@@ -53,6 +53,8 @@ import type {
   CreateExamSessionInput,
 } from '@/features/calendar-events/types';
 import AdminContentSkeleton from '@/components/layout/AdminContentSkeleton';
+import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
+import '@/styles/government-system.css';
 import { exportToExcel } from '@/lib/exportUtils';
 
 const MONTH_NAMES = [
@@ -451,408 +453,196 @@ export default function SchoolCalendarPage() {
   }
 
   return (
-    <div
-      className="w-full min-h-screen px-4 py-6 sm:px-6 lg:px-8 space-y-6"
-      style={{
-        background: t.pageBg,
-        color: t.textPrimary,
-        fontFamily: INTER,
-      }}
-    >
-      {/* Top Header & Year Picker */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-500 mb-1">
-            <CalendarDays className="w-4 h-4" />
-            <span>Academic Year Calendar &amp; Operations Planner</span>
+    <AdminPageWrapper>
+      <div className="space-y-4">
+        {/* ── 1. TOP HEADER (GOVERNMENT DESIGN SYSTEM STANDARD) ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-[17px] font-bold tracking-tight text-[#111111] uppercase font-sans m-0">
+              Institutional Calendar &amp; Planner
+            </h1>
+            <span className="inline-flex items-center px-2 py-0.5 text-[11px] font-mono font-bold bg-[#EAEAEA] text-[#222222] border border-[#CCCCCC]">
+              ACADEMIC YEAR {selectedYear}
+            </span>
           </div>
-          <h1
-            className="text-2xl sm:text-3xl font-bold tracking-tight"
-            style={{ fontFamily: SORA, color: t.textPrimary }}
-          >
-            School Calendar &amp; Exam Timetable
-          </h1>
-          <p className="text-sm mt-1" style={{ color: t.textMuted }}>
-            Schedule academic terms, exam weeks, sports galas, and school tours with live daily class examination tracking.
-          </p>
-        </div>
 
-        {/* Year Dropdown & Action Buttons */}
-        <div className="flex items-center gap-2.5 flex-wrap">
-          {/* Year Picker */}
-          <div
-            className="flex items-center gap-1.5 p-1 rounded-xl shadow-xs"
-            style={{
-              background: t.cardBg,
-              border: `1px solid ${t.cardBorder}`,
-            }}
-          >
-            <CalendarIcon className="w-4 h-4 ml-2" style={{ color: t.textMuted }} />
+          {/* Action Button Group */}
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            {/* Year Picker */}
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-transparent focus:outline-none cursor-pointer"
-              style={{ color: t.textPrimary }}
+              className="gov-select w-auto text-xs font-mono"
+              aria-label="Select Academic Year"
             >
               {[2024, 2025, 2026, 2027, 2028].map((y) => (
-                <option key={y} value={y} style={{ background: t.cardBg, color: t.textPrimary }}>
-                  Academic Year {y}
+                <option key={y} value={y}>
+                  Year {y}
                 </option>
               ))}
             </select>
-          </div>
 
-          <button
-            type="button"
-            onClick={handleExportExcel}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors"
-            style={{
-              background: t.cardBg,
-              border: `1px solid ${t.cardBorder}`,
-              color: t.textPrimary,
-            }}
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Excel</span>
-          </button>
-
-          {canManageEvents && (
             <button
               type="button"
-              onClick={() => {
-                setEditingEvent(null);
-                setEventModalOpen(true);
-              }}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white shadow-md transition-transform active:scale-95"
-              style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}
+              onClick={handleExportExcel}
+              className="gov-btn gov-btn-sm"
+              title="Export Excel Calendar"
             >
-              <Plus className="w-4 h-4" />
-              <span>Add Event</span>
+              <Download className="w-3.5 h-3.5" />
+              <span>Excel</span>
             </button>
-          )}
-        </div>
-      </div>
 
-      {/* KPI Cards: Year Overview Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* KPI 1: Total Events */}
-        <div
-          className="rounded-2xl p-4 shadow-sm"
-          style={{
-            background: cardGrad(isDark),
-            border: `1px solid ${t.cardBorder}`,
-          }}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: t.textMuted }}>
+            {canManageEvents && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingEvent(null);
+                  setEventModalOpen(true);
+                }}
+                className="gov-btn gov-btn-sm gov-btn-primary"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Event</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ── 2. METRIC SUMMARY BOXES (PLAIN, HIGH-DENSITY, NO FLUFF) ── */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="gov-card p-3 rounded-lg text-center border border-[#CCCCCC]">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-[#555555]">
               Total Events ({selectedYear})
-            </span>
-            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
-              <CalendarDays className="w-4 h-4" />
+            </div>
+            <div className="text-2xl font-mono font-bold text-[#111111] mt-1">
+              {summary?.total_events || 0}
             </div>
           </div>
-          <div className="mt-2 text-2xl font-bold" style={{ fontFamily: SORA, color: t.textPrimary }}>
-            {summary?.total_events || 0}
-          </div>
-          <div className="mt-1 text-xs" style={{ color: t.textMuted }}>
-            Full year calendar schedules
-          </div>
-        </div>
 
-        {/* KPI 2: Exam Periods & Timetabled Papers */}
-        <div
-          className="rounded-2xl p-4 shadow-sm"
-          style={{
-            background: cardGrad(isDark),
-            border: `1px solid ${t.cardBorder}`,
-          }}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: t.textMuted }}>
+          <div className="gov-card p-3 rounded-lg text-center border border-[#CCCCCC]">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-[#555555]">
               Examination Periods
-            </span>
-            <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-500">
-              <GraduationCap className="w-4 h-4" />
+            </div>
+            <div className="text-2xl font-mono font-bold text-[#111111] mt-1">
+              {summary?.exam_periods_count || 0}
             </div>
           </div>
-          <div className="mt-2 text-2xl font-bold text-indigo-500" style={{ fontFamily: SORA }}>
-            {summary?.exam_periods_count || 0}
-          </div>
-          <div className="mt-1 text-xs" style={{ color: t.textMuted }}>
-            {summary?.total_exam_papers || 0} individual papers timetabled
-          </div>
-        </div>
 
-        {/* KPI 3: Sports, Tours & Co-Curricular */}
-        <div
-          className="rounded-2xl p-4 shadow-sm"
-          style={{
-            background: cardGrad(isDark),
-            border: `1px solid ${t.cardBorder}`,
-          }}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: t.textMuted }}>
+          <div className="gov-card p-3 rounded-lg text-center border border-[#CCCCCC]">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-[#555555]">
               Sports &amp; Tours
-            </span>
-            <div className="p-2 rounded-xl bg-sky-500/10 text-sky-500">
-              <Trophy className="w-4 h-4" />
+            </div>
+            <div className="text-2xl font-mono font-bold text-[#111111] mt-1">
+              {summary?.sports_and_tours_count || 0}
             </div>
           </div>
-          <div className="mt-2 text-2xl font-bold text-sky-500" style={{ fontFamily: SORA }}>
-            {summary?.sports_and_tours_count || 0}
-          </div>
-          <div className="mt-1 text-xs" style={{ color: t.textMuted }}>
-            Field excursions &amp; sports gala competitions
-          </div>
-        </div>
 
-        {/* KPI 4: Live Today's Tracker */}
-        <div
-          className="rounded-2xl p-4 shadow-sm"
-          style={{
-            background:
-              todayActivities.papers.length > 0
-                ? isDark
-                  ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(15, 23, 42, 0.8))'
-                  : 'linear-gradient(135deg, #fef2f2, #fff1f2)'
-                : cardGrad(isDark),
-            border: `1px solid ${todayActivities.papers.length > 0 ? (isDark ? 'rgba(239, 68, 68, 0.3)' : '#fecaca') : t.cardBorder}`,
-          }}
-        >
-          <div className="flex items-center justify-between">
-            <span
-              className={`text-xs font-bold uppercase tracking-wider ${todayActivities.papers.length > 0 ? 'text-rose-500' : ''}`}
-              style={{ color: todayActivities.papers.length === 0 ? t.textMuted : undefined }}
-            >
+          <div className="gov-card p-3 rounded-lg text-center border border-[#CCCCCC]">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-[#555555]">
               Today's Live Sessions
-            </span>
-            <div
-              className={`p-2 rounded-xl ${todayActivities.papers.length > 0 ? 'bg-rose-500 text-white animate-pulse' : 'bg-slate-500/10 text-slate-400'}`}
-            >
-              <Clock className="w-4 h-4" />
             </div>
-          </div>
-          <div
-            className="mt-2 text-2xl font-bold"
-            style={{
-              fontFamily: SORA,
-              color: todayActivities.papers.length > 0 ? '#ef4444' : t.textPrimary,
-            }}
-          >
-            {todayActivities.papers.length} Exam {todayActivities.papers.length === 1 ? 'Paper' : 'Papers'}
-          </div>
-          <div className="mt-1 text-xs" style={{ color: t.textMuted }}>
-            {todayActivities.events.length > 0
-              ? `${todayActivities.events[0].title}`
-              : 'Regular lectures & clinical skills practice in progress'}
+            <div className="text-2xl font-mono font-bold text-[#111111] mt-1">
+              {todayActivities.papers.length} {todayActivities.papers.length === 1 ? 'Paper' : 'Papers'}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* ── REAL-TIME "TODAY'S SCHEDULE & LIVE PAPERS" BANNER ── */}
-      {(todayActivities.papers.length > 0 || todayActivities.events.length > 0) && (
-        <div
-          className="p-4 rounded-2xl shadow-sm border space-y-3"
-          style={{
-            background: isDark
-              ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(16, 185, 129, 0.08))'
-              : 'linear-gradient(135deg, #f0fdf4, #eff6ff)',
-            borderColor: isDark ? 'rgba(99, 102, 241, 0.3)' : '#bfdbfe',
-          }}
-        >
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-2">
-              <span className="flex h-2.5 w-2.5 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500" />
-              </span>
-              <span className="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
-                Active Today ({formatDateDisplay(todayStr)})
-              </span>
+        {/* ── 3. CONTROLS & NAVIGATION BAR ── */}
+        <div className="gov-control-bar">
+          <div className="gov-control-bar-left flex-wrap">
+            {/* View Tabs */}
+            <div className="inline-flex p-0.5 bg-[#EAEAEA] border border-[#CCCCCC] rounded gap-0.5">
+              <button
+                type="button"
+                onClick={() => setActiveTab('year_matrix')}
+                className={`px-2.5 py-1 text-xs font-semibold rounded transition-colors ${
+                  activeTab === 'year_matrix'
+                    ? 'bg-white text-[#111111] shadow-xs'
+                    : 'text-[#555555] hover:text-[#111111]'
+                }`}
+              >
+                12-Month Matrix
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('month_grid')}
+                className={`px-2.5 py-1 text-xs font-semibold rounded transition-colors ${
+                  activeTab === 'month_grid'
+                    ? 'bg-white text-[#111111] shadow-xs'
+                    : 'text-[#555555] hover:text-[#111111]'
+                }`}
+              >
+                Month Deep Dive
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('exam_timetable')}
+                className={`px-2.5 py-1 text-xs font-semibold rounded transition-colors ${
+                  activeTab === 'exam_timetable'
+                    ? 'bg-white text-[#111111] shadow-xs'
+                    : 'text-[#555555] hover:text-[#111111]'
+                }`}
+              >
+                Exam Timetable ({examSessions.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('all_events')}
+                className={`px-2.5 py-1 text-xs font-semibold rounded transition-colors ${
+                  activeTab === 'all_events'
+                    ? 'bg-white text-[#111111] shadow-xs'
+                    : 'text-[#555555] hover:text-[#111111]'
+                }`}
+              >
+                All Events ({events.length})
+              </button>
             </div>
-            <span className="text-xs font-semibold" style={{ color: t.textMuted }}>
-              Live Class &amp; Examination Session Status
-            </span>
-          </div>
 
-          {todayActivities.papers.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {todayActivities.papers.map((p) => (
-                <div
-                  key={p.id}
-                  className="p-3 rounded-xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 shadow-xs space-y-1.5"
-                >
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-                      {p.class_name}
-                    </span>
-                    <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {formatTimeDisplay(p.start_time)} - {formatTimeDisplay(p.end_time)}
-                    </span>
-                  </div>
-                  <div className="font-bold text-sm" style={{ color: t.textPrimary }}>
-                    {p.paper_name}
-                  </div>
-                  <div className="text-xs flex items-center justify-between" style={{ color: t.textMuted }}>
-                    <span className="flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
-                      {p.room_or_hall}
-                    </span>
-                    {p.invigilator_name && (
-                      <span className="flex items-center gap-1">
-                        <UserCheck className="w-3 h-3" />
-                        {p.invigilator_name}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
+            {/* Search Box */}
+            <div className="relative flex-1 min-w-[180px]">
+              <Search className="w-3.5 h-3.5 text-[#555555] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search event or paper..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="gov-input pl-8 font-mono text-xs"
+              />
             </div>
-          )}
 
-          {todayActivities.events.length > 0 && (
-            <div className="flex items-center gap-2 flex-wrap text-xs pt-1 border-t border-slate-200/60 dark:border-slate-800/60">
-              <span className="font-semibold" style={{ color: t.textMuted }}>
-                School Events Today:
-              </span>
-              {todayActivities.events.map((ev) => (
-                <span
-                  key={ev.event_id}
-                  className="px-2.5 py-1 rounded-lg font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                >
-                  {ev.title} {ev.location ? `(@ ${ev.location})` : ''}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Main View Tabs Bar */}
-      <div
-        className="p-1.5 rounded-2xl flex items-center justify-between gap-2 flex-wrap shadow-xs"
-        style={{
-          background: t.cardBg,
-          border: `1px solid ${t.cardBorder}`,
-        }}
-      >
-        {/* Navigation Tabs */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <button
-            type="button"
-            onClick={() => setActiveTab('year_matrix')}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
-              activeTab === 'year_matrix'
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'hover:bg-slate-500/10 text-slate-500 dark:text-slate-400'
-            }`}
-          >
-            <LayoutGrid className="w-4 h-4" />
-            <span>Full-Year Matrix (12 Months)</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('month_grid')}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
-              activeTab === 'month_grid'
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'hover:bg-slate-500/10 text-slate-500 dark:text-slate-400'
-            }`}
-          >
-            <CalendarDays className="w-4 h-4" />
-            <span>Month Deep Dive</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('exam_timetable')}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
-              activeTab === 'exam_timetable'
-                ? 'bg-indigo-600 text-white shadow-xs'
-                : 'hover:bg-slate-500/10 text-slate-500 dark:text-slate-400'
-            }`}
-          >
-            <GraduationCap className="w-4 h-4" />
-            <span>Exam Paper Timetable ({examSessions.length})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('all_events')}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
-              activeTab === 'all_events'
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'hover:bg-slate-500/10 text-slate-500 dark:text-slate-400'
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            <span>All Events List ({events.length})</span>
-          </button>
-        </div>
-
-        {/* Filters Toolbar */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Search Box */}
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search event or paper..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 pr-3 py-1.5 text-xs rounded-xl focus:outline-none w-44 sm:w-56"
-              style={{
-                background: t.inputBg,
-                border: `1px solid ${t.inputBorder}`,
-                color: t.textPrimary,
-              }}
-            />
-          </div>
-
-          {/* Category Filter */}
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="px-2.5 py-1.5 text-xs font-semibold rounded-xl focus:outline-none cursor-pointer"
-            style={{
-              background: t.inputBg,
-              border: `1px solid ${t.inputBorder}`,
-              color: t.textPrimary,
-            }}
-          >
-            <option value="all">All Categories</option>
-            {availableCategories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
-
-          {/* Class Filter (useful when in timetable view) */}
-          {availableClasses.length > 0 && (
+            {/* Category Filter */}
             <select
-              value={classFilter}
-              onChange={(e) => setClassFilter(e.target.value)}
-              className="px-2.5 py-1.5 text-xs font-semibold rounded-xl focus:outline-none cursor-pointer"
-              style={{
-                background: t.inputBg,
-                border: `1px solid ${t.inputBorder}`,
-                color: t.textPrimary,
-              }}
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="gov-select w-auto text-xs"
+              aria-label="Filter Category"
             >
-              <option value="all">All Classes / Streams</option>
-              {availableClasses.map((cls) => (
-                <option key={cls} value={cls}>
-                  Class: {cls}
+              <option value="all">All Categories</option>
+              {availableCategories.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
                 </option>
               ))}
             </select>
-          )}
+
+            {/* Class Filter */}
+            {availableClasses.length > 0 && (
+              <select
+                value={classFilter}
+                onChange={(e) => setClassFilter(e.target.value)}
+                className="gov-select w-auto text-xs"
+                aria-label="Filter Class"
+              >
+                <option value="all">All Classes / Streams</option>
+                {availableClasses.map((cls) => (
+                  <option key={cls} value={cls}>
+                    Class: {cls}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
         </div>
-      </div>
 
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {/* VIEW 1: FULL-YEAR 12-MONTH MATRIX ON THE SAME PAGE                   */}
@@ -1445,7 +1235,8 @@ export default function SchoolCalendarPage() {
           }}
         />
       )}
-    </div>
+      </div>
+    </AdminPageWrapper>
   );
 }
 

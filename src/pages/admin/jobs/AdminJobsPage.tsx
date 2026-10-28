@@ -7,6 +7,8 @@ import { useUIStore } from '@/store/uiStore';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
 import PosEmptyState from '@/components/finance/pos/PosEmptyState';
 import NativeModal from '@/components/NativeModal';
+import { GovPageLoader, GovRollingBox, GovTableLoader } from '@/components/ui/GovLoadingIndicator';
+import '@/styles/government-system.css';
 import {
   Briefcase,
   MapPin,
@@ -399,175 +401,155 @@ export default function AdminJobsPage() {
   };
 
   return (
-    <AdminPageWrapper
-      title="Careers"
-      subtitle="Publish institutional openings, configure application requirements, and review candidate dossiers."
-    >
-      <div className="w-full space-y-4 sm:space-y-6">
+    <div className="admin-terminal-page space-y-4 p-4">
+      {/* ── 1. OFFICIAL INSTITUTIONAL MASTHEAD ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#CCCCCC] pb-4">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-[#111111] uppercase font-mono">
+            INSTITUTIONAL VACANCIES &amp; CAREERS DESK
+          </h1>
+          <p className="text-xs text-[#555555] font-mono tracking-wider uppercase mt-0.5">
+            OFFICIAL CLINICAL &amp; ACADEMIC APPOINTMENT POSTINGS • REPUBLIC OF UGANDA
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setLocation(DEFAULT_CAMPUS);
+              setShowModal(true);
+            }}
+            className="gov-btn gov-btn-primary gov-btn-sm flex items-center gap-1.5 font-mono"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>POST NEW VACANCY</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="w-full space-y-4">
         {/* Toast / Notifications */}
         {err && (
-          <div className="flex items-center justify-between rounded-xl border border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-xs sm:text-sm text-red-800 dark:text-red-200 shadow-xs">
+          <div className="gov-card p-3 border-l-4 border-l-rose-600 bg-rose-50 flex items-center justify-between text-xs font-mono text-rose-800">
             <div className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 shrink-0" />
+              <AlertCircle className="h-4 w-4 text-rose-700 shrink-0" />
               <span>{err}</span>
             </div>
-            <button type="button" onClick={() => setErr(null)} className="text-red-600 dark:text-red-400 hover:opacity-80">
+            <button type="button" onClick={() => setErr(null)} className="text-rose-700 hover:opacity-80">
               <X className="h-4 w-4" />
             </button>
           </div>
         )}
 
         {successMsg && (
-          <div className="flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 px-4 py-3 text-xs sm:text-sm text-emerald-900 dark:text-emerald-200 shadow-xs">
+          <div className="gov-card p-3 border-l-4 border-l-emerald-600 bg-emerald-50 flex items-center justify-between text-xs font-mono text-emerald-800">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <CheckCircle2 className="h-4 w-4 text-emerald-700 shrink-0" />
               <span>{successMsg}</span>
             </div>
-            <button type="button" onClick={() => setSuccessMsg(null)} className="text-emerald-600 dark:text-emerald-400 hover:opacity-80">
+            <button type="button" onClick={() => setSuccessMsg(null)} className="text-emerald-700 hover:opacity-80">
               <X className="h-4 w-4" />
             </button>
           </div>
         )}
 
-        {/* Compact, High-Contrast 4-Card Summary Grid (Mobile-friendly 2x2, Desktop 4-col) */}
-        <div className="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4">
-          {/* Active Vacancies */}
-          <div
-            className="rounded-xl sm:rounded-2xl p-3 sm:p-4 transition-all shadow-xs bg-emerald-50/80 dark:bg-emerald-950/20 border border-emerald-200/90 dark:border-emerald-800/40"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300" style={{ fontFamily: INTER }}>
-                Active Vacancies
-              </span>
-              <div className="flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded-lg sm:rounded-xl bg-emerald-600/15 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 shrink-0">
-                <Briefcase className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </div>
+        {/* ── 2. MONOCHROME KPI SUMMARY STRIP ── */}
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="gov-card p-3">
+            <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+              ACTIVE VACANCIES
             </div>
-            <p className="mt-1.5 sm:mt-2 text-xl sm:text-3xl font-black text-slate-900 dark:text-white" style={{ fontFamily: SORA }}>
+            <div className="text-2xl font-bold font-mono text-emerald-700 mt-1">
               {stats.openJobs}
-            </p>
-            <p className="mt-0.5 sm:mt-1 text-[10.5px] sm:text-xs font-semibold text-[#007033] dark:text-emerald-400 truncate">
-              Accepting applications
-            </p>
+            </div>
+            <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+              ACCEPTING APPLICATIONS
+            </div>
           </div>
 
-          {/* Total Postings */}
-          <div
-            className="rounded-xl sm:rounded-2xl p-3 sm:p-4 transition-all shadow-xs bg-blue-50/80 dark:bg-blue-950/20 border border-blue-200/90 dark:border-blue-800/40"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300" style={{ fontFamily: INTER }}>
-                Total Postings
-              </span>
-              <div className="flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded-lg sm:rounded-xl bg-blue-600/15 dark:bg-blue-500/15 text-blue-800 dark:text-blue-300 shrink-0">
-                <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </div>
+          <div className="gov-card p-3">
+            <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+              RECORDED POSTINGS
             </div>
-            <p className="mt-1.5 sm:mt-2 text-xl sm:text-3xl font-black text-slate-900 dark:text-white" style={{ fontFamily: SORA }}>
+            <div className="text-2xl font-bold font-mono text-[#111111] mt-1">
               {stats.totalJobs}
-            </p>
-            <p className="mt-0.5 sm:mt-1 text-[10.5px] sm:text-xs font-semibold text-blue-700 dark:text-blue-400 truncate">
-              Recorded openings
-            </p>
+            </div>
+            <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+              TOTAL RECORDED OPENINGS
+            </div>
           </div>
 
-          {/* Total Applicants */}
-          <div
-            className="rounded-xl sm:rounded-2xl p-3 sm:p-4 transition-all shadow-xs bg-purple-50/80 dark:bg-purple-950/20 border border-purple-200/90 dark:border-purple-800/40"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300" style={{ fontFamily: INTER }}>
-                Total Applicants
-              </span>
-              <div className="flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded-lg sm:rounded-xl bg-purple-600/15 dark:bg-purple-500/15 text-purple-800 dark:text-purple-300 shrink-0">
-                <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </div>
+          <div className="gov-card p-3">
+            <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+              CANDIDATE DOSSIERS
             </div>
-            <p className="mt-1.5 sm:mt-2 text-xl sm:text-3xl font-black text-slate-900 dark:text-white" style={{ fontFamily: SORA }}>
+            <div className="text-2xl font-bold font-mono text-[#111111] mt-1">
               {stats.totalApplicants}
-            </p>
-            <p className="mt-0.5 sm:mt-1 text-[10.5px] sm:text-xs font-semibold text-purple-700 dark:text-purple-400 truncate">
-              Candidates applied
-            </p>
+            </div>
+            <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+              RECEIVED APPLICATIONS
+            </div>
           </div>
 
-          {/* Campuses / Sites */}
-          <div
-            className="rounded-xl sm:rounded-2xl p-3 sm:p-4 transition-all shadow-xs bg-amber-50/80 dark:bg-amber-950/20 border border-amber-200/90 dark:border-amber-800/40"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300" style={{ fontFamily: INTER }}>
-                Campuses / Sites
-              </span>
-              <div className="flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded-lg sm:rounded-xl bg-amber-600/15 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 shrink-0">
-                <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </div>
+          <div className="gov-card p-3">
+            <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+              CAMPUS SITES
             </div>
-            <p className="mt-1.5 sm:mt-2 text-xl sm:text-3xl font-black text-slate-900 dark:text-white" style={{ fontFamily: SORA }}>
+            <div className="text-2xl font-bold font-mono text-[#111111] mt-1">
               {stats.locationsCount || 1}
-            </p>
-            <p className="mt-0.5 sm:mt-1 text-[10.5px] sm:text-xs font-semibold text-amber-800 dark:text-amber-400 truncate">
-              Institutional locations
-            </p>
+            </div>
+            <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+              INSTITUTIONAL LOCATIONS
+            </div>
           </div>
         </div>
 
-        {/* Action Toolbar (Responsive, Clean Search & Filter) */}
-        <div
-          className="rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3"
-        >
-          {/* Top search & post row */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-4">
-            {/* Search Input with high contrast in light & dark mode */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 shrink-0" />
-              <input
-                type="text"
-                placeholder="Search by role title or location..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/70 pl-9 pr-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
-              />
-            </div>
-
-            {/* Post New Vacancy Button */}
-            <button
-              type="button"
-              onClick={() => {
-                setLocation(DEFAULT_CAMPUS);
-                setShowModal(true);
-              }}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#00873E] hover:bg-[#007033] px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm transition-all shrink-0 active:scale-98"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Post New Vacancy</span>
-            </button>
+        {/* ── 3. HIGH-DENSITY CONTROL BAR ── */}
+        <div className="gov-control-bar flex flex-wrap items-center justify-between gap-3 p-3 bg-white border border-[#CCCCCC]">
+          <div className="flex items-center gap-2 flex-1 min-w-[240px]">
+            <Search className="w-4 h-4 text-[#777777]" />
+            <input
+              type="text"
+              placeholder="Search by role title or location…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="gov-input text-xs font-mono w-full"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="p-1 hover:bg-[#F3F4F6] text-[#555555]"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
-          {/* Filter Tabs Row */}
-          <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 dark:border-slate-800/80">
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center border border-[#CCCCCC]">
               {(['all', 'Open', 'Pending', 'Closed'] as const).map((tab) => {
                 const isActive = statusFilter === tab;
+                const label = tab === 'all' ? 'ALL ROLES' : tab.toUpperCase();
                 return (
                   <button
                     key={tab}
                     type="button"
                     onClick={() => setStatusFilter(tab)}
-                    className={`rounded-lg px-3 py-1 text-xs font-semibold transition-all shrink-0 ${
+                    className={`px-3 py-1 text-xs font-mono font-bold transition-colors ${
                       isActive
-                        ? 'bg-emerald-600 text-white shadow-xs dark:bg-emerald-500/20 dark:text-emerald-300'
-                        : 'bg-slate-100 text-slate-600 hover:text-slate-900 dark:bg-slate-800/60 dark:text-slate-400 dark:hover:text-white'
+                        ? 'bg-[#111111] text-white'
+                        : 'bg-white text-[#555555] hover:bg-[#F9F9FB]'
                     }`}
                   >
-                    {tab === 'all' ? 'All Roles' : tab}
+                    {label}
                   </button>
                 );
               })}
             </div>
 
-            <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 shrink-0">
-              Showing {filteredJobs.length} {filteredJobs.length === 1 ? 'opening' : 'openings'}
+            <span className="text-xs font-mono text-[#555555] shrink-0">
+              SHOWING {filteredJobs.length} {filteredJobs.length === 1 ? 'OPENING' : 'OPENINGS'}
             </span>
           </div>
         </div>
@@ -1175,6 +1157,6 @@ export default function AdminJobsPage() {
           </div>
         </NativeModal>
       </div>
-    </AdminPageWrapper>
+    </div>
   );
 }

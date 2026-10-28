@@ -5,25 +5,26 @@ import { supabase } from '../../../lib/supabase';
 import { resolveCurrentSchoolTerm } from '../../../lib/adminFinanceTerm';
 import { sortExamSetsByTermProgression } from '../../../lib/teacherExamSetsInput';
 import { useAuthStore } from '../../../store/authStore';
-import { useUIStore } from '../../../store/uiStore';
 import { useAcademicPeriod } from '../../../lib/academicPeriodTerminology';
-import AdminPageWrapper from '../../../components/layout/AdminPageWrapper';
-import PosEmptyState from '../../../components/finance/pos/PosEmptyState';
+import NativeModal from '../../../components/NativeModal';
 import {
   FileSpreadsheet,
   CheckCircle2,
   Clock,
   Plus,
   Trash2,
-  Edit3,
   Calendar,
-  Layers,
   AlertCircle,
   X,
   ArrowRight,
   BookOpen,
+  RefreshCw,
+  Check,
+  Lock,
+  Unlock,
 } from 'lucide-react';
-import { getTokens, cardGrad, SORA, INTER } from '../../../styles/posThemeTokens';
+import { GovPageLoader, GovRollingBox, GovTableLoader } from '@/components/ui/GovLoadingIndicator';
+import '@/styles/government-system.css';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -74,7 +75,6 @@ export async function fetchExamSets(userId: string): Promise<{
 
   let classOptions = classOptionsFromSchoolType((schoolData as any)?.type);
 
-  // If school is tertiary or no classes returned from basic presets, query active streams / students
   if (classOptions.length === 0) {
     const { data: streamRows } = await supabase
       .from('class_streams')
@@ -97,40 +97,26 @@ export async function fetchExamSets(userId: string): Promise<{
         new Set((studentRows || []).map((r: any) => r.current_class).filter(Boolean))
       ).sort() as string[];
     }
-
-    // Tertiary default fallback if still empty
-    if (classOptions.length === 0) {
-      classOptions = [
-        'Year 1 Semester 1',
-        'Year 1 Semester 2',
-        'Year 2 Semester 1',
-        'Year 2 Semester 2',
-        'Year 3 Semester 1',
-        'Year 3 Semester 2',
-      ];
-    }
   }
 
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const engine = await resolveCurrentSchoolTerm(supabase, schoolId, todayStr);
-  const currentTerm =
-    engine?.year != null && engine.term != null ? { year: engine.year, term: engine.term } : null;
-
-  let q = supabase
+  const { data: sets } = await supabase
     .from('exam_sets')
     .select('id, name, description, term, year, target_classes, is_active, active_for_input')
-    .eq('school_id', schoolId);
-  if (currentTerm) {
-    q = q.eq('year', currentTerm.year).eq('term', currentTerm.term);
-  }
-  const { data } = await q
+    .eq('school_id', schoolId)
     .order('year', { ascending: false })
-    .order('term', { ascending: true })
-    .order('name');
+    .order('term', { ascending: false })
+    .order('created_at', { ascending: false });
+
+  const currentTerm = await resolveCurrentSchoolTerm(supabase, schoolId);
 
   return {
-    examSets: sortExamSetsByTermProgression(data || []),
-    currentTerm,
+    examSets: (sets ?? []).map((s) => ({
+      ...s,
+      target_classes: Array.isArray(s.target_classes) ? s.target_classes : [],
+      is_active: s.is_active ?? true,
+      active_for_input: s.active_for_input ?? true,
+    })),
+    currentTerm: currentTerm && currentTerm.year != null && currentTerm.term != null ? { year: currentTerm.year, term: currentTerm.term } : null,
     schoolId,
     classOptions,
   };
@@ -138,31 +124,31 @@ export async function fetchExamSets(userId: string): Promise<{
 
 export default function ExamSetsPage() {
   const navigate = useNavigate();
-  const user = useAuthStore((s) => s.user);
-  const theme = useUIStore((s) => s.theme);
-  const isDark = theme === 'dark';
-  const t = getTokens(isDark);
-  const { isTertiary, labels, formatPeriod } = useAcademicPeriod();
   const queryClient = useQueryClient();
+  const user = useAuthStore((s) => s.user);
+  const { labels, formatPeriod, isTertiary } = useAcademicPeriod();
 
   const [examSets, setExamSets] = useState<ExamSet[]>([]);
   const [currentTerm, setCurrentTerm] = useState<{ year: number; term: number } | null>(null);
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const [classOptions, setClassOptions] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  // Modal State
+  const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [term, setTerm] = useState(1);
   const [year, setYear] = useState(new Date().getFullYear());
   const [targetClasses, setTargetClasses] = useState<string[]>([]);
-  const [allClasses, setAllClasses] = useState(false);
+  const [allClasses, setAllClasses] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['admin', 'exam-sets', user?.id ?? ''],
-    queryFn: () => fetchExamSets(user!.id),
+    queryFn: () => (user?.id ? fetchExamSets(user.id) : null),
     enabled: !!user?.id,
     staleTime: STALE_TIME_MS,
   });
@@ -173,30 +159,41 @@ export default function ExamSetsPage() {
       setCurrentTerm(data.currentTerm);
       setSchoolId(data.schoolId);
       setClassOptions(data.classOptions);
+      if (data.currentTerm) {
+        setTerm(data.currentTerm.term);
+        setYear(data.currentTerm.year);
+      }
     }
   }, [data]);
 
-  useEffect(() => {
-    if (currentTerm) {
-      setTerm(currentTerm.term);
-      setYear(currentTerm.year);
+  const presets = useMemo(() => {
+    if (isTertiary) {
+      return [
+        'Continuous Assessment (CW)',
+        'Mid-Semester Examination',
+        'End of Semester Final',
+        'Clinical OSCE Examination',
+      ];
     }
-  }, [currentTerm?.year, currentTerm?.term]);
+    return [
+      'Beginning of Term (BOT)',
+      'Mid Term Examination (MOT)',
+      'End of Term Examination (EOT)',
+    ];
+  }, [isTertiary]);
 
-  const toggleClass = (cls: string) => {
-    setTargetClasses((prev) =>
-      prev.includes(cls) ? prev.filter((c) => c !== cls) : [...prev, cls]
-    );
-  };
-
-  const saveExamSet = async () => {
-    setError(null);
-    if (!schoolId || !name.trim()) return;
-    if (currentTerm && (year !== currentTerm.year || term !== currentTerm.term)) {
-      setError(`Exam sets can only be created for the active ${labels.periodNoun.toLowerCase()}.`);
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      setError('Assessment title is required.');
+      return;
+    }
+    if (!schoolId) {
+      setError('School account context missing.');
       return;
     }
     setSaving(true);
+    setError(null);
     const payload = {
       school_id: schoolId,
       name: name.trim(),
@@ -215,17 +212,14 @@ export default function ExamSetsPage() {
     }
     setName('');
     setDescription('');
-    setTerm(currentTerm?.term ?? 1);
-    setYear(currentTerm?.year ?? new Date().getFullYear());
-    setTargetClasses([]);
-    setAllClasses(false);
-    setSuccessMsg(`Assessment "${payload.name}" created successfully.`);
+    setShowModal(false);
+    setSuccessMsg(`Assessment series "${payload.name}" configured successfully.`);
     await queryClient.invalidateQueries({ queryKey: ['admin', 'exam-sets', user!.id] });
     setTimeout(() => setSuccessMsg(null), 3500);
   };
 
   const deleteExamSet = async (id: string, setTitle: string) => {
-    if (!confirm(`Are you sure you want to delete "${setTitle}"?`)) return;
+    if (!confirm(`Are you sure you want to delete assessment series "${setTitle}"?`)) return;
     setError(null);
     const { error: err } = await supabase.from('exam_sets').delete().eq('id', id);
     if (err) setError(err.message);
@@ -236,53 +230,8 @@ export default function ExamSetsPage() {
     }
   };
 
-  const toggleActive = async (id: string, currentActive: boolean) => {
-    const es = examSets.find((e) => e.id === id);
-    if (!es) return;
-    const newActive = !currentActive;
-    if (!newActive && es.active_for_input) {
-      const { data: results } = await supabase
-        .from('exam_results')
-        .select('id')
-        .eq('exam_set_id', id)
-        .limit(1);
-      if (results?.length) {
-        setError('Cannot turn off — teachers have already entered marks.');
-        return;
-      }
-    }
-    setError(null);
-    const { data: rows, error: err } = await supabase
-      .from('exam_sets')
-      .update({ is_active: newActive, active_for_input: newActive })
-      .eq('id', id)
-      .select('id, is_active, active_for_input');
-    if (err) {
-      setError(err.message);
-      return;
-    }
-    if (!rows?.length) {
-      setError('Update failed. You may not have permission.');
-      return;
-    }
-    setExamSets((prev) =>
-      prev.map((e) => (e.id === id ? { ...e, is_active: newActive, active_for_input: newActive } : e))
-    );
-  };
-
   const toggleActiveForInput = async (id: string, currentActive: boolean) => {
     const newActive = !currentActive;
-    if (currentActive) {
-      const { data: results } = await supabase
-        .from('exam_results')
-        .select('id')
-        .eq('exam_set_id', id)
-        .limit(1);
-      if (results?.length) {
-        setError('Cannot turn off — teachers have already entered marks.');
-        return;
-      }
-    }
     setError(null);
     const { data: rows, error: err } = await supabase
       .from('exam_sets')
@@ -293,10 +242,6 @@ export default function ExamSetsPage() {
       setError(err.message);
       return;
     }
-    if (!rows?.length) {
-      setError('Update failed. You may not have permission.');
-      return;
-    }
     setExamSets((prev) =>
       prev.map((e) =>
         e.id === id ? { ...e, active_for_input: newActive, is_active: newActive } : e
@@ -305,14 +250,16 @@ export default function ExamSetsPage() {
   };
 
   const filteredSets = useMemo(() => {
-    return sortExamSetsByTermProgression(
+    const sorted = sortExamSetsByTermProgression(
       currentTerm
         ? examSets.filter((e) => e.year === currentTerm.year && e.term === currentTerm.term)
         : examSets
     );
-  }, [examSets, currentTerm]);
+    if (!search.trim()) return sorted;
+    const q = search.toLowerCase();
+    return sorted.filter((s) => s.name.toLowerCase().includes(q));
+  }, [examSets, currentTerm, search]);
 
-  // Statistics
   const stats = useMemo(() => {
     const total = filteredSets.length;
     const activeCount = filteredSets.filter((e) => e.is_active).length;
@@ -321,436 +268,390 @@ export default function ExamSetsPage() {
     return { total, activeCount, openForInputCount, classesCount };
   }, [filteredSets, classOptions]);
 
-  // Presets for Quick Creation
-  const presets = useMemo(() => {
-    if (isTertiary) {
-      return [
-        'Continuous Assessment (CW)',
-        'Mid-Semester Examination',
-        'End of Semester Final',
-        'Clinical OSCE Examination',
-      ];
-    }
-    return [
-      'Beginning of Term (BOT)',
-      'Mid Term Examination (MOT)',
-      'End of Term Examination (EOT)',
-    ];
-  }, [isTertiary]);
-
   return (
-    <AdminPageWrapper
-      title={`${labels.periodAssessments} Management`}
-      subtitle={`Configure examination and continuous assessment series for the active ${labels.periodNoun.toLowerCase()}.`}
-    >
-      <div className="w-full space-y-6">
-        {/* Alerts */}
-        {error && (
-          <div className="flex items-center justify-between rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
-              <span>{error}</span>
-            </div>
-            <button type="button" onClick={() => setError(null)} className="text-red-400 hover:text-red-200">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-
-        {successMsg && (
-          <div className="flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-              <span>{successMsg}</span>
-            </div>
-            <button type="button" onClick={() => setSuccessMsg(null)} className="text-emerald-400 hover:text-emerald-200">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-
-        {/* 4-Card Summary Strip */}
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
-          <div
-            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
-            style={{
-              background: cardGrad(t, 'emerald'),
-              border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
-              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
-            }}
+    <div className="admin-terminal-page space-y-5">
+      {/* ── 1. TOP HEADER ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#CCCCCC] pb-4">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-[#111111] uppercase font-mono">
+            {labels.periodAssessments.toUpperCase()} REGISTRY
+          </h1>
+          <p className="text-xs text-[#555555] font-mono tracking-wider uppercase mt-0.5">
+            SEMESTER EXAMS, CONTINUOUS ASSESSMENT &amp; OSCE EVALUATIONS
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="gov-btn gov-btn-sm flex items-center gap-1.5"
+            title="Refresh Registry"
           >
-            <div className="flex items-center justify-between">
-              <span className={`text-xs font-medium uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
-                Active Series
-              </span>
-              <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${isDark ? 'bg-emerald-500/15 text-emerald-400' : 'bg-emerald-50 text-emerald-600'}`}>
-                <CheckCircle2 className="h-4 w-4" />
-              </div>
-            </div>
-            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
-              {stats.activeCount}
-            </p>
-            <p className={`mt-1 text-xs font-medium ${isDark ? 'text-emerald-400/90' : 'text-emerald-700'}`}>
-              Enabled assessment sets
-            </p>
-          </div>
-
-          <div
-            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
-            style={{
-              background: cardGrad(t, 'blue'),
-              border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
-              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
-            }}
+            <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+            <span>SYNC</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowModal(true)}
+            className="gov-btn gov-btn-primary gov-btn-sm flex items-center gap-1.5"
           >
-            <div className="flex items-center justify-between">
-              <span className={`text-xs font-medium uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
-                Mark Entry Open
-              </span>
-              <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${isDark ? 'bg-blue-500/15 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>
-                <Edit3 className="h-4 w-4" />
-              </div>
-            </div>
-            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
-              {stats.openForInputCount}
-            </p>
-            <p className={`mt-1 text-xs font-medium ${isDark ? 'text-blue-400/90' : 'text-blue-700'}`}>
-              Open for teacher marks input
-            </p>
-          </div>
+            <Plus className="w-3.5 h-3.5" />
+            <span>NEW ASSESSMENT SET</span>
+          </button>
+        </div>
+      </div>
 
-          <div
-            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
-            style={{
-              background: cardGrad(t, 'purple'),
-              border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
-              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <span className={`text-xs font-medium uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
-                Academic Period
-              </span>
-              <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${isDark ? 'bg-purple-500/15 text-purple-400' : 'bg-purple-50 text-purple-600'}`}>
-                <Calendar className="h-4 w-4" />
-              </div>
-            </div>
-            <p className={`mt-2 text-lg font-bold truncate ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
-              {currentTerm ? formatPeriod(currentTerm.term, currentTerm.year) : 'All Periods'}
-            </p>
-            <p className={`mt-1 text-xs font-medium ${isDark ? 'text-purple-400/90' : 'text-purple-700'}`}>
-              Active academic window
-            </p>
+      {/* Alerts */}
+      {error && (
+        <div className="border border-rose-300 bg-rose-50 p-3 text-xs font-mono text-rose-800 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-rose-700 shrink-0" />
+            <span>{error}</span>
           </div>
+          <button type="button" onClick={() => setError(null)} className="text-rose-700 hover:text-rose-950 font-bold">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
-          <div
-            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
-            style={{
-              background: cardGrad(t, 'amber'),
-              border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
-              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <span className={`text-xs font-medium uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
-                Classes Available
-              </span>
-              <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${isDark ? 'bg-amber-500/15 text-amber-400' : 'bg-amber-50 text-amber-600'}`}>
-                <Layers className="h-4 w-4" />
-              </div>
-            </div>
-            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
-              {stats.classesCount}
-            </p>
-            <p className={`mt-1 text-xs font-medium ${isDark ? 'text-amber-400/90' : 'text-amber-700'}`}>
-              Eligible class cohorts
-            </p>
+      {successMsg && (
+        <div className="border border-emerald-300 bg-emerald-50 p-3 text-xs font-mono text-emerald-800 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
+            <span>{successMsg}</span>
+          </div>
+          <button type="button" onClick={() => setSuccessMsg(null)} className="text-emerald-700 hover:text-emerald-950 font-bold">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* ── 2. MONOCHROME KPI SUMMARY METRIC CARDS ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            ASSESSMENT SERIES
+          </div>
+          <div className="text-2xl font-bold font-mono text-[#111111] mt-1">
+            {stats.total.toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            ACTIVE {labels.periodNoun} SCOPE
           </div>
         </div>
 
-        {/* Create Exam Set Form Card */}
-        <div
-          className="rounded-2xl p-5 shadow-sm space-y-4"
-          style={{
-            backgroundColor: t.panel,
-            border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
-            boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
-          }}
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            OPEN FOR MARKS ENTRY
+          </div>
+          <div className="text-2xl font-bold font-mono text-emerald-700 mt-1">
+            {stats.openForInputCount.toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            FACULTY SUBMISSION UNLOCKED
+          </div>
+        </div>
+
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            LOCKED / CONCLUDED
+          </div>
+          <div className="text-2xl font-bold font-mono text-amber-600 mt-1">
+            {(stats.total - stats.openForInputCount).toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            GRADE PORTAL CLOSED
+          </div>
+        </div>
+
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            CAMPUS COHORTS
+          </div>
+          <div className="text-2xl font-bold font-mono text-[#111111] mt-1">
+            {stats.classesCount.toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            REGISTERED STREAMS
+          </div>
+        </div>
+      </div>
+
+      {/* ── 3. CONTROL BAR ── */}
+      <div className="gov-control-bar flex flex-wrap items-center justify-between gap-3 p-3 bg-white border border-[#CCCCCC]">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-mono uppercase tracking-wider text-[#555555]">
+            CURRENT CYCLE:
+          </span>
+          <span className="text-xs font-mono font-bold text-[#111111] bg-[#F1F3F5] px-2 py-0.5 border border-[#CCCCCC]">
+            {currentTerm ? formatPeriod(currentTerm.term, currentTerm.year, { short: false }) : 'ALL PERIODS'}
+          </span>
+        </div>
+
+        <div className="relative min-w-[240px]">
+          <input
+            type="text"
+            placeholder="Search assessment series…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="gov-input text-xs font-mono w-full"
+          />
+        </div>
+      </div>
+
+      {/* ── 4. DATA TABLE ── */}
+      <div className="gov-card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="gov-table w-full text-left">
+            <thead>
+              <tr>
+                <th>ASSESSMENT SERIES</th>
+                <th>PERIOD / ACADEMIC YEAR</th>
+                <th>TARGET COHORTS / STREAMS</th>
+                <th>FACULTY MARKS ENTRY</th>
+                <th>STATUS</th>
+                <th className="text-right">ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <GovTableLoader colSpan={6} message="AUDITING SEMESTER ASSESSMENT SERIES..." />
+              ) : filteredSets.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-12 text-xs font-mono text-[#777777]">
+                    NO ASSESSMENT SERIES CONFIGURED FOR THIS ACADEMIC CYCLE
+                  </td>
+                </tr>
+              ) : (
+                filteredSets.map((s) => (
+                  <tr key={s.id} className="hover:bg-[#F9FAFB] transition-colors">
+                    <td className="font-bold text-xs text-[#111111]">
+                      <div className="flex items-center gap-2">
+                        <FileSpreadsheet className="w-4 h-4 text-[#555555] shrink-0" />
+                        <div>
+                          <div>{s.name}</div>
+                          {s.description && (
+                            <div className="text-[10px] font-mono text-[#777777] font-normal">{s.description}</div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="font-mono text-xs text-[#555555]">
+                      {formatPeriod(s.term, s.year, { short: true })}
+                    </td>
+                    <td className="text-xs">
+                      {s.target_classes.length === 0 ? (
+                        <span className="font-mono text-[11px] text-[#555555] bg-[#F8F9FA] px-1.5 py-0.5 border border-[#E5E7EB]">
+                          All Cohorts &amp; Streams
+                        </span>
+                      ) : (
+                        <span className="font-mono text-[11px] text-[#111111] font-semibold">
+                          {s.target_classes.join(', ')}
+                        </span>
+                      )}
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        onClick={() => toggleActiveForInput(s.id, s.active_for_input)}
+                        className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-mono font-bold tracking-wider uppercase border ${
+                          s.active_for_input
+                            ? 'border-emerald-400 bg-emerald-50 text-emerald-800'
+                            : 'border-zinc-300 bg-zinc-100 text-zinc-600'
+                        }`}
+                      >
+                        {s.active_for_input ? <Unlock className="w-3 h-3 text-emerald-600" /> : <Lock className="w-3 h-3 text-zinc-500" />}
+                        <span>{s.active_for_input ? 'ENTRY UNLOCKED' : 'ENTRY LOCKED'}</span>
+                      </button>
+                    </td>
+                    <td>
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-mono font-bold tracking-wider uppercase border ${
+                        s.is_active
+                          ? 'border-emerald-400 bg-emerald-50 text-emerald-800'
+                          : 'border-zinc-300 bg-zinc-100 text-zinc-600'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${s.is_active ? 'bg-emerald-600' : 'bg-zinc-400'}`} />
+                        {s.is_active ? 'ACTIVE' : 'ARCHIVED'}
+                      </span>
+                    </td>
+                    <td className="text-right whitespace-nowrap">
+                      <div className="inline-flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/dashboard/admin/exam-results?exam_set_id=${s.id}`)}
+                          className="gov-btn gov-btn-sm"
+                        >
+                          BROADSHEET
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteExamSet(s.id, s.name)}
+                          className="gov-btn gov-btn-sm text-rose-700 hover:text-rose-900"
+                          title="Delete Assessment Set"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ── 5. NEW ASSESSMENT MODAL ── */}
+      {showModal && (
+        <NativeModal
+          isOpen={true}
+          onClose={() => setShowModal(false)}
+          title="CONFIGURE NEW ASSESSMENT SERIES"
+          subtitle="Define official examination, continuous assessment, or clinical evaluation set."
+          icon={FileSpreadsheet}
+          size="lg"
         >
-          <div className={`flex items-center justify-between border-b pb-3 ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
-            <div className="flex items-center gap-2">
-              <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${isDark ? 'bg-teal-500/15 text-teal-400' : 'bg-teal-50 text-teal-600'}`}>
-                <Plus className="h-4 w-4" />
-              </div>
-              <h3 className={`text-sm font-semibold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
-                Create New {labels.periodAssessments} Series
-              </h3>
-            </div>
-
+          <form onSubmit={handleCreate} className="space-y-4">
             {/* Quick Presets */}
-            <div className="hidden sm:flex items-center gap-1.5 text-xs">
-              <span className={`font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Presets:</span>
-              {presets.map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => setName(preset)}
-                  className={`rounded-lg border px-2.5 py-1 text-[11px] transition ${
-                    isDark
-                      ? 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white'
-                      : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900'
-                  }`}
-                >
-                  {preset}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
-              <label className={`text-xs font-medium block mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                Assessment Name *
+              <label className="block text-xs font-mono uppercase tracking-wider text-[#555555] mb-1 font-semibold">
+                Fast Institutional Presets:
               </label>
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={`e.g. ${presets[0]}`}
-                className={`w-full rounded-xl border px-3 py-2 text-xs ${isDark ? 'text-slate-100 placeholder-slate-500' : 'text-slate-900 placeholder-slate-400'}`}
-                style={{ backgroundColor: t.fieldBg, borderColor: isDark ? t.stroke : '#cbd5e1' }}
-              />
+              <div className="flex flex-wrap gap-1.5">
+                {presets.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setName(p)}
+                    className="gov-btn gov-btn-sm text-[11px] py-1"
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div>
-              <label className={`text-xs font-medium block mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                Description (Optional)
-              </label>
-              <input
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="e.g. Weighted 30% towards final semester grade"
-                className={`w-full rounded-xl border px-3 py-2 text-xs ${isDark ? 'text-slate-100 placeholder-slate-500' : 'text-slate-900 placeholder-slate-400'}`}
-                style={{ backgroundColor: t.fieldBg, borderColor: isDark ? t.stroke : '#cbd5e1' }}
-              />
-            </div>
-          </div>
-
-          {/* Class Cohorts Selection */}
-          <div className="space-y-2 pt-1">
-            <div className="flex items-center justify-between">
-              <label className={`flex items-center gap-2 text-xs font-medium cursor-pointer ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-mono uppercase tracking-wider text-[#333333] mb-1 font-semibold">
+                  Assessment Title *
+                </label>
                 <input
-                  type="checkbox"
-                  checked={allClasses}
-                  onChange={(e) => {
-                    setAllClasses(e.target.checked);
-                    if (e.target.checked) setTargetClasses([]);
-                  }}
-                  className="rounded accent-emerald-500 h-4 w-4"
+                  type="text"
+                  placeholder="e.g. End of Semester Final Examination"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="gov-input w-full font-mono text-xs"
+                  required
                 />
-                Apply to all institutional cohorts &amp; classes
-              </label>
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono uppercase tracking-wider text-[#333333] mb-1 font-semibold">
+                  Academic {labels.periodNoun} *
+                </label>
+                <select
+                  value={term}
+                  onChange={(e) => setTerm(Number(e.target.value))}
+                  className="gov-select w-full font-mono text-xs"
+                >
+                  <option value={1}>{labels.periodNoun} 1</option>
+                  <option value={2}>{labels.periodNoun} 2</option>
+                  <option value={3}>{labels.periodNoun} 3</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono uppercase tracking-wider text-[#333333] mb-1 font-semibold">
+                  Academic Year *
+                </label>
+                <input
+                  type="number"
+                  value={year}
+                  onChange={(e) => setYear(Number(e.target.value))}
+                  className="gov-input w-full font-mono text-xs"
+                  required
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-mono uppercase tracking-wider text-[#333333] mb-1 font-semibold">
+                  Internal Description / Memo (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Weighted 40% Continuous Assessment, UNMEB syllabus verified"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="gov-input w-full font-mono text-xs"
+                />
+              </div>
+            </div>
+
+            {/* Target Cohorts Checklist */}
+            <div className="border border-[#CCCCCC] p-3 bg-[#F8F9FA] space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-mono uppercase tracking-wider text-[#333333] font-semibold">
+                  Target Cohorts &amp; Classes
+                </label>
+                <label className="flex items-center gap-1.5 text-xs font-mono text-[#111111] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={allClasses}
+                    onChange={(e) => {
+                      setAllClasses(e.target.checked);
+                      if (e.target.checked) setTargetClasses([]);
+                    }}
+                    className="accent-[#111111]"
+                  />
+                  <span>Apply to All Campus Cohorts</span>
+                </label>
+              </div>
+
               {!allClasses && (
-                <span className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                  {targetClasses.length} classes selected
-                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 pt-2 border-t border-[#E5E7EB]">
+                  {classOptions.map((c) => (
+                    <label key={c} className="flex items-center gap-1.5 text-xs font-mono text-[#333333] cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={targetClasses.includes(c)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setTargetClasses((prev) => [...prev, c]);
+                          } else {
+                            setTargetClasses((prev) => prev.filter((item) => item !== c));
+                          }
+                        }}
+                        className="accent-[#111111]"
+                      />
+                      <span>{c}</span>
+                    </label>
+                  ))}
+                </div>
               )}
             </div>
 
-            {!allClasses && classOptions.length > 0 && (
-              <div className="flex flex-wrap gap-2 pt-1">
-                {classOptions.map((cls) => {
-                  const isSelected = targetClasses.includes(cls);
-                  return (
-                    <button
-                      key={cls}
-                      type="button"
-                      onClick={() => toggleClass(cls)}
-                      className={`rounded-xl border px-3 py-1.5 text-xs font-medium transition-all ${
-                        isSelected
-                          ? isDark
-                            ? 'border-teal-500/50 bg-teal-500/20 text-teal-300 shadow-sm'
-                            : 'border-teal-500 bg-teal-50 text-teal-800 shadow-sm font-semibold'
-                          : isDark
-                            ? 'border-white/10 bg-white/5 text-slate-400 hover:text-slate-200'
-                            : 'border-slate-200 bg-slate-100 text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      {cls}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <div className="flex justify-end pt-2">
-            <button
-              type="button"
-              disabled={!schoolId || !name.trim() || saving || (!allClasses && targetClasses.length === 0)}
-              onClick={saveExamSet}
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-emerald-900/20 hover:from-emerald-500 hover:to-teal-500 transition disabled:opacity-50"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              {saving ? 'Creating…' : 'Create Assessment Series'}
-            </button>
-          </div>
-        </div>
-
-        {/* Exam Sets Register Table */}
-        <div
-          className="rounded-2xl overflow-hidden"
-          style={{
-            backgroundColor: t.panel,
-            border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
-            boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
-          }}
-        >
-          <div className={`flex items-center justify-between border-b p-4 ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
-            <div>
-              <h3 className={`text-sm font-semibold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
-                Configured Assessment Sets ({filteredSets.length})
-              </h3>
-              <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                Past and future periods are preserved; currently showing active period sets.
-              </p>
+            <div className="pt-3 flex justify-end gap-2 border-t border-[#E5E7EB]">
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="gov-btn gov-btn-sm"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="gov-btn gov-btn-primary gov-btn-sm flex items-center gap-1.5"
+              >
+                {saving ? <GovRollingBox size="sm" /> : <Check className="w-3.5 h-3.5" />}
+                <span>Authorize &amp; Register Series</span>
+              </button>
             </div>
-          </div>
-
-          {isLoading ? (
-            <div className="flex items-center justify-center py-20">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-teal-500 border-t-transparent" />
-            </div>
-          ) : filteredSets.length === 0 ? (
-            <div className="p-8">
-              <PosEmptyState
-                icon={<FileSpreadsheet className="w-8 h-8 text-teal-400" />}
-                title="No Assessment Sets Found"
-                description={`Create an assessment series above to start recording ${labels.periodNoun.toLowerCase()} marks and grading student results.`}
-                accentColor="mint"
-              />
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className={`w-full text-left text-xs ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-                <thead>
-                  <tr
-                    className={`border-b text-[11px] font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`}
-                    style={{
-                      backgroundColor: isDark ? t.fieldBg : '#f8fafc',
-                      borderColor: isDark ? t.stroke : '#e2e8f0',
-                    }}
-                  >
-                    <th className="py-3 px-4">Series Name</th>
-                    <th className="py-3 px-4">Description</th>
-                    <th className="py-3 px-4">Target Classes</th>
-                    <th className="py-3 px-4 text-center">Status</th>
-                    <th className="py-3 px-4 text-center">Mark Entry</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className={`divide-y ${isDark ? 'divide-white/5' : 'divide-slate-200'}`}>
-                  {filteredSets.map((es) => (
-                    <tr key={es.id} className={`transition ${isDark ? 'hover:bg-white/[0.02]' : 'hover:bg-slate-50'}`}>
-                      <td className={`py-3.5 px-4 font-semibold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
-                        <div className="flex items-center gap-2.5">
-                          <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${isDark ? 'bg-teal-500/10 text-teal-400' : 'bg-teal-50 text-teal-600'}`}>
-                            <FileSpreadsheet className="h-4 w-4" />
-                          </div>
-                          <span>{es.name}</span>
-                        </div>
-                      </td>
-
-                      <td className={`py-3.5 px-4 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                        {es.description || 'Standard series'}
-                      </td>
-
-                      <td className="py-3.5 px-4">
-                        {Array.isArray(es.target_classes) && es.target_classes.length === 0 ? (
-                          <span className={`inline-flex items-center rounded-lg px-2.5 py-0.5 text-[11px] font-medium ${isDark ? 'bg-emerald-500/15 text-emerald-400' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
-                            All Classes
-                          </span>
-                        ) : (
-                          <span className={`inline-flex items-center rounded-lg px-2.5 py-0.5 text-[11px] font-medium ${isDark ? 'bg-blue-500/15 text-blue-400' : 'bg-blue-50 text-blue-700 border border-blue-200'}`}>
-                            {es.target_classes?.length ?? 0} Class
-                            {(es.target_classes?.length ?? 0) !== 1 ? 'es' : ''}
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="py-3.5 px-4 text-center">
-                        <button
-                          type="button"
-                          onClick={() => toggleActive(es.id, es.is_active)}
-                          className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
-                            es.is_active
-                              ? isDark
-                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                                : 'bg-emerald-50 text-emerald-800 border border-emerald-300'
-                              : isDark
-                                ? 'bg-white/5 text-slate-400 border border-white/10'
-                                : 'bg-slate-100 text-slate-600 border border-slate-200'
-                          }`}
-                        >
-                          {es.is_active ? 'Active' : 'Inactive'}
-                        </button>
-                      </td>
-
-                      <td className="py-3.5 px-4 text-center">
-                        <button
-                          type="button"
-                          onClick={() => toggleActiveForInput(es.id, es.active_for_input)}
-                          className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
-                            es.active_for_input
-                              ? isDark
-                                ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
-                                : 'bg-teal-50 text-teal-800 border border-teal-300'
-                              : isDark
-                                ? 'bg-white/5 text-slate-400 border border-white/10'
-                                : 'bg-slate-100 text-slate-600 border border-slate-200'
-                          }`}
-                        >
-                          {es.active_for_input ? 'OPEN' : 'CLOSED'}
-                        </button>
-                      </td>
-
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="inline-flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              navigate(
-                                `/dashboard/admin/exam-set-results?examSetId=${es.id}`
-                              )
-                            }
-                            className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold transition ${
-                              isDark
-                                ? 'border-teal-500/30 bg-teal-500/15 text-teal-300 hover:bg-teal-500/25'
-                                : 'border-teal-300 bg-teal-50 text-teal-800 hover:bg-teal-100'
-                            }`}
-                          >
-                            <span>Results</span>
-                            <ArrowRight className="h-3 w-3" />
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => deleteExamSet(es.id, es.name)}
-                            className="rounded-lg p-1.5 text-slate-400 hover:bg-red-500/10 hover:text-red-500 transition"
-                            title="Delete Series"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </div>
-    </AdminPageWrapper>
+          </form>
+        </NativeModal>
+      )}
+    </div>
   );
 }

@@ -21,6 +21,8 @@ import { useSchoolType, isTertiarySchool } from '@/hooks/useSchoolType';
 import { getTokens, SORA, INTER } from '../../../styles/posThemeTokens';
 import { canonicalClassNamesForSchoolType } from '../../../lib/schoolClassNames';
 import { parseCohortKey } from '@/lib/tertiaryCurriculum';
+import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
+import '@/styles/government-system.css';
 
 const STALE_TIME_MS = 2 * 60 * 1000;
 
@@ -186,431 +188,231 @@ export default function SettingsClassesPage() {
   }, [classes, searchQuery, levelFilter]);
 
   return (
-    <div
-      className="min-h-screen p-4 sm:p-6 lg:p-8 space-y-6 transition-colors"
-      style={{ background: t.screenBg, color: t.textHi, fontFamily: INTER }}
-    >
-      {/* HEADER SECTION */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span
-              className="h-2 w-2 rounded-full"
-              style={{ background: t.mint }}
-            />
-            <span
-              className="text-[11px] font-bold uppercase tracking-[0.2em]"
-              style={{ color: t.mint }}
-            >
-              Academic Infrastructure
+    <AdminPageWrapper>
+      <div className="space-y-4">
+        {/* ── 1. TOP HEADER (GOVERNMENT DESIGN SYSTEM STANDARD) ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-[17px] font-bold tracking-tight text-[#111111] uppercase font-sans m-0">
+              {isTertiary ? 'Programmes & Cohorts Registry' : 'Class Management Registry'}
+            </h1>
+            <span className="inline-flex items-center px-2 py-0.5 text-[11px] font-mono font-bold bg-[#EAEAEA] text-[#222222] border border-[#CCCCCC]">
+              {filteredClasses.length} {isTertiary ? (filteredClasses.length === 1 ? 'COHORT' : 'COHORTS') : (filteredClasses.length === 1 ? 'CLASS' : 'CLASSES')}
             </span>
           </div>
-          <h1
-            className="text-2xl sm:text-3xl font-extrabold tracking-tight"
-            style={{ color: t.textHi, fontFamily: SORA }}
-          >
-            {isTertiary ? 'Programmes & Cohorts' : 'Class Management'}
-          </h1>
-          <p className="text-xs sm:text-sm mt-1" style={{ color: t.textMid }}>
-            {isTertiary
-              ? 'Manage academic programmes, semester cohorts, student enrollment capacity, and designate cohort class tutors.'
-              : 'Configure class tiers, monitor enrollment capacity, track active streams, and designate head class tutors.'}
-          </p>
-        </div>
 
-        {/* Action buttons */}
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => navigate('/dashboard/admin/students/stream-allocation')}
-            className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition-all border shadow-sm hover:scale-[1.01]"
-            style={{
-              background: t.panel,
-              borderColor: t.stroke,
-              color: t.textHi,
-            }}
-          >
-            <Layers className="h-4 w-4" style={{ color: t.blue }} />
-            <span>{isTertiary ? 'Intake / Set Allocation' : 'Stream Allocation'}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/dashboard/admin/settings')}
-            className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition-all border shadow-sm hover:scale-[1.01]"
-            style={{
-              background: t.panel,
-              borderColor: t.stroke,
-              color: t.textMid,
-            }}
-          >
-            <Settings className="h-4 w-4" />
-            <span>Settings</span>
-          </button>
-        </div>
-      </div>
+          {/* Action Button Group */}
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard/admin/students/stream-allocation')}
+              className="gov-btn gov-btn-sm"
+              title={isTertiary ? 'Intake & Set Allocation' : 'Stream Allocation'}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>{isTertiary ? 'Intake / Set Allocation' : 'Stream Allocation'}</span>
+            </button>
 
-      {/* TERTIARY CONTEXTUAL GUIDANCE BANNER */}
-      {isTertiary && (
-        <div
-          className="p-3.5 sm:p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs shadow-sm"
-          style={{ background: t.panel, borderColor: t.stroke }}
-        >
-          <div className="flex items-start gap-2.5">
-            <BookOpen className="h-4 w-4 shrink-0 mt-0.5" style={{ color: t.mint }} />
-            <div>
-              <span className="font-bold" style={{ color: t.textHi }}>
-                Cohort Tutors & Course Unit Allocations:
-              </span>{' '}
-              <span style={{ color: t.textMid }}>
-                Designate a Cohort Tutor below to act as the head patron supervising a semester cohort. To assign tutors to individual lecture modules and course units, go to{' '}
-              </span>
+            {isTertiary && (
               <button
                 type="button"
                 onClick={() => navigate('/dashboard/admin/settings/assignments')}
-                className="font-bold underline hover:opacity-80 inline-flex items-center gap-1"
-                style={{ color: t.mint }}
+                className="gov-btn gov-btn-sm"
+                title="Tutor Course Unit Allocations"
               >
-                <span>Tutor ↔ Course Unit Allocations</span>
-                <ArrowRight className="h-3 w-3 inline" />
+                <BookOpen className="w-3.5 h-3.5 text-teal-600" />
+                <span>Course Unit Allocations</span>
               </button>
-            </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard/admin/settings')}
+              className="gov-btn gov-btn-sm"
+              title="Academic Settings"
+            >
+              <Settings className="w-3.5 h-3.5" />
+              <span>Settings</span>
+            </button>
           </div>
         </div>
-      )}
 
-      {/* KPI METRIC CARDS */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {/* Total Classes / Cohorts */}
-        <div
-          className="rounded-2xl p-4 sm:p-5 border transition-all shadow-sm"
-          style={{ background: t.panel, borderColor: t.stroke }}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
+        {/* ── 2. METRIC SUMMARY BOXES (PLAIN, HIGH-DENSITY, NO FLUFF) ── */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="gov-card p-3 rounded-lg text-center border border-[#CCCCCC]">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-[#555555]">
               {isTertiary ? 'Total Cohorts' : 'Total Classes'}
-            </span>
-            <div
-              className="h-8 w-8 rounded-xl flex items-center justify-center"
-              style={{ background: t.mintDim, color: t.mint }}
-            >
-              <School className="h-4 w-4" />
+            </div>
+            <div className="text-2xl font-mono font-bold text-[#111111] mt-1">
+              {isLoading ? '…' : totalClasses}
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black mt-2 tabular-nums" style={{ color: t.textHi, fontFamily: SORA }}>
-            {isLoading ? '…' : totalClasses}
-          </div>
-          <p className="text-[11px] mt-1" style={{ color: t.textMid }}>
-            {isTertiary ? 'Active programme cohorts configured' : 'Active cohort grades configured'}
-          </p>
-        </div>
 
-        {/* Total Students */}
-        <div
-          className="rounded-2xl p-4 sm:p-5 border transition-all shadow-sm"
-          style={{ background: t.panel, borderColor: t.stroke }}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
-              {isTertiary ? 'Students Enrolled' : 'Learners Enrolled'}
-            </span>
-            <div
-              className="h-8 w-8 rounded-xl flex items-center justify-center"
-              style={{ background: t.blueDim, color: t.blue }}
-            >
-              <Users className="h-4 w-4" />
+          <div className="gov-card p-3 rounded-lg text-center border border-[#CCCCCC]">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-[#555555]">
+              {isTertiary ? 'Trainees Enrolled' : 'Learners Enrolled'}
+            </div>
+            <div className="text-2xl font-mono font-bold text-[#111111] mt-1">
+              {isLoading ? '…' : totalStudents.toLocaleString()}
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black mt-2 tabular-nums" style={{ color: t.textHi, fontFamily: SORA }}>
-            {isLoading ? '…' : totalStudents.toLocaleString()}
-          </div>
-          <p className="text-[11px] mt-1" style={{ color: t.textMid }}>
-            {isTertiary ? 'Active student nurses & midwives' : 'Active students across all classes'}
-          </p>
-        </div>
 
-        {/* Assigned Teachers / Tutors */}
-        <div
-          className="rounded-2xl p-4 sm:p-5 border transition-all shadow-sm"
-          style={{ background: t.panel, borderColor: t.stroke }}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
+          <div className="gov-card p-3 rounded-lg text-center border border-[#CCCCCC]">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-[#555555]">
               {isTertiary ? 'Designated Tutors' : 'Assigned Teachers'}
-            </span>
-            <div
-              className="h-8 w-8 rounded-xl flex items-center justify-center"
-              style={{ background: t.mintDim, color: t.mint }}
-            >
-              <UserCheck className="h-4 w-4" />
+            </div>
+            <div className="text-2xl font-mono font-bold text-[#111111] mt-1">
+              {isLoading ? '…' : `${assignedCount} / ${totalClasses}`}
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black mt-2 tabular-nums" style={{ color: t.mint, fontFamily: SORA }}>
-            {isLoading ? '…' : assignedCount}
-            <span className="text-sm font-semibold ml-1.5 opacity-70" style={{ color: t.textMid }}>
-              / {totalClasses}
-            </span>
-          </div>
-          <p className="text-[11px] mt-1" style={{ color: t.textMid }}>
-            {unassignedCount > 0
-              ? isTertiary
-                ? `${unassignedCount} missing cohort tutor`
-                : `${unassignedCount} missing class teacher`
-              : isTertiary
-              ? '100% tutor coverage'
-              : '100% staff coverage'}
-          </p>
-        </div>
 
-        {/* Streams Configured */}
-        <div
-          className="rounded-2xl p-4 sm:p-5 border transition-all shadow-sm"
-          style={{ background: t.panel, borderColor: t.stroke }}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
-              {isTertiary ? 'Active Intakes & Sets' : 'Active Streams'}
-            </span>
-            <div
-              className="h-8 w-8 rounded-xl flex items-center justify-center"
-              style={{ background: t.goldDim, color: t.gold }}
-            >
-              <Layers className="h-4 w-4" />
+          <div className="gov-card p-3 rounded-lg text-center border border-[#CCCCCC]">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-[#555555]">
+              {isTertiary ? 'Active Intakes / Sets' : 'Active Streams'}
+            </div>
+            <div className="text-2xl font-mono font-bold text-[#111111] mt-1">
+              {isLoading ? '…' : totalStreams}
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black mt-2 tabular-nums" style={{ color: t.gold, fontFamily: SORA }}>
-            {isLoading ? '…' : totalStreams}
+        </div>
+
+        {/* ── 3. CONTROLS BAR ── */}
+        <div className="gov-control-bar">
+          <div className="gov-control-bar-left flex-wrap">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="w-3.5 h-3.5 text-[#555555] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                placeholder={isTertiary ? 'Search programme, cohort code, or tutor…' : 'Search classes or assigned teachers…'}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="gov-input pl-8 font-mono text-xs"
+              />
+            </div>
+
+            <select
+              value={levelFilter}
+              onChange={(e) => setLevelFilter(e.target.value)}
+              className="gov-select w-auto text-xs"
+              aria-label="Filter Level"
+            >
+              {(isTertiary
+                ? [
+                    { id: 'all', label: 'All Cohorts' },
+                    { id: 'nursing', label: 'Nursing (CN / DN)' },
+                    { id: 'midwifery', label: 'Midwifery (CM / DM)' },
+                    { id: 'certificate', label: 'Certificate' },
+                    { id: 'diploma', label: 'Diploma' },
+                    { id: 'unassigned', label: 'Needs Cohort Tutor' },
+                  ]
+                : [
+                    { id: 'all', label: 'All Classes' },
+                    { id: 'nursery', label: 'Nursery / Early Years' },
+                    { id: 'primary', label: 'Primary' },
+                    { id: 'secondary', label: 'Secondary' },
+                    { id: 'unassigned', label: 'Needs Teacher' },
+                  ]
+              ).map((flt) => (
+                <option key={flt.id} value={flt.id}>
+                  {flt.label}
+                </option>
+              ))}
+            </select>
           </div>
-          <p className="text-[11px] mt-1" style={{ color: t.textMid }}>
-            {isTertiary ? 'Sub-streams and intake sets active' : 'Sub-streams and cohorts active'}
-          </p>
-        </div>
-      </div>
-
-      {/* SEARCH AND FILTER CONTROLS */}
-      <div
-        className="rounded-2xl p-4 border flex flex-col md:flex-row md:items-center md:justify-between gap-3 shadow-sm"
-        style={{ background: t.panel, borderColor: t.stroke }}
-      >
-        {/* Search input */}
-        <div className="relative flex-1 max-w-md">
-          <Search className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: t.textLow }} />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={isTertiary ? 'Search programme, cohort or tutor…' : 'Search classes or assigned teachers…'}
-            className="w-full pl-10 pr-4 py-2 text-xs font-medium rounded-xl transition-all focus:outline-none"
-            style={{
-              background: t.fieldBg,
-              border: `1px solid ${t.stroke}`,
-              color: t.textHi,
-            }}
-          />
         </div>
 
-        {/* Filter Pills */}
-        <div className="flex flex-wrap items-center gap-1.5">
-          {(isTertiary
-            ? [
-                { id: 'all', label: 'All Cohorts' },
-                { id: 'nursing', label: 'Nursing (CN / DN)' },
-                { id: 'midwifery', label: 'Midwifery (CM / DM)' },
-                { id: 'certificate', label: 'Certificate' },
-                { id: 'diploma', label: 'Diploma' },
-                { id: 'unassigned', label: 'Needs Cohort Tutor' },
-              ]
-            : [
-                { id: 'all', label: 'All Classes' },
-                { id: 'nursery', label: 'Nursery / Early Years' },
-                { id: 'primary', label: 'Primary' },
-                { id: 'secondary', label: 'Secondary' },
-                { id: 'unassigned', label: 'Needs Teacher' },
-              ]
-          ).map((flt) => {
-            const active = levelFilter === flt.id;
-            return (
-              <button
-                key={flt.id}
-                type="button"
-                onClick={() => setLevelFilter(flt.id)}
-                className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border"
-                style={{
-                  background: active ? t.mintDim : 'transparent',
-                  borderColor: active ? t.mintRing : t.stroke,
-                  color: active ? t.mint : t.textMid,
-                }}
-              >
-                {flt.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* CLASSES GRID */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div
-              key={i}
-              className="rounded-2xl p-5 border animate-pulse h-44"
-              style={{ background: t.panel, borderColor: t.stroke }}
-            />
-          ))}
-        </div>
-      ) : filteredClasses.length === 0 ? (
-        <div
-          className="rounded-2xl p-12 text-center border space-y-3 shadow-sm"
-          style={{ background: t.panel, borderColor: t.stroke }}
-        >
-          <BookOpen className="h-10 w-10 mx-auto opacity-30" style={{ color: t.textMid }} />
-          <h3 className="text-base font-bold" style={{ color: t.textHi, fontFamily: SORA }}>
-            {isTertiary ? 'No cohorts found' : 'No classes found'}
-          </h3>
-          <p className="text-xs max-w-sm mx-auto" style={{ color: t.textMid }}>
-            {isTertiary
-              ? 'No cohorts match your current search query or filter. Clear the search term to view all cohorts.'
-              : 'No classes match your current search query or level filter. Clear the search term to view all classes.'}
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              setSearchQuery('');
-              setLevelFilter('all');
-            }}
-            className="px-4 py-2 rounded-xl text-xs font-semibold transition-all"
-            style={{ background: t.mintDim, color: t.mint }}
-          >
-            Reset Filters
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredClasses.map((item) => {
-            const hasTeacher = Boolean(item.teacherName);
-            return (
-              <div
-                key={item.name}
-                onClick={() => navigate(`/dashboard/admin/settings/classes/${encodeURIComponent(item.name)}`)}
-                className="group cursor-pointer rounded-2xl p-5 border transition-all duration-200 shadow-sm hover:shadow-md hover:scale-[1.01] flex flex-col justify-between"
-                style={{
-                  background: t.panel,
-                  borderColor: t.stroke,
-                }}
-              >
-                <div>
-                  {/* Top Badges */}
-                  <div className="flex items-center justify-between gap-2 mb-3">
-                    <span
-                      className="px-2.5 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider"
-                      style={{
-                        background:
-                          item.awardLevel === 'certificate' || item.levelCategory === 'nursery'
-                            ? t.goldDim
-                            : item.awardLevel === 'diploma' || item.levelCategory === 'primary'
-                            ? t.mintDim
-                            : item.levelCategory === 'secondary'
-                            ? t.blueDim
-                            : t.fieldBg,
-                        color:
-                          item.awardLevel === 'certificate' || item.levelCategory === 'nursery'
-                            ? t.gold
-                            : item.awardLevel === 'diploma' || item.levelCategory === 'primary'
-                            ? t.mint
-                            : item.levelCategory === 'secondary'
-                            ? t.blue
-                            : t.textMid,
-                      }}
+        {/* ── 4. HIGH-DENSITY COHORTS DATA TABLE ── */}
+        {isLoading ? (
+          <div className="space-y-2 animate-pulse">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="h-12 rounded border border-[#CCCCCC] bg-[#EAEAEA]" />
+            ))}
+          </div>
+        ) : filteredClasses.length === 0 ? (
+          <div className="gov-card p-12 text-center text-xs text-[#555555]">
+            {isTertiary ? 'No cohorts found matching search criteria.' : 'No classes found matching search criteria.'}
+          </div>
+        ) : (
+          <div className="gov-table-container">
+            <table className="gov-table">
+              <thead>
+                <tr>
+                  <th>{isTertiary ? 'Cohort Code' : 'Class Code'}</th>
+                  <th>{isTertiary ? 'Programme Title' : 'Academic Level'}</th>
+                  <th>Level / Award</th>
+                  <th>Enrolled Trainees</th>
+                  <th>{isTertiary ? 'Intake Sets' : 'Streams'}</th>
+                  <th>{isTertiary ? 'Designated Tutor' : 'Class Teacher'}</th>
+                  <th className="text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredClasses.map((item) => {
+                  const hasTeacher = Boolean(item.teacherName);
+                  return (
+                    <tr
+                      key={item.name}
+                      onClick={() => navigate(`/dashboard/admin/settings/classes/${encodeURIComponent(item.name)}`)}
+                      className="cursor-pointer"
                     >
-                      {item.awardLevel ? item.awardLevel.toUpperCase() : item.levelCategory}
-                    </span>
-
-                    <span
-                      className="flex items-center gap-1.5 text-xs font-bold tabular-nums"
-                      style={{ color: t.textHi }}
-                    >
-                      <Users className="h-3.5 w-3.5" style={{ color: t.textLow }} />
-                      <span>
-                        {item.studentCount} {isTertiary ? (item.studentCount === 1 ? 'Student' : 'Students') : (item.studentCount === 1 ? 'Learner' : 'Learners')}
-                      </span>
-                    </span>
-                  </div>
-
-                  {/* Class / Cohort Name */}
-                  <h3
-                    className="text-lg font-bold group-hover:text-emerald-500 dark:group-hover:text-[#3DE8A0] transition-colors"
-                    style={{ color: t.textHi, fontFamily: SORA }}
-                  >
-                    {item.name}
-                  </h3>
-                  {item.programmeTitle && (
-                    <div className="text-[11px] font-medium mt-0.5" style={{ color: t.textMid }}>
-                      {item.programmeTitle}
-                    </div>
-                  )}
-
-                  {/* Streams / Sets */}
-                  <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
-                    {item.streams.length > 0 ? (
-                      item.streams.map((stream) => (
-                        <span
-                          key={stream}
-                          className="px-2 py-0.5 rounded-md text-[10px] font-medium border"
-                          style={{
-                            background: t.fieldBg,
-                            borderColor: t.stroke,
-                            color: t.textMid,
-                          }}
-                        >
-                          {stream}
+                      <td className="font-mono font-bold text-xs">
+                        {item.name}
+                      </td>
+                      <td className="font-semibold text-xs text-[#111111]">
+                        {item.programmeTitle || item.name}
+                      </td>
+                      <td>
+                        <span className="gov-tag text-[10px]">
+                          {item.awardLevel ? item.awardLevel.toUpperCase() : item.levelCategory.toUpperCase()}
                         </span>
-                      ))
-                    ) : (
-                      <span className="text-[11px] italic" style={{ color: t.textLow }}>
-                        {isTertiary ? 'Single unified cohort' : 'Single stream'}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Bottom Section: Cohort Tutor / Class Teacher */}
-                <div
-                  className="mt-5 pt-3.5 border-t flex items-center justify-between"
-                  style={{ borderColor: t.divider }}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div
-                      className="h-7 w-7 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0"
-                      style={{
-                        background: hasTeacher ? t.mintDim : t.redDim,
-                        color: hasTeacher ? t.mint : t.red,
-                      }}
-                    >
-                      {hasTeacher ? item.teacherName!.charAt(0).toUpperCase() : <UserX className="h-3.5 w-3.5" />}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
-                        {isTertiary ? 'Cohort Tutor' : 'Class Teacher'}
-                      </div>
-                      <div
-                        className="text-xs font-semibold truncate"
-                        style={{ color: hasTeacher ? t.textHi : t.red }}
-                      >
-                        {hasTeacher ? item.teacherName : 'Unassigned'}
-                      </div>
-                    </div>
-                  </div>
-
-                  <ArrowRight
-                    className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-1"
-                    style={{ color: t.textLow }}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
+                      </td>
+                      <td className="font-mono text-xs font-bold">
+                        {item.studentCount} {isTertiary ? 'Trainees' : 'Learners'}
+                      </td>
+                      <td>
+                        {item.streams.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {item.streams.map((stream) => (
+                              <span key={stream} className="gov-tag text-[10px]">
+                                {stream}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-[#777777] text-xs italic">
+                            {isTertiary ? 'Single Cohort' : 'Single Stream'}
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        {hasTeacher ? (
+                          <span className="font-medium text-xs text-[#111111]">
+                            {item.teacherName}
+                          </span>
+                        ) : (
+                          <span className="gov-tag gov-tag-rejected text-[10px]">
+                            UNASSIGNED
+                          </span>
+                        )}
+                      </td>
+                      <td className="text-right" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/dashboard/admin/settings/classes/${encodeURIComponent(item.name)}`)}
+                          className="gov-btn gov-btn-sm"
+                        >
+                          <span>Manage</span>
+                          <ArrowRight className="w-3 h-3" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </AdminPageWrapper>
   );
 }

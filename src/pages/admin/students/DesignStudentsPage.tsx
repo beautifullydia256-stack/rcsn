@@ -13,6 +13,7 @@ import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
 import NativeModal from '@/components/NativeModal';
 import { AddStudentForm } from './AddStudentForm';
 import BulkAddStudentsModal from './BulkAddStudentsModal';
+import GovernmentStudentsView from './GovernmentStudentsView';
 import { StudentImportWizard } from '@/components/admin/students/StudentImportWizard';
 import { StudentExportDialog } from '@/components/admin/students/StudentExportDialog';
 import { StudentImportHistory } from '@/components/admin/students/StudentImportHistory';
@@ -47,8 +48,12 @@ import {
   School,
   LayoutGrid,
   Table as TableIcon,
+  RefreshCw,
+  Printer,
+  FileText,
+  Eye,
 } from 'lucide-react';
-import '@/assets/pwezacore-students-scoped.css';
+import '@/styles/government-system.css';
 
 const FILTER_LABELS: Record<string, string> = {
   all: 'All Students',
@@ -231,7 +236,17 @@ function displayFullName(row: StudentListRow): string {
   return (row.name || '').trim() || '—';
 }
 
-type SortKey = 'name-asc' | 'name-desc' | 'class' | 'recent';
+function formatGovDate(iso?: string | null): string {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+  } catch {
+    return iso;
+  }
+}
+
+type SortKey = 'name-asc' | 'name-desc' | 'status' | 'id' | 'class' | 'recent';
 
 async function buildOfflineStudentsResult(schoolId: string): Promise<StudentsFetchResult> {
   const [cached, cachedParents] = await Promise.all([
@@ -491,14 +506,7 @@ export default function DesignStudentsPage() {
   };
 
   const openAddStudentModal = () => {
-    setSearchParams(
-      (prev) => {
-        const p = new URLSearchParams(prev);
-        p.set('add', '1');
-        return p;
-      },
-      { replace: true }
-    );
+    navigate('/dashboard/admin/students/add');
   };
   const [q, setQ] = useState('');
   const [classFilter, setClassFilter] = useState('');
@@ -563,13 +571,32 @@ export default function DesignStudentsPage() {
       out = out.filter((r) => {
         const parents = displayParentsForStudent(r.student_id, r, parentsByStudent);
         const full = displayFullName(r).toLowerCase();
+        const rawName = (r.name || '').toLowerCase();
+        const firstName = (r.first_name || '').toLowerCase();
+        const lastName = (r.last_name || '').toLowerCase();
+        const admNum = (r.admission_number || '').toLowerCase();
+        const cls = (r.current_class || '').toLowerCase();
+        const phone = (r.student_phone || '').toLowerCase();
+        const email = (r.student_email || '').toLowerCase();
+        const guardianName = (r.guardian_name || '').toLowerCase();
+        const guardianPhone = (r.guardian_phone || '').toLowerCase();
+
         return (
           full.includes(t) ||
-          (r.name || '').toLowerCase().includes(t) ||
-          (r.current_class || '').toLowerCase().includes(t) ||
-          (r.admission_number || '').toLowerCase().includes(t) ||
-          (r.guardian_name || '').toLowerCase().includes(t) ||
-          parents.some((p) => (p.name || '').toLowerCase().includes(t))
+          rawName.includes(t) ||
+          firstName.includes(t) ||
+          lastName.includes(t) ||
+          admNum.includes(t) ||
+          cls.includes(t) ||
+          phone.includes(t) ||
+          email.includes(t) ||
+          guardianName.includes(t) ||
+          guardianPhone.includes(t) ||
+          parents.some(
+            (p) =>
+              (p.name || '').toLowerCase().includes(t) ||
+              (p.phone || '').toLowerCase().includes(t)
+          )
         );
       });
     }
@@ -580,14 +607,22 @@ export default function DesignStudentsPage() {
       const bn = displayFullName(b).toLowerCase();
       const ac = (a.current_class || '').toLowerCase();
       const bc = (b.current_class || '').toLowerCase();
+      const aid = (a.admission_number || a.student_id || '').toLowerCase();
+      const bid = (b.admission_number || b.student_id || '').toLowerCase();
+      const aStat = (a.status || 'Active').toLowerCase();
+      const bStat = (b.status || 'Active').toLowerCase();
       switch (sortKey) {
         case 'name-desc':
           return bn.localeCompare(an);
+        case 'status':
+          return aStat.localeCompare(bStat) || an.localeCompare(bn);
+        case 'id':
+          return aid.localeCompare(bid);
         case 'class':
           return ac.localeCompare(bc) || an.localeCompare(bn);
         case 'recent': {
-          const ta = new Date(a.created_at || 0).getTime();
-          const tb = new Date(b.created_at || 0).getTime();
+          const ta = new Date(a.admission_date || a.created_at || 0).getTime();
+          const tb = new Date(b.admission_date || b.created_at || 0).getTime();
           return tb - ta;
         }
         default:
@@ -638,607 +673,34 @@ export default function DesignStudentsPage() {
 
   return (
     <AdminPageWrapper>
-      <div className="pw-students print:bg-[#07090f]" data-theme={theme}>
-        <div className="page">
-          <div className="page-header fade-up">
-            <div className="page-title-block">
-              <div className="page-eyebrow">{isTertiary ? 'Academic Registry' : 'Student Registry'}</div>
-              <h1 className="page-title">{isTertiary ? 'Students & Trainees' : 'Students'}</h1>
-              <p className="page-sub">
-                {isTertiary
-                  ? 'Manage enrolled nursing trainees, course cohorts, clinical stages, and parent contacts.'
-                  : 'Manage enrolled students, classes, attendance records, and parent contacts.'}
-              </p>
-            </div>
-            <div className="page-actions print:hidden">
-              <button
-                type="button"
-                className="btn btn-primary-cta inline-flex items-center gap-2"
-                onClick={openAddStudentModal}
-              >
-                <Plus className="w-4 h-4" />
-                <span>{isTertiary ? 'Add Trainee' : 'Add Student'}</span>
-              </button>
-              <button
-                type="button"
-                className="btn btn-ghost inline-flex items-center gap-1.5"
-                onClick={() => setBulkAddOpen(true)}
-              >
-                <Zap className="w-3.5 h-3.5 text-amber-400" />
-                <span>Multiple Input</span>
-              </button>
-              {schoolId && (
-                <>
-                  <button
-                    type="button"
-                    className="btn btn-ghost inline-flex items-center gap-1.5"
-                    onClick={() => setImportOpen(true)}
-                  >
-                    <Upload className="w-3.5 h-3.5 text-teal-400" />
-                    <span>Import</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-ghost inline-flex items-center gap-1.5"
-                    onClick={() => setExportOpen(true)}
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>Export</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-ghost"
-                    onClick={() => setImportHistoryOpen(true)}
-                  >
-                    History
-                  </button>
-                </>
-              )}
-              <button
-                type="button"
-                className="btn btn-ghost inline-flex items-center gap-1.5"
-                onClick={() => downloadStudentListPdf(filteredSorted, classFilter, schoolName ?? undefined)}
-              >
-                <Download className="w-3.5 h-3.5 text-blue-400" />
-                <span>PDF Roster</span>
-              </button>
-              <button
-                type="button"
-                className="btn btn-outline inline-flex items-center gap-1.5"
-                onClick={() => navigate('/dashboard/admin/cards')}
-              >
-                <CreditCard className="w-3.5 h-3.5 text-teal-400" />
-                <span>Access Cards</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="kpi-strip fade-up d1">
-            <div className="kpi-card c-teal">
-              <div className="kpi-ic c-teal">
-                <GraduationCap className="w-5 h-5 text-teal-500" />
-              </div>
-              <div className="kpi-info">
-                <div className="kpi-label">Total {isTertiary ? 'Trainees' : 'Students'}</div>
-                <div className="kpi-value c-teal">{loading ? '…' : stats.total}</div>
-                <div className="kpi-sub">{isTertiary ? 'Enrolled this semester' : 'Enrolled this term'}</div>
-              </div>
-            </div>
-            <div className="kpi-card c-blue">
-              <div className="kpi-ic c-blue">
-                <School className="w-5 h-5 text-blue-500" />
-              </div>
-              <div className="kpi-info">
-                <div className="kpi-label">{isTertiary ? 'Courses & Stages' : 'Classes'}</div>
-                <div className="kpi-value">{loading ? '…' : stats.classes}</div>
-                <div className="kpi-sub">{isTertiary ? 'Active course cohorts' : 'Active class groups'}</div>
-              </div>
-            </div>
-            <div className="kpi-card c-green">
-              <div className="kpi-ic c-green">
-                <Users className="w-5 h-5 text-emerald-500" />
-              </div>
-              <div className="kpi-info">
-                <div className="kpi-label">{isTertiary ? 'Sponsors / Parents' : 'Parents Linked'}</div>
-                <div className="kpi-value c-green">{loading ? '…' : stats.withParents}</div>
-                <div className="kpi-sub">With portal access</div>
-              </div>
-            </div>
-            <div className="kpi-card c-amber">
-              <div className="kpi-ic c-amber">
-                <CheckCircle2 className="w-5 h-5 text-amber-500" />
-              </div>
-              <div className="kpi-info">
-                <div className="kpi-label">Attended Today</div>
-                <div className="kpi-value c-amber">{loading ? '…' : stats.attendedToday}</div>
-                <div className="kpi-sub">Present this morning</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="toolbar fade-up d2 print:hidden">
-            <div className="search-bar">
-              <Search className="w-4 h-4 text-slate-400 shrink-0" />
-              <input
-                placeholder="Search by name, admission no, class, or parent…"
-                type="text"
-                inputMode="search"
-                autoComplete="off"
-                autoCorrect="off"
-                spellCheck={false}
-                enterKeyHint="search"
-                value={q}
-                onChange={(e) => {
-                  setQ(e.target.value);
-                  setPage(1);
-                }}
-              />
-            </div>
-
-            {/* Status / Category Filter Dropdown */}
-            <select
-              className="filter-select"
-              value={statusFilter}
-              onChange={(e) => {
-                const v = e.target.value;
-                setStatusFilter(v);
-                setPage(1);
-                setSearchParams(
-                  (prev) => {
-                    const p = new URLSearchParams(prev);
-                    if (v === 'all') p.delete('discipline');
-                    else p.set('discipline', v);
-                    return p;
-                  },
-                  { replace: true }
-                );
-              }}
-            >
-              <option value="all">All Students</option>
-              <option value="active">Active</option>
-              <option value="graduated">{isTertiary ? 'Graduated Alumni' : 'Graduated'}</option>
-              <option value="warned">Warned</option>
-              <option value="suspended">Suspended</option>
-              <option value="deactivated">Deactivated</option>
-              <option value="deleted">Deleted</option>
-              <option value="unallocated_stream">{isTertiary ? 'Without Intake Allocation' : 'Without Stream Allocation'}</option>
-              <option value="debtors">Fee Debtors (With Balances)</option>
-            </select>
-
-            <select
-              className="filter-select"
-              value={classFilter}
-              onChange={(e) => {
-                setClassFilter(e.target.value);
-                setPage(1);
-              }}
-            >
-              <option value="">{isTertiary ? 'All Courses & Stages' : 'All Classes'}</option>
-              {classOptions.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className="filter-select"
-              value={sortSelectValue}
-              onChange={(e) => {
-                const v = e.target.value;
-                setSortKey(v === 'name-desc' ? 'name-desc' : v === 'class' ? 'class' : v === 'recent' ? 'recent' : 'name-asc');
-                setPage(1);
-              }}
-            >
-              <option value="name-asc">Name A → Z</option>
-              <option value="name-desc">Name Z → A</option>
-              <option value="class">Class</option>
-              <option value="recent">Most Recent</option>
-            </select>
-
-            {/* Dual View Toggle: Grid vs Table */}
-            <div className="view-toggle">
-              <button
-                type="button"
-                className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`}
-                onClick={() => {
-                  setViewMode('grid');
-                  localStorage.setItem('pwezacore-students-view', 'grid');
-                }}
-                title="Grid View (Cards)"
-              >
-                <span className="inline-flex items-center gap-1">
-                  <LayoutGrid className="w-3.5 h-3.5" />
-                  <span>Grid</span>
-                </span>
-              </button>
-              <button
-                type="button"
-                className={`view-btn ${viewMode === 'table' ? 'active' : ''}`}
-                onClick={() => {
-                  setViewMode('table');
-                  localStorage.setItem('pwezacore-students-view', 'table');
-                }}
-                title="Table Format"
-              >
-                <span className="inline-flex items-center gap-1">
-                  <TableIcon className="w-3.5 h-3.5" />
-                  <span>Table</span>
-                </span>
-              </button>
-            </div>
-          </div>
-
-          <div className="fade-up d3 print:hidden">
-              {loading ? (
-                <div className="empty-state">
-                  <div className="empty-icon">
-                    <GraduationCap className="w-10 h-10 text-slate-400 opacity-40 mx-auto animate-pulse" />
-                  </div>
-                  <div className="empty-title">Loading students…</div>
-                </div>
-              ) : pageSlice.length === 0 ? (
-                <div className="empty-state">
-                  <div className="empty-icon">
-                    <GraduationCap className="w-10 h-10 text-slate-400 opacity-40 mx-auto" />
-                  </div>
-                  <div className="empty-title">No students found.</div>
-                </div>
-              ) : viewMode === 'table' ? (
-                <div className="table-wrap">
-                  <div className="table-head">
-                    <div className="th">Student</div>
-                    <div className="th">{isTertiary ? 'Course & Stage' : 'Class & Stream'}</div>
-                    <div className="th">Discipline</div>
-                    <div className="th">Parent / Phone</div>
-                    <div className="th">Attendance</div>
-                    <div className="th">Fee Status</div>
-                    <div className="th" style={{ textAlign: 'right', justifyContent: 'flex-end' }}>Actions</div>
-                  </div>
-
-                  {pageSlice.map((r, idx) => {
-                    const globalIdx = (safePage - 1) * PAGE_SIZE + idx;
-                    const parents = displayParentsForStudent(r.student_id, r, parentsByStudent);
-                    const first = parents[0];
-                    const phone = (first?.phone || r.guardian_phone || '').trim();
-                    const name = displayFullName(r);
-                    const adm = r.admission_number?.trim();
-                    const photo = photoByStudentId[r.student_id];
-                    const parentLabel = parents.map((p) => p.name).filter(Boolean).join(', ') || r.guardian_name || '—';
-                    const dStat = resolveDisciplineDisplayStatus(
-                      {
-                        deleted_at: r.deleted_at,
-                        discipline_deactivated_at: r.discipline_deactivated_at,
-                        suspension_open: r.suspension_open,
-                      },
-                      warningIdSet.has(r.student_id)
-                    );
-                    const attendanceStatus = attendanceTodayByStudentId[r.student_id];
-                    const paymentStatus = (r.payment_status || 'unpaid').toLowerCase();
-
-                    return (
-                      <div
-                        key={r.student_id}
-                        className="table-row"
-                        onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}
-                      >
-                        <div className="td">
-                          <div className="student-cell">
-                            <div className="student-av" style={photo ? undefined : { background: gradAt(globalIdx) }}>
-                              {photo ? (
-                                <img src={photo} alt="" />
-                              ) : (
-                                initials(name)
-                              )}
-                            </div>
-                            <div>
-                              <div className="student-name">{name}</div>
-                              <div className="student-sub">{adm ? (isTertiary ? adm : `#${adm}`) : (isTertiary ? 'No Reg No.' : 'No Adm No.')}</div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="td">
-                          {isTertiary ? (
-                            <span className={`class-chip ${classChipModifier(r.current_class)}`}>
-                              {r.current_class || '—'}
-                            </span>
-                          ) : (
-                            <>
-                              <span className={`class-chip ${classChipModifier(r.current_class)}`}>
-                                {r.current_class || '—'}
-                              </span>
-                              {r.stream && <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--t3)' }}>({r.stream})</span>}
-                            </>
-                          )}
-                        </div>
-
-                        <div className="td">
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span
-                              style={{
-                                display: 'inline-block',
-                                width: 8,
-                                height: 8,
-                                borderRadius: '50%',
-                                ...disciplineStatusDotStyle(dStat),
-                              }}
-                            />
-                            <span style={{ fontSize: 12, fontWeight: 600 }}>{dStat}</span>
-                          </div>
-                        </div>
-
-                        <div className="td">
-                          {phone ? (
-                            <a
-                              href={`tel:${phone.replace(/\s/g, '')}`}
-                              className="phone-link inline-flex items-center gap-1"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <Phone className="w-3 h-3 text-teal-500 shrink-0" />
-                              <span>{phone}</span>
-                            </a>
-                          ) : (
-                            <span className="td muted" style={{ padding: 0 }}>{parentLabel}</span>
-                          )}
-                        </div>
-
-                        <div className="td">
-                          <span
-                            style={{
-                              fontSize: 11,
-                              fontWeight: 600,
-                              padding: '3px 9px',
-                              borderRadius: 6,
-                              border:
-                                attendanceStatus === 'present'
-                                  ? '1px solid rgba(16,185,129,0.32)'
-                                  : theme === 'light'
-                                  ? '1px solid #e2e8f0'
-                                  : '1px solid rgba(148,163,184,0.22)',
-                              background:
-                                attendanceStatus === 'present'
-                                  ? 'rgba(16,185,129,0.14)'
-                                  : theme === 'light'
-                                  ? '#f1f5f9'
-                                  : 'rgba(148,163,184,0.1)',
-                              color:
-                                attendanceStatus === 'present'
-                                  ? theme === 'light'
-                                    ? '#059669'
-                                    : '#34d399'
-                                  : theme === 'light'
-                                  ? '#475569'
-                                  : 'var(--t3)',
-                            }}
-                          >
-                            {attendanceStatus === 'present' ? '● Present' : '○ Not Marked'}
-                          </span>
-                        </div>
-
-                        <div className="td">
-                          <span
-                            style={{
-                              fontSize: 11,
-                              fontWeight: 700,
-                              padding: '3px 9px',
-                              borderRadius: 6,
-                              textTransform: 'capitalize',
-                              border:
-                                paymentStatus === 'full' || paymentStatus === 'cleared' || paymentStatus === 'paid'
-                                  ? '1px solid rgba(16,185,129,0.35)'
-                                  : paymentStatus === 'partial'
-                                  ? '1px solid rgba(245,158,11,0.35)'
-                                  : '1px solid rgba(244,63,94,0.35)',
-                              background:
-                                paymentStatus === 'full' || paymentStatus === 'cleared' || paymentStatus === 'paid'
-                                  ? 'rgba(16,185,129,0.14)'
-                                  : paymentStatus === 'partial'
-                                  ? 'rgba(245,158,11,0.14)'
-                                  : 'rgba(244,63,94,0.14)',
-                              color:
-                                paymentStatus === 'full' || paymentStatus === 'cleared' || paymentStatus === 'paid'
-                                  ? '#34d399'
-                                  : paymentStatus === 'partial'
-                                  ? '#fbbf24'
-                                  : '#fb7185',
-                            }}
-                          >
-                            {paymentStatus}
-                          </span>
-                        </div>
-
-                        <div className="td" onClick={(e) => e.stopPropagation()}>
-                          <div className="row-actions">
-                            <button
-                              type="button"
-                              className="row-btn inline-flex items-center justify-center"
-                              title="Service Access Cards"
-                              onClick={() => navigate('/dashboard/admin/cards')}
-                            >
-                              <CreditCard className="w-3.5 h-3.5 text-teal-500" />
-                            </button>
-                            <button
-                              type="button"
-                              className="row-btn inline-flex items-center justify-center"
-                              title="Discipline Records"
-                              onClick={() => navigate(`/dashboard/admin/students/${r.student_id}#discipline`)}
-                            >
-                              <Scale className="w-3.5 h-3.5 text-amber-500" />
-                            </button>
-                            <button
-                              type="button"
-                              className="row-btn arrow"
-                              title="View Student Profile"
-                              onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}
-                            >
-                              →
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="card-grid">
-                  {pageSlice.map((r, idx) => {
-                    const globalIdx = (safePage - 1) * PAGE_SIZE + idx;
-                    const parents = displayParentsForStudent(r.student_id, r, parentsByStudent);
-                    const first = parents[0];
-                    const phone = (first?.phone || r.guardian_phone || '').trim();
-                    const addr =
-                      (r.address && r.address.trim()) || (r.guardian_address && r.guardian_address.trim()) || '';
-                    const teacher = classTeacherNameByClass[r.current_class || ''] || '';
-                    const name = displayFullName(r);
-                    const adm = r.admission_number?.trim();
-                    const photo = photoByStudentId[r.student_id];
-                    const parentLabel = parents.map((p) => p.name).filter(Boolean).join(', ') || '—';
-                    const dStat = resolveDisciplineDisplayStatus(
-                      {
-                        deleted_at: r.deleted_at,
-                        discipline_deactivated_at: r.discipline_deactivated_at,
-                        suspension_open: r.suspension_open,
-                      },
-                      warningIdSet.has(r.student_id)
-                    );
-
-                    return (
-                      <div key={r.student_id} className="student-card">
-                        <div className="student-card-top">
-                          <div className="sc-av" style={photo ? undefined : { background: gradAt(globalIdx) }}>
-                            {photo ? (
-                              <img
-                                src={photo}
-                                alt=""
-                                style={{ width: '100%', height: '100%', borderRadius: 13, objectFit: 'cover' }}
-                              />
-                            ) : (
-                              initials(name)
-                            )}
-                          </div>
-                          <div>
-                            <div className="sc-name">{name}</div>
-                            <div className="sc-sub">
-                              {r.current_class || '—'} · {adm ? (isTertiary ? adm : `#${adm}`) : '—'}
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            className="sc-status"
-                            title={`${dStat} — open discipline`}
-                            onClick={() => navigate(`/dashboard/admin/students/${r.student_id}#discipline`)}
-                            style={{
-                              border: 'none',
-                              padding: 0,
-                              cursor: 'pointer',
-                              background: 'transparent',
-                              ...disciplineStatusDotStyle(dStat),
-                              width: 10,
-                              height: 10,
-                            }}
-                          />
-                        </div>
-                        <div className="student-card-body">
-                          <div className="sc-row">
-                            <span className="sc-row-label">Discipline</span>
-                            <span className="sc-row-value">{dStat}</span>
-                          </div>
-                          <div className="sc-row">
-                            <span className="sc-row-label">Teacher</span>
-                            <span className="sc-row-value">{teacher || '—'}</span>
-                          </div>
-                          <div className="sc-row">
-                            <span className="sc-row-label">Parent</span>
-                            <span className="sc-row-value">{parentLabel}</span>
-                          </div>
-                          <div className="sc-row">
-                            <span className="sc-row-label">Address</span>
-                            <span className="sc-row-value">{addr || '—'}</span>
-                          </div>
-                          <div className="sc-row">
-                            <span className="sc-row-label">Phone</span>
-                            {phone ? (
-                              <a href={`tel:${phone.replace(/\s/g, '')}`} className="sc-row-value phone inline-flex items-center gap-1">
-                                <Phone className="w-3 h-3 text-teal-500 shrink-0" />
-                                <span>{phone}</span>
-                              </a>
-                            ) : (
-                              <span className="sc-row-value">—</span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="student-card-foot">
-                          <button
-                            type="button"
-                            className="sc-btn sc-btn-ghost inline-flex items-center gap-1"
-                            onClick={() => navigate('/dashboard/admin/cards')}
-                            title="Issue or view access cards"
-                          >
-                            <CreditCard className="w-3.5 h-3.5 text-teal-500" />
-                            <span>Card</span>
-                          </button>
-                          <button
-                            type="button"
-                            className="sc-btn sc-btn-ghost"
-                            onClick={() => navigate(`/dashboard/admin/students/${r.student_id}#discipline`)}
-                          >
-                            <svg className="w-3.5 h-3.5 mr-1.5 inline-block text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
-                            Discipline
-                          </button>
-                          <button
-                            type="button"
-                            className="sc-btn sc-btn-primary"
-                            onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}
-                          >
-                            Profile →
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {!loading && filteredSorted.length > 0 && (
-                <div className="pagination" style={{ marginTop: 14 }}>
-                  <div className="pagination-info">
-                    Showing <strong>{startIdx}</strong>–<strong>{endIdx}</strong> of{' '}
-                    <strong>{filteredSorted.length}</strong> students
-                  </div>
-                  <div className="pagination-btns">
-                    <button
-                      type="button"
-                      className="page-btn"
-                      disabled={safePage <= 1}
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    >
-                      ‹
-                    </button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-                      <button
-                        key={n}
-                        type="button"
-                        className={`page-btn ${n === safePage ? 'active' : ''}`}
-                        onClick={() => setPage(n)}
-                      >
-                        {n}
-                      </button>
-                    ))}
-                    <button
-                      type="button"
-                      className="page-btn"
-                      disabled={safePage >= totalPages}
-                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    >
-                      ›
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-        </div>
-      </div>
+      <GovernmentStudentsView
+        userId={user?.id}
+        schoolId={schoolId}
+        schoolName={schoolName}
+        isTertiary={isTertiary}
+        q={q}
+        setQ={setQ}
+        sortKey={sortKey}
+        setSortKey={setSortKey}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        classFilter={classFilter}
+        setClassFilter={setClassFilter}
+        classOptions={classOptions}
+        pageSlice={pageSlice}
+        filteredSorted={filteredSorted}
+        safePage={safePage}
+        setPage={setPage}
+        totalPages={totalPages}
+        startIdx={startIdx}
+        endIdx={endIdx}
+        loading={loading}
+        warningIdSet={warningIdSet}
+        openAddStudentModal={openAddStudentModal}
+        setExportOpen={setExportOpen}
+        setImportOpen={setImportOpen}
+        setBulkAddOpen={setBulkAddOpen}
+      />
 
       {schoolId && (
         <>
@@ -1270,6 +732,7 @@ export default function DesignStudentsPage() {
         onClose={closeAddStudentModal}
         title={isTertiary ? 'Add Trainee' : 'Add Student'}
         size="lg"
+        variant="government"
       >
         <AddStudentForm
           mode="modal"

@@ -30,6 +30,7 @@ import {
   type SettingsTabKey,
 } from './settingsNavConfig';
 import { useSchoolType } from '@/hooks/useSchoolType';
+import '@/styles/government-system.css';
 
 const MD_QUERY = '(min-width: 768px)';
 
@@ -188,17 +189,45 @@ export default function SettingsPage() {
   const onBackMobile = () => navigate('/dashboard/admin/settings');
 
   return (
-    <div className="admin-terminal-page md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden">
-      <div className="flex w-full max-w-full flex-col gap-0 max-md:min-h-0 md:h-full md:min-h-0 md:flex-1 md:flex-row md:gap-8 md:items-stretch md:overflow-hidden">
+    <div className="admin-terminal-page space-y-4 md:flex md:h-[calc(100vh-100px)] md:max-h-[calc(100vh-100px)] md:min-h-0 md:flex-col md:overflow-hidden">
+      {/* INSTITUTIONAL GOVERNMENT HEADER */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#CCCCCC] pb-4 shrink-0">
+        <div className="flex items-center gap-3">
+          <h1 className="text-[17px] font-bold tracking-tight text-[#111111] uppercase font-sans">
+            INSTITUTIONAL CONFIGURATION & SETTINGS
+          </h1>
+          <span className="inline-flex items-center px-2 py-0.5 text-[11px] font-mono font-bold bg-[#EAEAEA] text-[#222222] border border-[#CCCCCC]">
+            SYSTEM
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => goSection('branding')}
+            className="gov-btn gov-btn-sm"
+          >
+            INSTITUTION IDENTITY
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard/admin/settings/location')}
+            className="gov-btn gov-btn-sm"
+          >
+            CAMPUS LOCATION
+          </button>
+        </div>
+      </div>
+
+      <div className="flex w-full max-w-full flex-col gap-0 max-md:min-h-0 md:h-full md:min-h-0 md:flex-1 md:flex-row md:gap-6 md:items-stretch md:overflow-hidden">
         <aside
-          className={`md:w-[min(100%,340px)] md:shrink-0 md:min-h-0 md:overflow-y-auto md:overscroll-y-contain ${
+          className={`md:w-[min(100%,320px)] md:shrink-0 md:h-full md:min-h-0 md:overflow-y-auto md:overscroll-y-contain pr-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden outline-none ${
             showMaster ? '' : 'hidden'
           }`}
           aria-hidden={!showMaster}
+          tabIndex={0}
+          role="region"
+          aria-label="Settings navigation menu"
         >
-          <h2 className="mb-4 px-0.5 text-[28px] font-bold tracking-tight text-slate-900 dark:text-white md:text-[22px]">
-            Settings
-          </h2>
           <SettingsMasterList
             activeSection={activeTab}
             onSelectSection={goSection}
@@ -210,10 +239,11 @@ export default function SettingsPage() {
 
         {showDetail && activeTab && sectionMeta && (
           <section
-            className={`flex min-w-0 flex-col max-md:flex-none max-md:min-h-0 md:min-h-0 md:flex-1 md:overflow-hidden md:overscroll-y-contain ${
+            className={`flex min-w-0 flex-col max-md:flex-none max-md:min-h-0 md:min-h-0 md:flex-1 md:h-full md:overflow-y-auto md:overscroll-y-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden outline-none ${
               !isMd && !section ? 'hidden' : ''
             }`}
             aria-label={sectionMeta.title}
+            tabIndex={0}
           >
             <SettingsDetailLayout
               title={sectionMeta.title}
@@ -221,7 +251,7 @@ export default function SettingsPage() {
               showMobileChrome={isMobileDetail}
               onBack={onBackMobile}
             >
-              <div className={`${adminCardClass} overflow-x-auto p-4 sm:p-6`}>
+              <div className="gov-card rounded-lg border border-[#CCCCCC] bg-white overflow-x-auto p-4 sm:p-5">
                 {activeTab === 'subjects' && (
                   <>
                     <SettingsSubjectsPerClass

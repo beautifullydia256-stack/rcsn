@@ -1,12 +1,10 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
-import { useUIStore } from '@/store/uiStore';
 import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
-import { SkeletonKPIStrip, SkeletonTable } from '@/components/PwezaSkeleton';
 import NativeModal from '@/components/NativeModal';
 import { AddTeacherForm } from './AddTeacherForm';
 import {
@@ -17,54 +15,27 @@ import {
 import { getOfflineTeachers } from '@/lib/offlineDb';
 import { downloadTeacherListPdf } from '@/lib/adminPdfDownload';
 import { useSchoolType } from '@/hooks/useSchoolType';
-
-import teachersTemplateRaw from '@/assets/pwezacore-teachers-page.html?raw';
+import {
+  User,
+  Search,
+  Plus,
+  RefreshCw,
+  Download,
+  Phone,
+  Mail,
+  GraduationCap,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  Layers,
+  LayoutGrid,
+  List,
+} from 'lucide-react';
+import { GovPageLoader, GovRollingBox, GovTableLoader } from '@/components/ui/GovLoadingIndicator';
+import '@/styles/government-system.css';
 
 const PAGE_SIZE = 12;
-
-const TEACHERS_FONT_HREF =
-  'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap';
-
-const TEACHERS_MOTION_KILL = `
-.pw-teachers .tch-fu,
-.pw-teachers .tch-d1,
-.pw-teachers .tch-d2,
-.pw-teachers .tch-d3,
-.pw-teachers .tch-d4 {
-  animation: none !important;
-  animation-delay: 0 !important;
-  opacity: 1 !important;
-  transform: none !important;
-}
-.pw-teachers .tch-kpi:hover,
-.pw-teachers .tch-card:hover {
-  transform: none !important;
-}
-.pw-teachers .tch-kpi,
-.pw-teachers .tch-card {
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-`;
-
-const GRADIENTS = [
-  'linear-gradient(135deg,#ffb547,#ff4f6a)',
-  'linear-gradient(135deg,#3d7eff,#9d7eff)',
-  'linear-gradient(135deg,#27e09f,#3d7eff)',
-  'linear-gradient(135deg,#9d7eff,#ff4f6a)',
-  'linear-gradient(135deg,#ff4f6a,#ffb547)',
-  'linear-gradient(135deg,#00e5c3,#3d7eff)',
-  'linear-gradient(135deg,#ffb547,#9d7eff)',
-];
-const grad = (i: number) => GRADIENTS[i % GRADIENTS.length];
-
-function parseInjectedHtml(raw: string): string {
-  const styleMatch = raw.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
-  const bodyMatch = raw.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-  let inner = bodyMatch ? bodyMatch[1].trim() : raw;
-  inner = inner.replace(/<script[\s\S]*?<\/script>/gi, '');
-  const styleBlock = styleMatch ? `<style>${styleMatch[1]}</style>` : '';
-  return `${styleBlock}${inner}`;
-}
 
 function initials(name: string) {
   return (name || '?')
@@ -74,14 +45,6 @@ function initials(name: string) {
     .join('')
     .slice(0, 2)
     .toUpperCase();
-}
-
-function escapeHtml(s: string) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }
 
 function normEmail(e: string | null | undefined): string {
@@ -94,12 +57,6 @@ function fmtDate(d: string | null | undefined): string {
   if (!d) return '—';
   const x = new Date(d);
   return Number.isNaN(x.getTime()) ? '—' : x.toLocaleDateString('en-UG', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
-function fmtShort(d: string | null | undefined): string {
-  if (!d) return '—';
-  const x = new Date(d);
-  return Number.isNaN(x.getTime()) ? '—' : x.toLocaleDateString('en-UG', { month: 'short', year: 'numeric' });
 }
 
 export type TeacherDirectoryRow = {
@@ -125,7 +82,6 @@ const SORT_LABELS = ['Name A → Z', 'Name Z → A', 'Most Recent Hire', 'Oldest
 type SortLabel = (typeof SORT_LABELS)[number];
 
 export async function fetchTeachersDirectory(userId: string): Promise<{ rows: TeacherDirectoryRow[]; stats: TeachersStats; schoolName: string | null }> {
-  // Offline: serve from IndexedDB cache instantly
   if (!navigator.onLine) {
     const storedSchoolId = useAuthStore.getState().schoolId;
     if (storedSchoolId) {
@@ -201,591 +157,563 @@ export async function fetchTeachersDirectory(userId: string): Promise<{ rows: Te
     classesByTeacher[tid].add(t);
   };
 
-  for (const r of ctRows || []) {
-    const row = r as { teacher_id?: string; class_name?: string };
-    if (row.teacher_id && row.class_name) addClass(row.teacher_id, row.class_name);
-  }
-  for (const r of tcsRows || []) {
-    const row = r as { teacher_id?: string; class_name?: string };
-    if (row.teacher_id && row.class_name) addClass(row.teacher_id, row.class_name);
-  }
-
-  const coveredClasses = new Set<string>();
-  for (const r of ctRows || []) {
-    const cn = (r as { class_name?: string }).class_name;
-    if (cn?.trim()) coveredClasses.add(cn.trim());
-  }
-  for (const r of tcsRows || []) {
-    const cn = (r as { class_name?: string }).class_name;
-    if (cn?.trim()) coveredClasses.add(cn.trim());
-  }
-
-  const rows: TeacherDirectoryRow[] = (teacherRows || []).map((raw) => {
-    const t = raw as {
-      teacher_id: string;
-      name: string;
-      phone?: string | null;
-      email?: string | null;
-      employee_id?: string | null;
-      date_of_hire?: string | null;
-      created_at?: string | null;
-    };
-
-    const tid = t.teacher_id;
-
-    const cls = classesByTeacher[tid] ? [...classesByTeacher[tid]].sort() : [];
-
-    return {
-      teacher_id: tid,
-      name: t.name || '—',
-      phone: t.phone ?? null,
-      email: t.email ?? null,
-      employee_id: t.employee_id ?? null,
-      date_of_hire: t.date_of_hire ?? null,
-      created_at: t.created_at ?? null,
-      classes: cls,
-      portal_active: !!(t.email && portalEmails.has(normEmail(t.email))),
-    };
+  (ctRows || []).forEach((r) => {
+    if (r.teacher_id && r.class_name) addClass(r.teacher_id, r.class_name);
+  });
+  (tcsRows || []).forEach((r) => {
+    if (r.teacher_id && r.class_name) addClass(r.teacher_id, r.class_name);
   });
 
-  const hiredThisYear = rows.filter((r) => r.date_of_hire && String(r.date_of_hire).startsWith(y)).length;
-  const withPortal = rows.filter((r) => r.portal_active).length;
+  const allCoveredClasses = new Set<string>();
+  Object.values(classesByTeacher).forEach((set) => {
+    set.forEach((c) => allCoveredClasses.add(c));
+  });
+
+  let withPortal = 0;
+  let hiredThisYear = 0;
+
+  const rows: TeacherDirectoryRow[] = (teacherRows || []).map((t) => {
+    const em = normEmail(t.email);
+    const hasPortal = em ? portalEmails.has(em) : false;
+    if (hasPortal) withPortal += 1;
+    const doh = t.date_of_hire || t.created_at;
+    if (doh && String(doh).startsWith(y)) hiredThisYear += 1;
+
+    const classList = Array.from(classesByTeacher[t.teacher_id] || []).sort();
+
+    return {
+      teacher_id: t.teacher_id,
+      name: t.name || 'Unnamed Faculty',
+      phone: t.phone || null,
+      email: t.email || null,
+      employee_id: t.employee_id || null,
+      date_of_hire: t.date_of_hire || null,
+      created_at: t.created_at || null,
+      classes: classList,
+      portal_active: hasPortal,
+    };
+  });
 
   return {
     rows,
     stats: {
       totalTeachers: rows.length,
-      classesCovered: coveredClasses.size,
+      classesCovered: allCoveredClasses.size,
       withPortal,
       hiredThisYear,
     },
-    schoolName: (schoolRow as { name?: string } | null)?.name ?? null,
+    schoolName: schoolRow?.name ?? null,
   };
 }
 
 export default function DesignTeachersPage() {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const theme = useUIStore((s) => s.theme);
   const user = useAuthStore((s) => s.user);
   const { isTertiary } = useSchoolType();
 
-  /** Warm cache for Add Parent when navigating from teachers (same pattern as students/parents pages). */
-  useQuery({
+  const [q, setQ] = useState('');
+  const [sort, setSort] = useState<SortLabel>('Name A → Z');
+  const [filterClass, setFilterClass] = useState('ALL');
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [page, setPage] = useState(1);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  const { data, isLoading, refetch, isFetching } = useQuery({
+    queryKey: adminQueryKeys.teachersDesign(user?.id ?? ''),
+    queryFn: () => (user?.id ? fetchTeachersDirectory(user.id) : null),
+    enabled: !!user?.id,
+    staleTime: ADMIN_STALE_TIME_MS,
+    gcTime: ADMIN_GC_TIME_MS,
+  });
+
+  const { data: schoolCtx } = useQuery({
     queryKey: addParentSchoolQueryKey(user?.id ?? ''),
-    queryFn: () => fetchAddParentSchoolContext(user!.id),
+    queryFn: () => fetchAddParentSchoolContext(user?.id ?? ''),
     enabled: !!user?.id,
     ...addParentSchoolStaleOptions,
   });
 
-  const addTeacherModalOpen = searchParams.get('add') === '1';
+  const rows = data?.rows ?? [];
+  const stats = data?.stats ?? { totalTeachers: 0, classesCovered: 0, withPortal: 0, hiredThisYear: 0 };
+  const schoolName = data?.schoolName ?? 'Rakai Community School of Nursing';
 
-  const closeAddTeacherModal = () => {
-    setSearchParams(
-      (prev) => {
-        const p = new URLSearchParams(prev);
-        p.delete('add');
-        return p;
-      },
-      { replace: true }
+  // Distinct classes for filter
+  const allClasses = useMemo(() => {
+    const s = new Set<string>();
+    rows.forEach((r) => r.classes.forEach((c) => s.add(c)));
+    return Array.from(s).sort();
+  }, [rows]);
+
+  // Filter & Sort
+  const filteredRows = useMemo(() => {
+    let list = rows;
+    if (q.trim()) {
+      const needle = q.toLowerCase();
+      list = list.filter(
+        (r) =>
+          r.name.toLowerCase().includes(needle) ||
+          (r.employee_id && r.employee_id.toLowerCase().includes(needle)) ||
+          (r.phone && r.phone.includes(needle)) ||
+          (r.email && r.email.toLowerCase().includes(needle))
+      );
+    }
+    if (filterClass !== 'ALL') {
+      list = list.filter((r) => r.classes.includes(filterClass));
+    }
+
+    const sorted = [...list];
+    if (sort === 'Name A → Z') {
+      sorted.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sort === 'Name Z → A') {
+      sorted.sort((a, b) => b.name.localeCompare(a.name));
+    } else if (sort === 'Most Recent Hire') {
+      sorted.sort((a, b) => (b.date_of_hire || '').localeCompare(a.date_of_hire || ''));
+    } else if (sort === 'Oldest Hire') {
+      sorted.sort((a, b) => (a.date_of_hire || '9999').localeCompare(b.date_of_hire || '9999'));
+    }
+    return sorted;
+  }, [rows, q, filterClass, sort]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const startIdx = (safePage - 1) * PAGE_SIZE;
+  const pageSlice = filteredRows.slice(startIdx, startIdx + PAGE_SIZE);
+
+  const handleExportPdf = () => {
+    downloadTeacherListPdf(
+      filteredRows,
+      schoolName ?? undefined,
+      {
+        title: isTertiary ? 'Tutors & Clinical Instructors Directory' : 'Teachers Directory',
+        singular: isTertiary ? 'tutor' : 'teacher',
+        plural: isTertiary ? 'tutors' : 'teachers',
+        classesHeader: isTertiary ? 'Assigned Cohorts' : 'Classes',
+      }
     );
   };
-  const containerRef = useRef<HTMLDivElement>(null);
-  const lastInjectedHtmlRef = useRef<string | null>(null);
-  const filteredSortedRef = useRef<TeacherDirectoryRow[]>([]);
-  const schoolNameRef = useRef<string | null>(null);
-  const [htmlContent, setHtmlContent] = useState('');
-
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortLabel, setSortLabel] = useState<SortLabel>('Name A → Z');
-  const [page, setPage] = useState(1);
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>(() => {
-    try {
-      return (localStorage.getItem('pwezacore-teachers-view') as 'list' | 'grid') || 'list';
-    } catch {
-      return 'list';
-    }
-  });
-  useEffect(() => {
-    const id = 'pweza-teachers-fonts';
-    if (!document.getElementById(id)) {
-      const link = document.createElement('link');
-      link.id = id;
-      link.rel = 'stylesheet';
-      link.href = TEACHERS_FONT_HREF;
-      document.head.appendChild(link);
-    }
-  }, []);
-
-  useEffect(() => {
-    setHtmlContent(parseInjectedHtml(teachersTemplateRaw));
-  }, []);
-
-  const { data, isPending } = useQuery({
-    queryKey: adminQueryKeys.teachersDesign(user?.id ?? ''),
-    queryFn: () => fetchTeachersDirectory(user!.id),
-    enabled: !!user?.id,
-    staleTime: ADMIN_STALE_TIME_MS,
-    gcTime: ADMIN_GC_TIME_MS,
-    placeholderData: keepPreviousData,
-    refetchOnWindowFocus: false,
-  });
-
-  const allRows = data?.rows ?? [];
-  const stats = data?.stats;
-  const schoolName = data?.schoolName ?? null;
-
-  /** If React ever dropped imperative KPI updates, derive from rows so counts never show 0 with a non-empty table. */
-  const effectiveStats = useMemo((): TeachersStats | null => {
-    if (stats) return stats;
-    if (!allRows.length) return null;
-    const y = new Date().getFullYear().toString();
-    const covered = new Set<string>();
-    allRows.forEach((r) => {
-      r.classes.forEach((c) => {
-        const t = String(c || '').trim();
-        if (t) covered.add(t);
-      });
-    });
-    const withPortal = allRows.filter((r) => r.portal_active).length;
-    const hiredThisYear = allRows.filter((r) => r.date_of_hire && String(r.date_of_hire).startsWith(y)).length;
-    return {
-      totalTeachers: allRows.length,
-      classesCovered: covered.size,
-      withPortal,
-      hiredThisYear,
-    };
-  }, [stats, allRows]);
-
-  const filteredSorted = useMemo(() => {
-    let out = [...allRows];
-    const q = searchQuery.trim().toLowerCase();
-    if (q) {
-      out = out.filter(
-        (t) =>
-          (t.name || '').toLowerCase().includes(q) ||
-          (t.email || '').toLowerCase().includes(q) ||
-          t.classes.some((c) => c.toLowerCase().includes(q))
-      );
-    }
-
-    out.sort((a, b) => {
-      const an = (a.name || '').toLowerCase();
-      const bn = (b.name || '').toLowerCase();
-      const ha = a.date_of_hire ? new Date(a.date_of_hire).getTime() : 0;
-      const hb = b.date_of_hire ? new Date(b.date_of_hire).getTime() : 0;
-      switch (sortLabel) {
-        case 'Name Z → A':
-          return bn.localeCompare(an);
-        case 'Most Recent Hire':
-          return hb - ha || an.localeCompare(bn);
-        case 'Oldest Hire':
-          return ha - hb || an.localeCompare(bn);
-        default:
-          return an.localeCompare(bn);
-      }
-    });
-    return out;
-  }, [allRows, searchQuery, sortLabel]);
-
-  filteredSortedRef.current = filteredSorted;
-  schoolNameRef.current = schoolName;
-
-  const totalPages = Math.max(1, Math.ceil(filteredSorted.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-
-  useEffect(() => {
-    setPage((p) => Math.min(p, totalPages));
-  }, [totalPages]);
-
-  const startIdx = filteredSorted.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const endIdx = Math.min(safePage * PAGE_SIZE, filteredSorted.length);
-
-  const renderTableAndGrid = useCallback(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const root = el.querySelector('.pw-teachers') || el;
-    const start = (safePage - 1) * PAGE_SIZE;
-    const pageSlice = filteredSorted.slice(start, start + PAGE_SIZE);
-
-    const setKpi = (sel: string, val: string) => {
-      const n = root.querySelector(sel);
-      if (n) n.textContent = val;
-    };
-    const initialLoad = !data && allRows.length === 0 && isPending;
-    const k = effectiveStats;
-    const kpiVals = {
-      total: initialLoad ? '—' : String(k?.totalTeachers ?? allRows.length),
-      classes: initialLoad ? '—' : String(k?.classesCovered ?? 0),
-      portal: initialLoad ? '—' : String(k?.withPortal ?? 0),
-      hired: initialLoad ? '—' : String(k?.hiredThisYear ?? 0),
-    };
-    setKpi('[data-kpi="total-teachers"]', kpiVals.total);
-    setKpi('[data-kpi="classes-covered"]', kpiVals.classes);
-    setKpi('[data-kpi="with-portal"]', kpiVals.portal);
-    setKpi('[data-kpi="hired-this-year"]', kpiVals.hired);
-
-    // Dynamic headers, titles, and labels for tertiary tutors vs teachers:
-    const eyebrow = root.querySelector('.tch-eyebrow');
-    if (eyebrow) eyebrow.textContent = isTertiary ? 'Academic Faculty & Tutors' : 'Academic Staff';
-
-    const titleEl = root.querySelector('.tch-title');
-    if (titleEl) titleEl.textContent = isTertiary ? 'Tutors' : 'Teachers';
-
-    const subEl = root.querySelector('.tch-sub');
-    if (subEl) {
-      subEl.textContent = isTertiary
-        ? 'Manage tutors, course assignments, and professional records.'
-        : 'Manage teaching staff, class assignments, and professional records.';
-    }
-
-    const addBtnEl = root.querySelector('#tch-btn-add');
-    if (addBtnEl) addBtnEl.textContent = isTertiary ? '＋ Add Tutor' : '＋ Add Teacher';
-
-    const searchInput = root.querySelector('#tch-search') as HTMLInputElement | null;
-    if (searchInput) {
-      searchInput.setAttribute(
-        'placeholder',
-        isTertiary ? 'Search by name, email, or course…' : 'Search by name, email, or class…'
-      );
-    }
-
-    // Dynamic KPI card labels
-    const totalKpiLabel = root.querySelector('[data-kpi="total-teachers"]')?.parentElement?.querySelector('.tch-kpi-label');
-    if (totalKpiLabel) totalKpiLabel.textContent = isTertiary ? 'Total Tutors' : 'Total Teachers';
-    const totalKpiSub = root.querySelector('[data-kpi="total-teachers"]')?.parentElement?.querySelector('.tch-kpi-sub');
-    if (totalKpiSub) totalKpiSub.textContent = isTertiary ? 'Active tutors' : 'Active staff members';
-
-    const classesKpiLabel = root.querySelector('[data-kpi="classes-covered"]')?.parentElement?.querySelector('.tch-kpi-label');
-    if (classesKpiLabel) classesKpiLabel.textContent = isTertiary ? 'Courses Covered' : 'Classes Covered';
-    const classesKpiSub = root.querySelector('[data-kpi="classes-covered"]')?.parentElement?.querySelector('.tch-kpi-sub');
-    if (classesKpiSub) classesKpiSub.textContent = isTertiary ? 'With assigned tutor' : 'With assigned teacher';
-
-    const portalKpiSub = root.querySelector('[data-kpi="with-portal"]')?.parentElement?.querySelector('.tch-kpi-sub');
-    if (portalKpiSub) portalKpiSub.textContent = isTertiary ? 'Active tutor accounts' : 'Active teacher accounts';
-
-    const hiredKpiSub = root.querySelector('[data-kpi="hired-this-year"]')?.parentElement?.querySelector('.tch-kpi-sub');
-    if (hiredKpiSub) hiredKpiSub.textContent = isTertiary ? 'New tutors this year' : 'New staff this year';
-
-    // Dynamic Table Headers
-    const theadThs = root.querySelectorAll('.tch-thead .tch-th');
-    if (theadThs.length >= 4) {
-      theadThs[0].textContent = isTertiary ? 'Tutor ▲' : 'Teacher ▲';
-      theadThs[3].textContent = isTertiary ? 'Courses / Classes' : 'Classes';
-    }
-
-    const sortSel = root.querySelector('#tch-sort-select') as HTMLSelectElement | null;
-    if (sortSel) sortSel.value = sortLabel;
-
-    const info = root.querySelector('#tch-page-info');
-    if (info) {
-      const noun = isTertiary ? 'tutors' : 'teachers';
-      info.innerHTML =
-        filteredSorted.length === 0
-          ? `Showing <strong>0</strong> of <strong>0</strong> ${noun}`
-          : `Showing <strong>${startIdx}</strong>–<strong>${endIdx}</strong> of <strong>${filteredSorted.length}</strong> ${noun}`;
-    }
-
-    // Manage List (Table) vs Grid view display
-    const listView = root.querySelector('#tch-list-view') as HTMLElement | null;
-    const gridView = root.querySelector('#tch-grid-view') as HTMLElement | null;
-    const listBtn = root.querySelector('#tch-list-btn') as HTMLElement | null;
-    const gridBtn = root.querySelector('#tch-grid-btn') as HTMLElement | null;
-
-    if (listView && gridView) {
-      if (viewMode === 'list') {
-        listView.style.display = 'block';
-        gridView.style.display = 'none';
-        listBtn?.classList.add('active');
-        gridBtn?.classList.remove('active');
-      } else {
-        listView.style.display = 'none';
-        gridView.style.display = 'block';
-        listBtn?.classList.remove('active');
-        gridBtn?.classList.add('active');
-      }
-    }
-
-    // Populate Table View
-    const tableBody = root.querySelector('#tch-table-body');
-    if (tableBody) {
-      if (pageSlice.length === 0) {
-        tableBody.innerHTML = initialLoad
-          ? `<div style="padding:40px;text-align:center;color:var(--t2);font-size:13px">${isTertiary ? 'Loading tutors…' : 'Loading teachers…'}</div>`
-          : `<div style="padding:40px;text-align:center;color:var(--t3);font-size:13px">${isTertiary ? 'No tutors found.' : 'No teachers found.'}</div>`;
-      } else {
-        tableBody.innerHTML = pageSlice
-          .map((t, i) => {
-            const ini = initials(t.name);
-            const bg = grad(start + i);
-            const phone = String(t.phone ?? '').trim();
-            const email = String(t.email ?? '').trim();
-            return `
-            <div class="tch-trow" data-nav="/dashboard/admin/teachers/${escapeHtml(t.teacher_id)}" style="cursor:pointer">
-              <div class="tch-td">
-                <div class="tch-cell">
-                  <div class="tch-av" style="background:${bg}">${escapeHtml(ini)}</div>
-                  <div>
-                    <div class="tch-name">${escapeHtml(t.name)}</div>
-                    <div class="tch-emp-id">ID: ${escapeHtml(t.employee_id || '—')}</div>
-                  </div>
-                </div>
-              </div>
-              <div class="tch-td">${
-                phone
-                  ? `<a href="tel:${phone.replace(/\s/g, '')}" onclick="event.stopPropagation()">${escapeHtml(phone)}</a>`
-                  : '<span class="tch-td muted">—</span>'
-              }</div>
-              <div class="tch-td" style="font-size:12px;color:var(--blue)">${
-                email ? escapeHtml(email) : '<span class="tch-td muted">—</span>'
-              }</div>
-              <div class="tch-td">${
-                t.classes.length > 0
-                  ? t.classes.map((c) => `<span class="tch-stag">${escapeHtml(c)}</span>`).join('')
-                  : `<span class="tch-td muted">${isTertiary ? 'No course assigned' : 'No class assigned'}</span>`
-              }</div>
-              <div class="tch-td">${fmtDate(t.date_of_hire)}</div>
-              <div class="tch-td" style="justify-content:flex-end;display:flex;gap:6px" onclick="event.stopPropagation()">
-                <button type="button" class="tch-crd-btn tch-crd-amber" data-nav="/dashboard/admin/teachers/${escapeHtml(
-                  t.teacher_id
-                )}">View Profile</button>
-              </div>
-            </div>`;
-          })
-          .join('');
-      }
-    }
-
-    // Populate Card Grid View
-    const cardGrid = root.querySelector('#tch-card-grid');
-    if (cardGrid) {
-      if (pageSlice.length === 0) {
-        cardGrid.innerHTML = initialLoad
-          ? `<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--t2);font-size:13px">${isTertiary ? 'Loading tutors…' : 'Loading teachers…'}</div>`
-          : `<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--t3);font-size:13px">${isTertiary ? 'No tutors found.' : 'No teachers found.'}</div>`;
-      } else {
-        cardGrid.innerHTML = pageSlice
-          .map((t, i) => {
-            const ini = initials(t.name);
-            const bg = grad(start + i);
-            const phone = String(t.phone ?? '').trim();
-            const email = String(t.email ?? '').trim();
-            return `
-            <div class="tch-card" data-nav="/dashboard/admin/teachers/${escapeHtml(t.teacher_id)}" style="cursor:pointer">
-              <div class="tch-card-top">
-                <div class="tch-card-av" style="background:${bg}">${escapeHtml(ini)}</div>
-                <div class="tch-card-name">${escapeHtml(t.name)}</div>
-                <div class="tch-card-sub">ID: ${escapeHtml(t.employee_id || '—')} · Hired ${fmtShort(t.date_of_hire)}</div>
-              </div>
-              <div class="tch-card-body">
-                <div class="tch-card-row"><span class="tch-card-lbl">Phone</span><span class="tch-card-val">${
-                  phone
-                    ? `<a href="tel:${phone.replace(/\s/g, '')}" onclick="event.stopPropagation()">${escapeHtml(phone)}</a>`
-                    : '<span style="color:var(--t3);font-style:italic">—</span>'
-                }</span></div>
-                <div class="tch-card-row"><span class="tch-card-lbl">Email</span><span class="tch-card-val" style="font-size:12px;color:var(--blue)">${
-                  email ? escapeHtml(email) : '<span style="color:var(--t3);font-style:italic">—</span>'
-                }</span></div>
-                <div class="tch-card-row"><span class="tch-card-lbl">Portal</span><span class="tch-chip ${t.portal_active ? 'green' : 'rose'}" style="font-size:11px;padding:2px 8px">${
-                  t.portal_active ? 'Active' : 'No Portal'
-                }</span></div>
-              </div>
-              ${
-                t.classes.length > 0
-                  ? `<div class="tch-card-classes">${t.classes.map((c) => `<span class="tch-stag">${escapeHtml(c)}</span>`).join('')}</div>`
-                  : ''
-              }
-              <div class="tch-card-foot">
-                <button type="button" class="tch-crd-btn tch-crd-ghost" onclick="event.stopPropagation()">Schedule</button>
-                <button type="button" class="tch-crd-btn tch-crd-amber" data-nav="/dashboard/admin/teachers/${escapeHtml(
-                  t.teacher_id
-                )}">View Profile</button>
-              </div>
-            </div>`;
-          })
-          .join('');
-      }
-    }
-
-    const pageBtns = root.querySelector('#tch-page-btns');
-    if (pageBtns) {
-      if (totalPages <= 1) {
-        pageBtns.innerHTML = '';
-      } else {
-        const pages: string[] = [];
-        pages.push(`<button type="button" class="tch-pbtn" ${safePage === 1 ? 'disabled' : ''} data-page="prev">‹</button>`);
-        for (let i = 1; i <= totalPages; i++) {
-          if (i === 1 || i === totalPages || Math.abs(i - safePage) <= 1) {
-            pages.push(`<button type="button" class="tch-pbtn ${i === safePage ? 'active' : ''}" data-page="${i}">${i}</button>`);
-          } else if (Math.abs(i - safePage) === 2) {
-            pages.push(`<span class="tch-pbtn" style="pointer-events:none;border:none;background:transparent">…</span>`);
-          }
-        }
-        pages.push(`<button type="button" class="tch-pbtn" ${safePage === totalPages ? 'disabled' : ''} data-page="next">›</button>`);
-        pageBtns.innerHTML = pages.join('');
-      }
-    }
-
-  }, [
-    data,
-    isPending,
-    effectiveStats,
-    allRows.length,
-    filteredSorted,
-    safePage,
-    startIdx,
-    endIdx,
-    totalPages,
-    sortLabel,
-    viewMode,
-    isTertiary,
-  ]);
-
-  // Inject template once per htmlContent string — React must NOT re-apply dangerouslySetInnerHTML on every
-  // state change or KPI/table updates are wiped (same fix as admin design dashboard).
-  useLayoutEffect(() => {
-    const el = containerRef.current;
-    if (!el || !htmlContent) return;
-    if (lastInjectedHtmlRef.current !== htmlContent) {
-      el.innerHTML = htmlContent;
-      lastInjectedHtmlRef.current = htmlContent;
-    }
-    requestAnimationFrame(() => renderTableAndGrid());
-  }, [htmlContent, renderTableAndGrid]);
-
-  useEffect(() => {
-    if (!htmlContent || !containerRef.current) return;
-    const root = containerRef.current;
-
-    const onNav = (e: Event) => {
-      const t = (e.target as HTMLElement | null)?.closest('[data-nav]');
-      if (!t) return;
-      e.preventDefault();
-      const href = t.getAttribute('data-nav');
-      if (href) navigate(href);
-    };
-    root.addEventListener('click', onNav);
-
-    const searchEl = root.querySelector('#tch-search') as HTMLInputElement | null;
-    const sortEl = root.querySelector('#tch-sort-select') as HTMLSelectElement | null;
-
-    const onSearch = () => {
-      if (searchEl) setSearchQuery(searchEl.value);
-      setPage(1);
-    };
-    const onSort = () => {
-      if (sortEl && SORT_LABELS.includes(sortEl.value as SortLabel)) setSortLabel(sortEl.value as SortLabel);
-      setPage(1);
-    };
-
-    searchEl?.addEventListener('input', onSearch);
-    sortEl?.addEventListener('change', onSort);
-
-    const onPageClick = (e: Event) => {
-      const btn = (e.target as HTMLElement | null)?.closest('[data-page]') as HTMLButtonElement | null;
-      if (!btn || btn.disabled) return;
-      const p = btn.dataset.page;
-      if (p === 'prev') setPage((x) => Math.max(1, x - 1));
-      else if (p === 'next') setPage((x) => Math.min(totalPages, x + 1));
-      else if (p) setPage(Number(p));
-    };
-    const pageBtnsEl = root.querySelector('#tch-page-btns');
-    pageBtnsEl?.addEventListener('click', onPageClick);
-
-    const onAdd = () => {
-      setSearchParams(
-        (prev) => {
-          const p = new URLSearchParams(prev);
-          p.set('add', '1');
-          return p;
-        },
-        { replace: true }
-      );
-    };
-    const onAddStudent = () => navigate('/dashboard/admin/students?add=1');
-    const onAddParent = () => navigate('/dashboard/admin/parents?add=1');
-    root.querySelector('#tch-btn-add')?.addEventListener('click', onAdd);
-    root.querySelector('#tch-btn-add-student')?.addEventListener('click', onAddStudent);
-    root.querySelector('#tch-btn-add-parent')?.addEventListener('click', onAddParent);
-
-    const onPdf = () =>
-      downloadTeacherListPdf(
-        filteredSortedRef.current,
-        schoolNameRef.current ?? undefined,
-        isTertiary
-          ? { title: 'Tutors Directory', singular: 'tutor', plural: 'tutors', classesHeader: 'Courses / Classes' }
-          : undefined
-      );
-    root.querySelector('#tch-btn-pdf')?.addEventListener('click', onPdf);
-
-    const listBtnEl = root.querySelector('#tch-list-btn');
-    const gridBtnEl = root.querySelector('#tch-grid-btn');
-    const onListClick = () => {
-      setViewMode('list');
-      try { localStorage.setItem('pwezacore-teachers-view', 'list'); } catch {}
-    };
-    const onGridClick = () => {
-      setViewMode('grid');
-      try { localStorage.setItem('pwezacore-teachers-view', 'grid'); } catch {}
-    };
-    listBtnEl?.addEventListener('click', onListClick);
-    gridBtnEl?.addEventListener('click', onGridClick);
-
-    return () => {
-      root.removeEventListener('click', onNav);
-      searchEl?.removeEventListener('input', onSearch);
-      sortEl?.removeEventListener('change', onSort);
-      pageBtnsEl?.removeEventListener('click', onPageClick);
-      root.querySelector('#tch-btn-add')?.removeEventListener('click', onAdd);
-      root.querySelector('#tch-btn-add-student')?.removeEventListener('click', onAddStudent);
-      root.querySelector('#tch-btn-add-parent')?.removeEventListener('click', onAddParent);
-      root.querySelector('#tch-btn-pdf')?.removeEventListener('click', onPdf);
-      listBtnEl?.removeEventListener('click', onListClick);
-      gridBtnEl?.removeEventListener('click', onGridClick);
-    };
-  }, [htmlContent, navigate, totalPages, setSearchParams, isTertiary]);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const sync = () =>
-      document.documentElement.classList.toggle('light', !document.documentElement.classList.contains('dark'));
-    sync();
-    const obs = new MutationObserver(sync);
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] });
-    return () => obs.disconnect();
-  }, [htmlContent]);
-
-  const showSkeleton = Boolean(user?.id && isPending && !data);
 
   return (
-    <>
-      <style>{TEACHERS_MOTION_KILL}</style>
-      {showSkeleton && (
-        <div style={{ padding: '26px 28px' }}>
-          <SkeletonKPIStrip count={4} />
-          <SkeletonTable rows={6} cols={7} />
+    <div className="admin-terminal-page space-y-5">
+      {/* ── 1. TOP HEADER ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#CCCCCC] pb-4">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-[#111111] uppercase font-mono">
+            {isTertiary ? 'TUTORS & CLINICAL INSTRUCTORS REGISTRY' : 'TEACHERS & FACULTY REGISTRY'}
+          </h1>
+          <p className="text-xs text-[#555555] font-mono tracking-wider uppercase mt-0.5">
+            ACCREDITED FACULTY, CLINICAL PRECEPTORS &amp; COURSE ALLOCATIONS
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="gov-btn gov-btn-sm flex items-center gap-1.5"
+            title="Refresh Roster"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+            <span>SYNC</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleExportPdf}
+            disabled={rows.length === 0}
+            className="gov-btn gov-btn-sm flex items-center gap-1.5"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>EXPORT ROSTER PDF</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsAddModalOpen(true)}
+            className="gov-btn gov-btn-primary gov-btn-sm flex items-center gap-1.5"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>{isTertiary ? 'APPOINT TUTOR' : 'ADD TEACHER'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ── 2. MONOCHROME KPI SUMMARY METRIC CARDS ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            TOTAL FACULTY
+          </div>
+          <div className="text-2xl font-bold font-mono text-[#111111] mt-1">
+            {stats.totalTeachers.toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            ACTIVE {isTertiary ? 'INSTRUCTORS' : 'STAFF'}
+          </div>
+        </div>
+
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            COHORTS COVERED
+          </div>
+          <div className="text-2xl font-bold font-mono text-emerald-700 mt-1">
+            {stats.classesCovered.toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            STREAMS ALLOCATED
+          </div>
+        </div>
+
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            PORTAL ACCESS
+          </div>
+          <div className="text-2xl font-bold font-mono text-[#111111] mt-1">
+            {stats.withPortal.toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            ACTIVE SYSTEM LOGINS
+          </div>
+        </div>
+
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            HIRED THIS YEAR
+          </div>
+          <div className="text-2xl font-bold font-mono text-blue-600 mt-1">
+            {stats.hiredThisYear.toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            NEW APPOINTMENTS
+          </div>
+        </div>
+      </div>
+
+      {/* ── 3. CONTROL BAR ── */}
+      <div className="gov-control-bar flex flex-wrap items-center justify-between gap-3 p-3 bg-white border border-[#CCCCCC]">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Search */}
+          <div className="relative min-w-[240px]">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#888888]" />
+            <input
+              type="text"
+              placeholder={`Search ${isTertiary ? 'tutor' : 'teacher'} by name, ID, phone…`}
+              value={q}
+              onChange={(e) => {
+                setQ(e.target.value);
+                setPage(1);
+              }}
+              className="gov-input pl-8 text-xs font-mono w-full"
+            />
+          </div>
+
+          {/* Cohort / Class Filter */}
+          <div>
+            <select
+              value={filterClass}
+              onChange={(e) => {
+                setFilterClass(e.target.value);
+                setPage(1);
+              }}
+              className="gov-select text-xs font-mono"
+            >
+              <option value="ALL">ALL ASSIGNED COHORTS</option>
+              {allClasses.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Sort */}
+          <div>
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value as SortLabel)}
+              className="gov-select text-xs font-mono"
+            >
+              {SORT_LABELS.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="text-xs font-mono text-[#555555]">
+            RECORDS: <span className="font-bold text-[#111111]">{filteredRows.length}</span>
+          </div>
+
+          {/* View Mode Toggle */}
+          <div className="inline-flex border border-[#CCCCCC]">
+            <button
+              type="button"
+              onClick={() => setViewMode('table')}
+              className={`p-1.5 transition-colors ${
+                viewMode === 'table' ? 'bg-[#111111] text-white' : 'bg-white text-[#555555] hover:bg-[#F3F4F6]'
+              }`}
+              title="Table View"
+            >
+              <List className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('grid')}
+              className={`p-1.5 transition-colors ${
+                viewMode === 'grid' ? 'bg-[#111111] text-white' : 'bg-white text-[#555555] hover:bg-[#F3F4F6]'
+              }`}
+              title="Grid View"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── 4. DATA PRESENTATION ── */}
+      {viewMode === 'table' ? (
+        <div className="gov-card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="gov-table w-full text-left">
+              <thead>
+                <tr>
+                  <th>FACULTY / INSTRUCTOR NAME</th>
+                  <th>EMPLOYEE ID</th>
+                  <th>PHONE CONTACT</th>
+                  <th>OFFICIAL EMAIL</th>
+                  <th>ASSIGNED COHORTS / UNITS</th>
+                  <th>DATE OF HIRE</th>
+                  <th>PORTAL STATUS</th>
+                  <th className="text-right">ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading ? (
+                  <GovTableLoader colSpan={8} message="AUDITING FACULTY & CLINICAL INSTRUCTOR ROSTER..." />
+                ) : pageSlice.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="text-center py-12 text-xs font-mono text-[#777777]">
+                      NO FACULTY RECORDS MATCHED THE SPECIFIED SEARCH CRITERIA
+                    </td>
+                  </tr>
+                ) : (
+                  pageSlice.map((t) => (
+                    <tr
+                      key={t.teacher_id}
+                      onClick={() => navigate(`/dashboard/admin/teachers/${t.teacher_id}`)}
+                      className="hover:bg-[#F9FAFB] transition-colors cursor-pointer"
+                    >
+                      <td className="font-bold text-xs text-[#111111]">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-none bg-[#111111] text-white flex items-center justify-center text-[10px] font-mono font-bold">
+                            {initials(t.name)}
+                          </div>
+                          <span>{t.name}</span>
+                        </div>
+                      </td>
+                      <td className="font-mono text-xs text-[#555555]">
+                        {t.employee_id || '—'}
+                      </td>
+                      <td className="font-mono text-xs text-[#333333]">
+                        {t.phone ? (
+                          <a
+                            href={`tel:${t.phone.replace(/\s/g, '')}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="hover:underline flex items-center gap-1"
+                          >
+                            <Phone className="w-3 h-3 text-[#777777]" />
+                            {t.phone}
+                          </a>
+                        ) : (
+                          <span className="text-[#888888]">—</span>
+                        )}
+                      </td>
+                      <td className="font-mono text-xs text-[#333333]">
+                        {t.email ? (
+                          <a
+                            href={`mailto:${t.email}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="hover:underline flex items-center gap-1 text-blue-700"
+                          >
+                            <Mail className="w-3 h-3 text-[#777777]" />
+                            {t.email}
+                          </a>
+                        ) : (
+                          <span className="text-[#888888]">—</span>
+                        )}
+                      </td>
+                      <td className="text-xs">
+                        {t.classes.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {t.classes.map((c) => (
+                              <span
+                                key={c}
+                                className="font-mono text-[10px] px-1.5 py-0.5 border border-[#CCCCCC] bg-[#F8F9FA] text-[#111111]"
+                              >
+                                {c}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-[#888888] font-mono text-[11px] italic">Unassigned</span>
+                        )}
+                      </td>
+                      <td className="font-mono text-xs text-[#555555]">
+                        {fmtDate(t.date_of_hire)}
+                      </td>
+                      <td>
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-mono font-bold tracking-wider uppercase border ${
+                            t.portal_active
+                              ? 'border-emerald-400 bg-emerald-50 text-emerald-800'
+                              : 'border-zinc-300 bg-zinc-100 text-zinc-600'
+                          }`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${t.portal_active ? 'bg-emerald-600' : 'bg-zinc-400'}`} />
+                          {t.portal_active ? 'ACTIVE' : 'NO PORTAL'}
+                        </span>
+                      </td>
+                      <td className="text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/dashboard/admin/teachers/${t.teacher_id}`)}
+                          className="gov-btn gov-btn-sm"
+                        >
+                          PROFILE
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {pageSlice.map((t) => (
+            <div
+              key={t.teacher_id}
+              onClick={() => navigate(`/dashboard/admin/teachers/${t.teacher_id}`)}
+              className="gov-card p-4 hover:border-[#111111] transition-all cursor-pointer bg-white border border-[#CCCCCC] flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between gap-2 border-b border-[#E5E7EB] pb-3 mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-none bg-[#111111] text-white flex items-center justify-center text-xs font-mono font-bold">
+                      {initials(t.name)}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-xs text-[#111111]">{t.name}</h4>
+                      <div className="text-[10px] font-mono text-[#777777]">ID: {t.employee_id || '—'}</div>
+                    </div>
+                  </div>
+                  <span
+                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-mono font-bold tracking-wider uppercase border ${
+                      t.portal_active
+                        ? 'border-emerald-400 bg-emerald-50 text-emerald-800'
+                        : 'border-zinc-300 bg-zinc-100 text-zinc-600'
+                    }`}
+                  >
+                    {t.portal_active ? 'PORTAL ACTIVE' : 'NO PORTAL'}
+                  </span>
+                </div>
+
+                <div className="space-y-1.5 text-xs font-mono">
+                  <div className="flex items-center justify-between text-[#555555]">
+                    <span>PHONE:</span>
+                    <span className="text-[#111111] font-semibold">{t.phone || '—'}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-[#555555]">
+                    <span>EMAIL:</span>
+                    <span className="text-blue-700 font-semibold truncate max-w-[170px]">{t.email || '—'}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-[#555555]">
+                    <span>APPOINTED:</span>
+                    <span className="text-[#111111]">{fmtDate(t.date_of_hire)}</span>
+                  </div>
+                </div>
+
+                {t.classes.length > 0 && (
+                  <div className="mt-3 pt-2 border-t border-[#E5E7EB]">
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-[#777777] mb-1">
+                      Allocated Cohorts:
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {t.classes.map((c) => (
+                        <span key={c} className="font-mono text-[9px] px-1 py-0.5 border border-[#CCCCCC] bg-[#F8F9FA] text-[#111111]">
+                          {c}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-[#E5E7EB] flex justify-end" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/dashboard/admin/teachers/${t.teacher_id}`)}
+                  className="gov-btn gov-btn-sm w-full"
+                >
+                  VIEW PROFILE
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
-      <div ref={containerRef} data-theme={theme} style={{ width: '100%', minHeight: showSkeleton ? '0' : '100vh', display: showSkeleton ? 'none' : 'block' }} />
-      <NativeModal
-        isOpen={addTeacherModalOpen}
-        onClose={closeAddTeacherModal}
-        title={isTertiary ? 'Add tutor' : 'Add teacher'}
-        size="lg"
-      >
-        <AddTeacherForm
-          mode="modal"
-          isTertiary={isTertiary}
-          onCompleted={() => {
-            closeAddTeacherModal();
-            if (user?.id) {
-              void queryClient.invalidateQueries({ queryKey: adminQueryKeys.teachersDesign(user.id) });
-            }
-          }}
-          onCancel={closeAddTeacherModal}
-        />
-      </NativeModal>
-    </>
+
+      {/* ── 5. PAGINATION ── */}
+      {totalPages > 1 && (
+        <div className="gov-card p-3 flex items-center justify-between text-xs font-mono bg-white border border-[#CCCCCC]">
+          <div className="text-[#555555]">
+            PAGE {safePage} OF {totalPages} · SHOWING {startIdx + 1} TO {Math.min(startIdx + PAGE_SIZE, filteredRows.length)} OF {filteredRows.length} RECORDS
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={safePage <= 1}
+              className="gov-btn gov-btn-sm"
+            >
+              PREVIOUS
+            </button>
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={safePage >= totalPages}
+              className="gov-btn gov-btn-sm"
+            >
+              NEXT
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── 6. ADD TEACHER MODAL ── */}
+      {isAddModalOpen && (
+        <NativeModal
+          isOpen={true}
+          onClose={() => setIsAddModalOpen(false)}
+          title={isTertiary ? 'APPOINT TUTOR / CLINICAL INSTRUCTOR' : 'ADD TEACHER / FACULTY MEMBER'}
+          subtitle="Register credentials, contact details, and department allocations."
+          icon={User}
+          size="lg"
+        >
+          <AddTeacherForm
+            mode="modal"
+            isTertiary={isTertiary}
+            onCompleted={() => {
+              setIsAddModalOpen(false);
+              void queryClient.invalidateQueries({ queryKey: adminQueryKeys.teachersDesign(user?.id ?? '') });
+            }}
+            onCancel={() => setIsAddModalOpen(false)}
+          />
+        </NativeModal>
+      )}
+    </div>
   );
 }

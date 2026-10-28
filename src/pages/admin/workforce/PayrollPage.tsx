@@ -2,12 +2,9 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
-import { useUIStore } from '@/store/uiStore';
 import { usePermission } from '@/hooks/usePermission';
 import { PERMISSION_KEYS } from '@/lib/permissions';
-import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
 import NativeModal from '@/components/NativeModal';
-import PosEmptyState from '@/components/finance/pos/PosEmptyState';
 import { fetchPayrollPageData, fetchPayrollPayslips, type PayslipRow } from '@/pages/admin/workforce/workforceApi';
 import { workforceQueryKeys } from '@/pages/admin/workforce/workforceQueryKeys';
 import {
@@ -24,16 +21,16 @@ import {
   FileText,
   Building2,
   TrendingDown,
-  ArrowUpRight,
+  ArrowLeft,
+  RefreshCw,
 } from 'lucide-react';
-import { getTokens, cardGrad, SORA, INTER } from '@/styles/posThemeTokens';
+import { Link } from 'react-router-dom';
+import { GovPageLoader, GovRollingBox } from '@/components/ui/GovLoadingIndicator';
+import '@/styles/government-system.css';
 
 export default function PayrollPage() {
   const canPay = usePermission(PERMISSION_KEYS.hrPayroll);
   const user = useAuthStore((s) => s.user);
-  const theme = useUIStore((s) => s.theme);
-  const isDark = theme === 'dark';
-  const t = getTokens(isDark);
   const queryClient = useQueryClient();
 
   const payrollQ = useQuery({
@@ -49,811 +46,653 @@ export default function PayrollPage() {
   const loading = payrollQ.isPending;
 
   const [selPeriod, setSelPeriod] = useState<string>('');
-  const [err, setErr] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
-
-  // New period form state
-  const [showNewPeriodModal, setShowNewPeriodModal] = useState(false);
-  const [newLabel, setNewLabel] = useState(
-    new Date().toLocaleString('default', { month: 'long', year: 'numeric' })
-  );
-  const [newStart, setNewStart] = useState('');
-  const [newEnd, setNewEnd] = useState('');
-  const [savingPeriod, setSavingPeriod] = useState(false);
-
-  // New payslip form state
-  const [showNewPayslipModal, setShowNewPayslipModal] = useState(false);
-  const [pKind, setPKind] = useState<'teacher' | 'other_staff'>('teacher');
-  const [pStaff, setPStaff] = useState('');
-  const [gross, setGross] = useState('');
-  const [net, setNet] = useState('');
-  const [pNotes, setPNotes] = useState('');
-  const [savingPayslip, setSavingPayslip] = useState(false);
-
-  // Filter
   const [kindFilter, setKindFilter] = useState<'all' | 'teacher' | 'other_staff'>('all');
-
-  // Selected voucher for print preview
   const [selectedVoucher, setSelectedVoucher] = useState<PayslipRow | null>(null);
 
-  // Auto-select first period if available
+  // Modals
+  const [showNewPeriodModal, setShowNewPeriodModal] = useState(false);
+  const [newPeriodLabel, setNewPeriodLabel] = useState('');
+  const [newPeriodStart, setNewPeriodStart] = useState('');
+  const [newPeriodEnd, setNewPeriodEnd] = useState('');
+  const [creatingPeriod, setCreatingPeriod] = useState(false);
+
+  const [showNewPayslipModal, setShowNewPayslipModal] = useState(false);
+  const [newSlipKind, setNewSlipKind] = useState<'teacher' | 'other_staff'>('teacher');
+  const [newSlipStaffId, setNewSlipStaffId] = useState('');
+  const [newSlipGross, setNewSlipGross] = useState('');
+  const [newSlipNet, setNewSlipNet] = useState('');
+  const [creatingSlip, setCreatingSlip] = useState(false);
+
+  // Default active period
   React.useEffect(() => {
-    if (periods.length > 0 && !selPeriod) {
+    if (!selPeriod && periods.length > 0) {
       setSelPeriod(periods[0].id);
     }
   }, [periods, selPeriod]);
 
-  const activePeriodObj = useMemo(
-    () => periods.find((p) => p.id === selPeriod) || periods[0] || null,
-    [periods, selPeriod]
-  );
+  const activePeriodObj = useMemo(() => {
+    return periods.find((p) => p.id === selPeriod) || null;
+  }, [periods, selPeriod]);
 
+  // Fetch payslips for selected period
   const payslipsQ = useQuery({
-    queryKey: workforceQueryKeys.payrollPayslips(activePeriodObj?.id ?? ''),
-    queryFn: () => fetchPayrollPayslips(activePeriodObj!.id),
-    enabled: !!activePeriodObj?.id,
+    queryKey: workforceQueryKeys.payrollPayslips(selPeriod),
+    queryFn: () => fetchPayrollPayslips(selPeriod),
+    enabled: !!selPeriod,
   });
 
-  const payslips = useMemo(() => payslipsQ.data ?? [], [payslipsQ.data]);
+  const payslips = payslipsQ.data ?? [];
+
+  const staffName = useCallback(
+    (row: PayslipRow) => {
+      if (row.staff_kind === 'teacher') {
+        const t = tList.find((x) => x.teacher_id === row.staff_id);
+        return t?.name || 'Academic Faculty';
+      }
+      const o = oList.find((x) => x.id === row.staff_id);
+      return o?.full_name || 'Support Staff';
+    },
+    [tList, oList]
+  );
 
   const filteredPayslips = useMemo(() => {
     if (kindFilter === 'all') return payslips;
     return payslips.filter((p) => p.staff_kind === kindFilter);
   }, [payslips, kindFilter]);
 
-  const staffName = useCallback(
-    (row: PayslipRow) => {
-      if (row.staff_kind === 'teacher') {
-        return tList.find((t) => t.teacher_id === row.staff_id)?.name || 'Teaching Staff';
-      }
-      return oList.find((o) => o.id === row.staff_id)?.full_name || 'Support Staff';
-    },
-    [tList, oList]
-  );
-
-  // Financial aggregates
+  // Summary statistics
   const totals = useMemo(() => {
-    const totalGross = payslips.reduce((acc, p) => acc + (Number(p.gross) || 0), 0);
-    const totalNet = payslips.reduce((acc, p) => acc + (Number(p.net) || 0), 0);
-    const totalDeductions = totalGross - totalNet;
-    const staffCount = payslips.length;
+    let totalGross = 0;
+    let totalNet = 0;
+    for (const p of payslips) {
+      totalGross += Number(p.gross) || 0;
+      totalNet += Number(p.net) || 0;
+    }
     return {
       totalGross,
       totalNet,
-      totalDeductions,
-      staffCount,
+      totalDeductions: totalGross - totalNet,
+      staffCount: payslips.length,
     };
   }, [payslips]);
 
-  const createPeriod = async (e: React.FormEvent) => {
+  const handleCreatePeriod = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!schoolId || !newLabel || !newStart || !newEnd || !user?.id) return;
-    setErr(null);
-    setSavingPeriod(true);
-    const { error } = await supabase.from('hr_payroll_periods').insert({
-      school_id: schoolId,
-      label: newLabel.trim(),
-      period_start: newStart,
-      period_end: newEnd,
-      status: 'draft',
-    });
-    setSavingPeriod(false);
-    if (error) {
-      setErr(error.message);
-    } else {
-      setSuccessMsg(`Payroll run "${newLabel}" created successfully.`);
+    if (!schoolId || !newPeriodLabel || !newPeriodStart || !newPeriodEnd) return;
+    setCreatingPeriod(true);
+    const { data, error } = await supabase
+      .from('hr_payroll_periods')
+      .insert({
+        school_id: schoolId,
+        label: newPeriodLabel.trim(),
+        period_start: newPeriodStart,
+        period_end: newPeriodEnd,
+        status: 'draft',
+      })
+      .select('id')
+      .single();
+
+    setCreatingPeriod(false);
+    if (!error && data) {
       setShowNewPeriodModal(false);
-      setNewLabel(new Date().toLocaleString('default', { month: 'long', year: 'numeric' }));
-      setNewStart('');
-      setNewEnd('');
-      void queryClient.invalidateQueries({ queryKey: workforceQueryKeys.payroll(user.id) });
-      setTimeout(() => setSuccessMsg(null), 4000);
+      setNewPeriodLabel('');
+      setNewPeriodStart('');
+      setNewPeriodEnd('');
+      await queryClient.invalidateQueries({ queryKey: workforceQueryKeys.payroll(user?.id ?? '') });
+      setSelPeriod(data.id);
+    } else if (error) {
+      alert(error.message);
     }
   };
 
-  const addPayslip = async (e: React.FormEvent) => {
+  const handleCreatePayslip = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!schoolId || !activePeriodObj?.id || !pStaff) return;
-    const g = parseFloat(gross) || 0;
-    const n = parseFloat(net) || 0;
-    setErr(null);
-    setSavingPayslip(true);
+    if (!schoolId || !selPeriod || !newSlipStaffId || !newSlipGross || !newSlipNet) return;
+    setCreatingSlip(true);
     const { error } = await supabase.from('hr_payslips').insert({
       school_id: schoolId,
-      payroll_period_id: activePeriodObj.id,
-      staff_kind: pKind,
-      staff_id: pStaff,
-      gross: g,
-      net: n,
-      allowances: [] as const,
-      deductions: [] as const,
+      payroll_period_id: selPeriod,
+      staff_kind: newSlipKind,
+      staff_id: newSlipStaffId,
+      gross: Number(newSlipGross),
+      net: Number(newSlipNet),
       currency: 'UGX',
-      notes: pNotes.trim() || null,
+      status: 'approved',
     });
-    setSavingPayslip(false);
-    if (error) {
-      setErr(error.message);
-    } else {
-      setSuccessMsg('Staff payslip line saved successfully.');
+    setCreatingSlip(false);
+    if (!error) {
       setShowNewPayslipModal(false);
-      setPStaff('');
-      setGross('');
-      setNet('');
-      setPNotes('');
-      void queryClient.invalidateQueries({
-        queryKey: workforceQueryKeys.payrollPayslips(activePeriodObj.id),
-      });
-      setTimeout(() => setSuccessMsg(null), 4000);
+      setNewSlipStaffId('');
+      setNewSlipGross('');
+      setNewSlipNet('');
+      await queryClient.invalidateQueries({ queryKey: workforceQueryKeys.payrollPayslips(selPeriod) });
+    } else {
+      alert(error.message);
     }
   };
 
-  const updatePeriodStatus = async (newStatus: string) => {
-    if (!schoolId || !activePeriodObj?.id || !user?.id) return;
+  const updatePeriodStatus = async (status: string) => {
+    if (!selPeriod) return;
     const { error } = await supabase
       .from('hr_payroll_periods')
-      .update({ status: newStatus })
-      .eq('id', activePeriodObj.id);
-    if (error) {
-      setErr(error.message);
+      .update({ status })
+      .eq('id', selPeriod);
+    if (!error) {
+      await queryClient.invalidateQueries({ queryKey: workforceQueryKeys.payroll(user?.id ?? '') });
     } else {
-      setSuccessMsg(`Period status updated to ${newStatus}.`);
-      void queryClient.invalidateQueries({ queryKey: workforceQueryKeys.payroll(user.id) });
-      setTimeout(() => setSuccessMsg(null), 3000);
+      alert(error.message);
     }
   };
 
-  if (!user) return null;
-
-  if (payrollQ.isError) {
+  if (!canPay) {
     return (
-      <AdminPageWrapper title="Payroll & Disbursements" subtitle="Pay runs, employee earnings, and vouchers">
-        <div className="w-full rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-sm text-red-200">
-          <div className="flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
-            <span>{payrollQ.error instanceof Error ? payrollQ.error.message : 'Failed to load payroll data'}</span>
-          </div>
+      <div className="admin-terminal-page space-y-4 p-4">
+        <div className="gov-card p-6 border-l-4 border-l-rose-600 bg-rose-50 text-xs font-mono text-rose-800">
+          ACCESS RESTRICTED: Institutional payroll authorization privileges are required to inspect or disburse staff payroll registers.
         </div>
-      </AdminPageWrapper>
+      </div>
     );
   }
 
   if (loading) {
     return (
-      <AdminPageWrapper title="Payroll & Disbursements" subtitle="Loading pay runs…">
-        <div className="flex items-center justify-center py-20">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
-        </div>
-      </AdminPageWrapper>
-    );
-  }
-
-  if (!canPay) {
-    return (
-      <AdminPageWrapper title="Payroll & Disbursements" subtitle="Pay runs, employee earnings, and vouchers">
-        <div className="w-full rounded-2xl border border-amber-500/30 bg-amber-500/10 p-6 text-sm text-amber-200">
-          Workforce &amp; HR (or Payroll) permission required to view and disburse payroll.
-        </div>
-      </AdminPageWrapper>
+      <div className="admin-terminal-page space-y-4 p-4">
+        <GovPageLoader message="COMPILING INSTITUTIONAL PAYROLL PERIODS & DISBURSEMENT LEDGER..." minHeight="min-h-[40vh]" />
+      </div>
     );
   }
 
   return (
-    <AdminPageWrapper
-      title="Payroll & Disbursements"
-      subtitle="Manage pay periods, compute gross-to-net earnings in UGX, and issue disbursement vouchers."
-    >
-      <div className="w-full space-y-6">
-        {/* Toast / Notifications */}
-        {err && (
-          <div className="flex items-center justify-between rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
-              <span>{err}</span>
-            </div>
-            <button type="button" onClick={() => setErr(null)} className="text-red-400 hover:text-red-200">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-
-        {successMsg && (
-          <div className="flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-              <span>{successMsg}</span>
-            </div>
-            <button type="button" onClick={() => setSuccessMsg(null)} className="text-emerald-400 hover:text-emerald-200">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-
-        {/* 4-Card KPI Strip */}
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
-          <div
-            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
-            style={{
-              background: cardGrad(t, 'blue'),
-              border: `1px solid ${t.border}`,
-            }}
+    <div className="admin-terminal-page space-y-4 p-4">
+      {/* ── 1. OFFICIAL INSTITUTIONAL MASTHEAD ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#CCCCCC] pb-4">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-[#111111] uppercase font-mono">
+            INSTITUTIONAL STAFF PAYROLL &amp; DISBURSEMENTS DESK
+          </h1>
+          <p className="text-xs text-[#555555] font-mono tracking-wider uppercase mt-0.5">
+            OFFICIAL SALARY COMPUTATION, STATUTORY WITHHOLDINGS &amp; PAYSLIPS • REPUBLIC OF UGANDA
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/dashboard/admin/workforce"
+            className="gov-btn gov-btn-secondary gov-btn-sm flex items-center gap-1.5 font-mono"
           >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
-                Total Gross Pay
-              </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/15 text-blue-400">
-                <DollarSign className="h-4 w-4" />
-              </div>
-            </div>
-            <p className="mt-2 text-xl font-bold text-slate-100 truncate" style={{ fontFamily: SORA }}>
-              UGX {totals.totalGross.toLocaleString()}
-            </p>
-            <p className="mt-1 text-xs text-blue-400/90 font-medium">
-              Gross payroll obligation
-            </p>
-          </div>
-
-          <div
-            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
-            style={{
-              background: cardGrad(t, 'emerald'),
-              border: `1px solid ${t.border}`,
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>WORKFORCE HUB</span>
+          </Link>
+          <button
+            type="button"
+            onClick={() => {
+              void payrollQ.refetch();
+              if (selPeriod) void payslipsQ.refetch();
             }}
+            className="gov-btn gov-btn-secondary gov-btn-sm flex items-center gap-1.5"
           >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
-                Net Disbursement
-              </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
-                <CreditCard className="h-4 w-4" />
-              </div>
-            </div>
-            <p className="mt-2 text-xl font-bold text-slate-100 truncate" style={{ fontFamily: SORA }}>
-              UGX {totals.totalNet.toLocaleString()}
-            </p>
-            <p className="mt-1 text-xs text-emerald-400/90 font-medium">
-              Total payable to staff
-            </p>
-          </div>
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
 
-          <div
-            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
-            style={{
-              background: cardGrad(t, 'amber'),
-              border: `1px solid ${t.border}`,
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
-                Deductions
-              </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-400">
-                <TrendingDown className="h-4 w-4" />
-              </div>
-            </div>
-            <p className="mt-2 text-xl font-bold text-slate-100 truncate" style={{ fontFamily: SORA }}>
-              UGX {totals.totalDeductions.toLocaleString()}
-            </p>
-            <p className="mt-1 text-xs text-amber-400/90 font-medium">
-              Tax, NSSF &amp; withholdings
-            </p>
+      {/* ── 2. MONOCHROME KPI SUMMARY STRIP ── */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            TOTAL GROSS OBLIGATION
           </div>
-
-          <div
-            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
-            style={{
-              background: cardGrad(t, 'purple'),
-              border: `1px solid ${t.border}`,
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
-                Staff on Payroll
-              </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/15 text-purple-400">
-                <Users className="h-4 w-4" />
-              </div>
-            </div>
-            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
-              {totals.staffCount}
-            </p>
-            <p className="mt-1 text-xs text-purple-400/90 font-medium">
-              Payslips registered
-            </p>
+          <div className="text-xl font-bold font-mono text-[#111111] mt-1 truncate">
+            UGX {totals.totalGross.toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            GROSS PAYROLL BUDGET
           </div>
         </div>
 
-        {/* Pay Period Selector & Action Toolbar */}
-        <div
-          className="flex flex-wrap items-center justify-between gap-4 rounded-2xl p-4"
-          style={{
-            backgroundColor: t.surface,
-            border: `1px solid ${t.border}`,
-          }}
-        >
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-500/15 text-teal-400">
-              <Calendar className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-semibold text-slate-100" style={{ fontFamily: SORA }}>
-                  Pay Period: {activePeriodObj?.label || 'None Selected'}
-                </h2>
-                {activePeriodObj && (
-                  <span
-                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
-                      activePeriodObj.status === 'approved' || activePeriodObj.status === 'disbursed'
-                        ? 'bg-emerald-500/15 text-emerald-400'
-                        : 'bg-amber-500/15 text-amber-400'
-                    }`}
-                  >
-                    {activePeriodObj.status}
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-slate-400">
-                {activePeriodObj
-                  ? `${activePeriodObj.period_start} to ${activePeriodObj.period_end}`
-                  : 'Select or create a pay period'}
-              </p>
-            </div>
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            NET DISBURSEMENT
           </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            {periods.length > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 font-medium">Period:</span>
-                <select
-                  value={selPeriod}
-                  onChange={(e) => setSelPeriod(e.target.value)}
-                  className="rounded-xl border px-3 py-2 text-xs font-medium transition-colors"
-                  style={{
-                    backgroundColor: t.surfaceSubtle,
-                    borderColor: t.border,
-                    color: t.textPrimary,
-                  }}
-                >
-                  {periods.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.label} ({p.status})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {activePeriodObj && activePeriodObj.status === 'draft' && (
-              <button
-                type="button"
-                onClick={() => updatePeriodStatus('approved')}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-300 transition-all hover:bg-emerald-500/25"
-              >
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                Approve Run
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={() => setShowNewPeriodModal(true)}
-              className="inline-flex items-center gap-2 rounded-xl border border-teal-500/30 bg-teal-500/15 px-3.5 py-2 text-xs font-semibold text-teal-300 transition-all hover:bg-teal-500/25"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              New Pay Period
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setShowNewPayslipModal(true)}
-              disabled={!activePeriodObj}
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-3.5 py-2 text-xs font-semibold text-white shadow-lg shadow-emerald-900/20 transition-all hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50"
-            >
-              <CreditCard className="h-3.5 w-3.5" />
-              Add Payslip Line
-            </button>
+          <div className="text-xl font-bold font-mono text-emerald-700 mt-1 truncate">
+            UGX {totals.totalNet.toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            PAYABLE TO EMPLOYEE ACCOUNTS
           </div>
         </div>
 
-        {/* Payslips Register Table */}
-        <div
-          className="rounded-2xl overflow-hidden"
-          style={{
-            backgroundColor: t.surface,
-            border: `1px solid ${t.border}`,
-          }}
-        >
-          {/* Table Toolbar / Role Filter */}
-          <div
-            className="flex flex-wrap items-center justify-between gap-3 border-b p-4"
-            style={{ borderColor: t.border }}
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-slate-200" style={{ fontFamily: SORA }}>
-                Payslips Register
-              </span>
-              <span className="text-xs text-slate-400">({filteredPayslips.length} staff records)</span>
-            </div>
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            STATUTORY DEDUCTIONS
+          </div>
+          <div className="text-xl font-bold font-mono text-amber-700 mt-1 truncate">
+            UGX {totals.totalDeductions.toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            PAYE, NSSF &amp; WITHHOLDINGS
+          </div>
+        </div>
 
-            <div
-              className="inline-flex rounded-xl p-1"
-              style={{ backgroundColor: t.surfaceSubtle }}
-            >
-              {(['all', 'teacher', 'other_staff'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setKindFilter(tab)}
-                  className={`rounded-lg px-3 py-1 text-xs font-medium capitalize transition-all ${
-                    kindFilter === tab
-                      ? 'bg-teal-500/20 text-teal-300 font-semibold shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200'
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            STAFF ON RUN
+          </div>
+          <div className="text-2xl font-bold font-mono text-[#111111] mt-1">
+            {totals.staffCount}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            VOUCHERS REGISTERED
+          </div>
+        </div>
+      </div>
+
+      {/* ── 3. PAY PERIOD SELECTOR & CONTROL BAR ── */}
+      <div className="gov-control-bar flex flex-wrap items-center justify-between gap-3 p-3 bg-white border border-[#CCCCCC]">
+        <div className="flex items-center gap-3">
+          <Calendar className="w-4 h-4 text-[#777777]" />
+          <div>
+            <div className="flex items-center gap-2 font-mono">
+              <span className="text-xs uppercase text-[#555555]">ACTIVE PERIOD:</span>
+              <span className="text-xs font-bold text-[#111111] uppercase bg-[#F1F3F5] px-2 py-0.5 border border-[#CCCCCC]">
+                {activePeriodObj?.label || 'NONE SELECTED'}
+              </span>
+              {activePeriodObj && (
+                <span
+                  className={`text-[10px] font-bold px-1.5 py-0.2 border uppercase ${
+                    activePeriodObj.status === 'approved' || activePeriodObj.status === 'disbursed'
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                      : 'bg-amber-50 text-amber-900 border-amber-300'
                   }`}
                 >
-                  {tab === 'all' ? 'All Staff' : tab === 'teacher' ? 'Teaching' : 'Support'}
-                </button>
-              ))}
+                  {activePeriodObj.status}
+                </span>
+              )}
             </div>
+            <p className="text-[10px] font-mono text-[#777777] mt-0.5">
+              {activePeriodObj
+                ? `${activePeriodObj.period_start} TO ${activePeriodObj.period_end}`
+                : 'SELECT OR CONFIGURE A PAYROLL PERIOD'}
+            </p>
           </div>
-
-          {/* Table Contents */}
-          {payslipsQ.isPending ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-teal-500 border-t-transparent" />
-            </div>
-          ) : filteredPayslips.length === 0 ? (
-            <div className="p-8">
-              <PosEmptyState
-                icon={<CreditCard className="w-8 h-8 text-teal-400" />}
-                title="No Payslips Recorded"
-                description={
-                  activePeriodObj
-                    ? `No payslips generated for ${activePeriodObj.label}. Add staff pay lines to disburse salaries.`
-                    : 'Create or select a pay period above to manage payslips.'
-                }
-                accentColor="mint"
-              />
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-slate-200">
-                <thead
-                  className="border-b text-xs font-semibold uppercase tracking-wider text-slate-400"
-                  style={{
-                    backgroundColor: t.surfaceSubtle,
-                    borderColor: t.border,
-                  }}
-                >
-                  <tr>
-                    <th className="px-4 py-3">Staff Member</th>
-                    <th className="px-4 py-3">Category</th>
-                    <th className="px-4 py-3 text-right">Gross Pay</th>
-                    <th className="px-4 py-3 text-right">Deductions</th>
-                    <th className="px-4 py-3 text-right">Net Payable</th>
-                    <th className="px-4 py-3 text-center">Voucher</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y" style={{ borderColor: t.border }}>
-                  {filteredPayslips.map((p) => {
-                    const name = staffName(p);
-                    const isTeacher = p.staff_kind === 'teacher';
-                    const grossNum = Number(p.gross) || 0;
-                    const netNum = Number(p.net) || 0;
-                    const dedNum = grossNum - netNum;
-
-                    return (
-                      <tr
-                        key={p.id}
-                        className="transition-colors hover:bg-white/[0.02]"
-                      >
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-teal-500/10 text-xs font-bold text-teal-400">
-                              {name.charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                              <p className="font-medium text-slate-100">{name}</p>
-                              <p className="text-xs text-slate-400 font-mono">ID: {p.staff_id?.slice(0, 8)}</p>
-                            </div>
-                          </div>
-                        </td>
-
-                        <td className="px-4 py-3.5">
-                          <span
-                            className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-medium ${
-                              isTeacher
-                                ? 'bg-blue-500/15 text-blue-300'
-                                : 'bg-purple-500/15 text-purple-300'
-                            }`}
-                          >
-                            {isTeacher ? 'Teaching Staff' : 'Support Staff'}
-                          </span>
-                        </td>
-
-                        <td className="px-4 py-3.5 text-right font-medium text-slate-200">
-                          {grossNum.toLocaleString()} {p.currency}
-                        </td>
-
-                        <td className="px-4 py-3.5 text-right font-medium text-amber-400/90">
-                          {dedNum > 0 ? `-${dedNum.toLocaleString()} ${p.currency}` : '0 UGX'}
-                        </td>
-
-                        <td className="px-4 py-3.5 text-right font-bold text-emerald-400">
-                          {netNum.toLocaleString()} {p.currency}
-                        </td>
-
-                        <td className="px-4 py-3.5 text-center">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedVoucher(p)}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-slate-300 hover:bg-white/10 hover:text-white"
-                          >
-                            <Printer className="h-3.5 w-3.5 text-teal-400" />
-                            Voucher
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
         </div>
 
-        {/* Voucher Preview Modal */}
-        {selectedVoucher && (
-          <NativeModal
-            isOpen={!!selectedVoucher}
-            onClose={() => setSelectedVoucher(null)}
-            title="Staff Payment Voucher"
-            subtitle={activePeriodObj?.label}
-            icon={FileText}
-            size="md"
-          >
-            <div className="space-y-4 text-white">
-              <div className="space-y-2.5 text-sm rounded-2xl bg-black/30 border border-white/10 p-4">
-                <div className="flex justify-between border-b border-white/10 pb-2">
-                  <span className="text-white/60">Employee Name:</span>
-                  <span className="font-semibold text-white">{staffName(selectedVoucher)}</span>
-                </div>
-                <div className="flex justify-between border-b border-white/10 pb-2">
-                  <span className="text-white/60">Category:</span>
-                  <span className="capitalize text-white/90">{selectedVoucher.staff_kind.replace('_', ' ')}</span>
-                </div>
-                <div className="flex justify-between border-b border-white/10 pb-2">
-                  <span className="text-white/60">Gross Earnings:</span>
-                  <span className="font-semibold text-white">
-                    UGX {Number(selectedVoucher.gross).toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between border-b border-white/10 pb-2">
-                  <span className="text-white/60">Total Deductions:</span>
-                  <span className="text-amber-400 font-medium">
-                    UGX {(Number(selectedVoucher.gross) - Number(selectedVoucher.net)).toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between rounded-xl bg-emerald-500/15 border border-emerald-500/30 p-3 mt-1">
-                  <span className="font-semibold text-emerald-300">Net Disbursable:</span>
-                  <span className="text-base font-bold text-emerald-400" style={{ fontFamily: SORA }}>
-                    UGX {Number(selectedVoucher.net).toLocaleString()}
-                  </span>
-                </div>
-              </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {periods.length > 0 && (
+            <select
+              value={selPeriod}
+              onChange={(e) => setSelPeriod(e.target.value)}
+              className="gov-input text-xs font-mono"
+            >
+              {periods.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.label} ({p.status.toUpperCase()})
+                </option>
+              ))}
+            </select>
+          )}
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-white/10">
-                <button
-                  type="button"
-                  onClick={() => setSelectedVoucher(null)}
-                  className="rounded-xl px-4 py-2.5 text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition"
-                >
-                  Close
-                </button>
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-teal-500 hover:bg-teal-400 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-teal-500/25 transition"
-                >
-                  <Printer className="h-3.5 w-3.5" />
-                  Print Voucher
-                </button>
+          {activePeriodObj && activePeriodObj.status === 'draft' && (
+            <button
+              type="button"
+              onClick={() => updatePeriodStatus('approved')}
+              className="gov-btn gov-btn-secondary gov-btn-sm font-mono flex items-center gap-1.5"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
+              <span>APPROVE RUN</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setShowNewPeriodModal(true)}
+            className="gov-btn gov-btn-secondary gov-btn-sm font-mono flex items-center gap-1.5"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>NEW PERIOD</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowNewPayslipModal(true)}
+            disabled={!activePeriodObj}
+            className="gov-btn gov-btn-primary gov-btn-sm font-mono flex items-center gap-1.5"
+          >
+            <CreditCard className="w-3.5 h-3.5" />
+            <span>ADD PAYSLIP LINE</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ── 4. PAYSLIPS REGISTER TABLE ── */}
+      <div className="gov-card p-4 bg-white border border-[#CCCCCC] space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#CCCCCC] pb-3">
+          <div>
+            <h3 className="text-xs font-mono font-bold uppercase text-[#111111]">
+              INSTITUTIONAL PAYROLL REGISTER
+            </h3>
+            <p className="text-[11px] font-mono text-[#555555] mt-0.5">
+              Verified payslip lines for {activePeriodObj?.label || 'selected period'}.
+            </p>
+          </div>
+
+          <div className="flex items-center border border-[#CCCCCC]">
+            {(['all', 'teacher', 'other_staff'] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setKindFilter(tab)}
+                className={`px-3 py-1 text-xs font-mono font-bold uppercase transition-colors ${
+                  kindFilter === tab
+                    ? 'bg-[#111111] text-white'
+                    : 'bg-white text-[#555555] hover:bg-[#F9F9FB]'
+                }`}
+              >
+                {tab === 'all' ? 'ALL STAFF' : tab === 'teacher' ? 'ACADEMIC' : 'SUPPORT'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="gov-table-container border border-[#CCCCCC] bg-white">
+          {payslipsQ.isPending ? (
+            <div className="p-12 text-center">
+              <GovRollingBox size="sm" />
+            </div>
+          ) : filteredPayslips.length === 0 ? (
+            <div className="p-8 text-center text-xs font-mono text-[#777777]">
+              {activePeriodObj
+                ? `NO PAYSLIP LINES RECORDED FOR ${activePeriodObj.label.toUpperCase()}.`
+                : 'CREATE OR SELECT A PAY PERIOD ABOVE.'}
+            </div>
+          ) : (
+            <table className="gov-table w-full text-left border-collapse font-mono">
+              <thead>
+                <tr className="bg-[#EAEAEA] border-b border-[#CCCCCC]">
+                  <th className="py-2.5 px-3 text-[11px] uppercase font-bold text-[#111111]">STAFF MEMBER</th>
+                  <th className="py-2.5 px-3 text-[11px] uppercase font-bold text-[#111111]">CATEGORY</th>
+                  <th className="py-2.5 px-3 text-[11px] uppercase font-bold text-[#111111] text-right">GROSS PAY</th>
+                  <th className="py-2.5 px-3 text-[11px] uppercase font-bold text-[#111111] text-right">DEDUCTIONS</th>
+                  <th className="py-2.5 px-3 text-[11px] uppercase font-bold text-[#111111] text-right">NET PAYABLE</th>
+                  <th className="py-2.5 px-3 text-[11px] uppercase font-bold text-[#111111] text-center">OFFICIAL VOUCHER</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredPayslips.map((p) => {
+                  const name = staffName(p);
+                  const isTeacher = p.staff_kind === 'teacher';
+                  const grossNum = Number(p.gross) || 0;
+                  const netNum = Number(p.net) || 0;
+                  const dedNum = grossNum - netNum;
+
+                  return (
+                    <tr
+                      key={p.id}
+                      className="border-b border-[#E5E7EB] hover:bg-[#F9F9FB] transition-colors"
+                    >
+                      <td className="py-2.5 px-3 text-xs font-bold text-[#111111]">
+                        <div>{name}</div>
+                        <div className="text-[10px] text-[#777777]">ID: {p.staff_id?.slice(0, 8)}</div>
+                      </td>
+
+                      <td className="py-2.5 px-3 text-xs">
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 border uppercase ${
+                          isTeacher
+                            ? 'bg-[#F1F3F5] text-[#111111] border-[#CCCCCC]'
+                            : 'bg-white text-[#555555] border-[#CCCCCC]'
+                        }`}>
+                          {isTeacher ? 'Academic Faculty' : 'Support Staff'}
+                        </span>
+                      </td>
+
+                      <td className="py-2.5 px-3 text-xs text-right font-medium text-[#111111]">
+                        {grossNum.toLocaleString()} {p.currency}
+                      </td>
+
+                      <td className="py-2.5 px-3 text-xs text-right font-medium text-amber-700">
+                        {dedNum > 0 ? `-${dedNum.toLocaleString()} ${p.currency}` : '0 UGX'}
+                      </td>
+
+                      <td className="py-2.5 px-3 text-xs text-right font-bold text-emerald-700">
+                        {netNum.toLocaleString()} {p.currency}
+                      </td>
+
+                      <td className="py-2.5 px-3 text-center">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedVoucher(p)}
+                          className="gov-btn gov-btn-secondary gov-btn-xs font-mono inline-flex items-center gap-1"
+                        >
+                          <Printer className="w-3 h-3 text-[#111111]" />
+                          <span>VOUCHER</span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+
+      {/* ── 5. MODALS ── */}
+      {/* Voucher Preview Modal */}
+      {selectedVoucher && (
+        <NativeModal
+          isOpen={!!selectedVoucher}
+          onClose={() => setSelectedVoucher(null)}
+          title="OFFICIAL SALARY PAYMENT VOUCHER"
+          subtitle={activePeriodObj?.label}
+          size="md"
+        >
+          <div className="space-y-4 font-mono text-xs text-[#111111]">
+            <div className="gov-card p-3 bg-[#F9F9FB] border border-[#CCCCCC] space-y-2">
+              <div className="flex justify-between border-b border-[#CCCCCC] pb-1.5">
+                <span className="text-[#555555]">EMPLOYEE:</span>
+                <span className="font-bold">{staffName(selectedVoucher)}</span>
+              </div>
+              <div className="flex justify-between border-b border-[#CCCCCC] pb-1.5">
+                <span className="text-[#555555]">CATEGORY:</span>
+                <span className="capitalize">{selectedVoucher.staff_kind.replace('_', ' ')}</span>
+              </div>
+              <div className="flex justify-between border-b border-[#CCCCCC] pb-1.5">
+                <span className="text-[#555555]">GROSS SALARY:</span>
+                <span className="font-bold">
+                  UGX {Number(selectedVoucher.gross).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between border-b border-[#CCCCCC] pb-1.5">
+                <span className="text-[#555555]">DEDUCTIONS (NSSF/PAYE):</span>
+                <span className="text-amber-700 font-bold">
+                  UGX {(Number(selectedVoucher.gross) - Number(selectedVoucher.net)).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between p-2 bg-emerald-50 border border-emerald-300 font-bold text-emerald-900 mt-2">
+                <span>NET DISBURSABLE:</span>
+                <span className="text-sm">
+                  UGX {Number(selectedVoucher.net).toLocaleString()}
+                </span>
               </div>
             </div>
-          </NativeModal>
-        )}
 
-        {/* Modal: New Pay Period */}
+            <div className="flex justify-end gap-2 pt-2 border-t border-[#CCCCCC]">
+              <button
+                type="button"
+                onClick={() => setSelectedVoucher(null)}
+                className="gov-btn gov-btn-secondary gov-btn-sm"
+              >
+                CLOSE
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="gov-btn gov-btn-primary gov-btn-sm flex items-center gap-1.5"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>PRINT VOUCHER</span>
+              </button>
+            </div>
+          </div>
+        </NativeModal>
+      )}
+
+      {/* New Period Modal */}
+      {showNewPeriodModal && (
         <NativeModal
           isOpen={showNewPeriodModal}
           onClose={() => setShowNewPeriodModal(false)}
-          title="New Payroll Period"
-          subtitle="Define new payroll cycle dates and label"
-          icon={Calendar}
+          title="CONFIGURE NEW PAYROLL CYCLE"
           size="md"
         >
-          <form onSubmit={createPeriod} className="space-y-4 text-white">
+          <form onSubmit={handleCreatePeriod} className="space-y-3 font-mono text-xs">
             <div>
-              <label className="block text-xs font-semibold text-white/70 mb-1">Period Label *</label>
+              <label className="mb-1 block font-bold uppercase text-[#555555]">PERIOD TITLE / LABEL</label>
               <input
-                type="text"
+                className="gov-input w-full text-xs"
+                placeholder="e.g. October 2026 Payroll Run"
+                value={newPeriodLabel}
+                onChange={(e) => setNewPeriodLabel(e.target.value)}
                 required
-                value={newLabel}
-                onChange={(e) => setNewLabel(e.target.value)}
-                placeholder="e.g. October 2026"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-teal-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
               />
             </div>
-
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-white/70 mb-1">Period Start *</label>
+                <label className="mb-1 block font-bold uppercase text-[#555555]">START DATE</label>
                 <input
                   type="date"
+                  className="gov-input w-full text-xs"
+                  value={newPeriodStart}
+                  onChange={(e) => setNewPeriodStart(e.target.value)}
                   required
-                  value={newStart}
-                  onChange={(e) => setNewStart(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-teal-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-white/70 mb-1">Period End *</label>
+                <label className="mb-1 block font-bold uppercase text-[#555555]">END DATE</label>
                 <input
                   type="date"
+                  className="gov-input w-full text-xs"
+                  value={newPeriodEnd}
+                  onChange={(e) => setNewPeriodEnd(e.target.value)}
                   required
-                  value={newEnd}
-                  onChange={(e) => setNewEnd(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-teal-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
                 />
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-3 border-t border-white/10">
+            <div className="flex justify-end gap-2 pt-3 border-t border-[#CCCCCC]">
               <button
                 type="button"
                 onClick={() => setShowNewPeriodModal(false)}
-                className="rounded-xl px-4 py-2.5 text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition"
+                className="gov-btn gov-btn-secondary gov-btn-sm"
               >
-                Cancel
+                CANCEL
               </button>
               <button
                 type="submit"
-                disabled={savingPeriod}
-                className="rounded-xl bg-teal-500 hover:bg-teal-400 px-5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-teal-500/25 transition disabled:opacity-50"
+                disabled={creatingPeriod}
+                className="gov-btn gov-btn-primary gov-btn-sm flex items-center gap-1.5"
               >
-                {savingPeriod ? 'Creating…' : 'Create Period'}
+                {creatingPeriod ? <GovRollingBox size="xs" /> : <Plus className="w-3.5 h-3.5" />}
+                <span>ESTABLISH PERIOD</span>
               </button>
             </div>
           </form>
         </NativeModal>
+      )}
 
-        {/* Modal: Add Payslip Line */}
+      {/* New Payslip Modal */}
+      {showNewPayslipModal && (
         <NativeModal
           isOpen={showNewPayslipModal}
           onClose={() => setShowNewPayslipModal(false)}
-          title="Add Payslip Record"
-          subtitle="Issue pay record for teaching or support staff"
-          icon={CreditCard}
+          title="RECORD STAFF PAYSLIP LINE"
           size="md"
         >
-          <form onSubmit={addPayslip} className="space-y-4 text-white">
-            <div>
-              <label className="block text-xs font-semibold text-white/70 mb-1.5">Staff Category</label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPKind('teacher');
-                    setPStaff('');
+          <form onSubmit={handleCreatePayslip} className="space-y-3 font-mono text-xs">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block font-bold uppercase text-[#555555]">STAFF CATEGORY</label>
+                <select
+                  value={newSlipKind}
+                  onChange={(e) => {
+                    setNewSlipKind(e.target.value as 'teacher' | 'other_staff');
+                    setNewSlipStaffId('');
                   }}
-                  className={`rounded-xl border py-2.5 text-xs font-semibold transition ${
-                    pKind === 'teacher'
-                      ? 'border-emerald-400 bg-emerald-500/20 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
-                      : 'border-white/15 bg-white/5 hover:bg-white/10 text-white/70'
-                  }`}
+                  className="gov-input w-full text-xs"
                 >
-                  Teaching Staff
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPKind('other_staff');
-                    setPStaff('');
-                  }}
-                  className={`rounded-xl border py-2.5 text-xs font-semibold transition ${
-                    pKind === 'other_staff'
-                      ? 'border-purple-400 bg-purple-500/20 text-purple-300 shadow-[0_0_15px_rgba(168,85,247,0.2)]'
-                      : 'border-white/15 bg-white/5 hover:bg-white/10 text-white/70'
-                  }`}
-                >
-                  Support Staff
-                </button>
+                  <option value="teacher">Academic Faculty</option>
+                  <option value="other_staff">Support Staff</option>
+                </select>
               </div>
-            </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-white/70 mb-1">Staff Member *</label>
-              <select
-                required
-                value={pStaff}
-                onChange={(e) => setPStaff(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-slate-900/90 dark:bg-black/90 hover:border-white/35 focus:border-white/70 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-teal-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
-              >
-                <option value="" className="bg-slate-900 text-white">Choose a staff member…</option>
-                {pKind === 'teacher'
-                  ? tList.map((t) => (
-                      <option key={t.teacher_id} value={t.teacher_id} className="bg-slate-900 text-white">
-                        {t.name}
-                      </option>
-                    ))
-                  : oList.map((o) => (
-                      <option key={o.id} value={o.id} className="bg-slate-900 text-white">
-                        {o.full_name}
-                      </option>
-                    ))}
-              </select>
+              <div>
+                <label className="mb-1 block font-bold uppercase text-[#555555]">EMPLOYEE</label>
+                <select
+                  value={newSlipStaffId}
+                  onChange={(e) => setNewSlipStaffId(e.target.value)}
+                  className="gov-input w-full text-xs"
+                  required
+                >
+                  <option value="">-- SELECT EMPLOYEE --</option>
+                  {newSlipKind === 'teacher'
+                    ? tList.map((t) => (
+                        <option key={t.teacher_id} value={t.teacher_id}>
+                          {t.name || 'Unnamed Teacher'}
+                        </option>
+                      ))
+                    : oList.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.full_name || 'Unnamed Staff'}
+                        </option>
+                      ))}
+                </select>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-white/70 mb-1">Gross Pay (UGX) *</label>
+                <label className="mb-1 block font-bold uppercase text-[#555555]">GROSS SALARY (UGX)</label>
                 <input
                   type="number"
-                  required
-                  min="0"
+                  className="gov-input w-full text-xs"
                   placeholder="e.g. 1500000"
-                  value={gross}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setGross(val);
-                    if (!net) setNet(val);
-                  }}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-teal-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+                  value={newSlipGross}
+                  onChange={(e) => setNewSlipGross(e.target.value)}
+                  required
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-white/70 mb-1">Net Pay (UGX) *</label>
+                <label className="mb-1 block font-bold uppercase text-[#555555]">NET PAYABLE (UGX)</label>
                 <input
                   type="number"
-                  required
-                  min="0"
+                  className="gov-input w-full text-xs"
                   placeholder="e.g. 1350000"
-                  value={net}
-                  onChange={(e) => setNet(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-teal-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
+                  value={newSlipNet}
+                  onChange={(e) => setNewSlipNet(e.target.value)}
+                  required
                 />
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-white/70 mb-1">Remarks / Breakdown Notes</label>
-              <input
-                type="text"
-                value={pNotes}
-                onChange={(e) => setPNotes(e.target.value)}
-                placeholder="e.g. Base salary + transport allowance"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-teal-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
-              />
-            </div>
-
-            <div className="flex justify-end gap-2 pt-3 border-t border-white/10">
+            <div className="flex justify-end gap-2 pt-3 border-t border-[#CCCCCC]">
               <button
                 type="button"
                 onClick={() => setShowNewPayslipModal(false)}
-                className="rounded-xl px-4 py-2.5 text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition"
+                className="gov-btn gov-btn-secondary gov-btn-sm"
               >
-                Cancel
+                CANCEL
               </button>
               <button
                 type="submit"
-                disabled={savingPayslip}
-                className="rounded-xl bg-emerald-500 hover:bg-emerald-400 px-5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-emerald-500/25 transition disabled:opacity-50"
+                disabled={creatingSlip}
+                className="gov-btn gov-btn-primary gov-btn-sm flex items-center gap-1.5"
               >
-                {savingPayslip ? 'Saving…' : 'Record Payslip'}
+                {creatingSlip ? <GovRollingBox size="xs" /> : <Plus className="w-3.5 h-3.5" />}
+                <span>REGISTER PAYSLIP</span>
               </button>
             </div>
           </form>
         </NativeModal>
-      </div>
-    </AdminPageWrapper>
+      )}
+    </div>
   );
 }

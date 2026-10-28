@@ -32,6 +32,7 @@ import {
 import { fetchSchoolDepartments } from '@/features/departments/services/departmentService';
 import NativeModal from '@/components/NativeModal';
 import LiquidGlassSelect from '@/components/ui/LiquidGlassSelect';
+import { GovRollingBox } from '@/components/ui/GovLoadingIndicator';
 import type {
   BudgetRequisition,
   BudgetRequisitionItem,
@@ -578,7 +579,11 @@ export default function BudgetRequisitionsPage() {
 
       {/* Requisitions List */}
       <div className="space-y-4">
-        {filteredRequisitions.length === 0 ? (
+        {isLoading ? (
+          <div className="py-20 flex items-center justify-center">
+            <GovRollingBox size="lg" />
+          </div>
+        ) : filteredRequisitions.length === 0 ? (
           <div className="p-12 text-center rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40">
             <FileText className="w-10 h-10 mx-auto text-slate-400 mb-3" />
             <h3 className="text-base font-semibold text-slate-700 dark:text-slate-300">

@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
+import { GovRollingBox } from '@/components/ui/GovLoadingIndicator';
 import { supabase } from '@/lib/supabase';
 import SectionHeader from './SectionHeader';
-import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
 import { useAcademicVocabulary } from '@/hooks/useAcademicVocabulary';
 import TertiaryCohortPicker from '@/components/tertiary/TertiaryCohortPicker';
 import {
@@ -224,232 +224,261 @@ export default function SettingsTeacherSubjectClass({
   };
 
   return (
-    <div>
+    <div className="space-y-6">
       <SectionHeader
         embedded={embedded}
-        title={v.teacherAssignmentTitle}
-        desc={v.teacherAssignmentDesc}
+        title={isTertiary ? 'FACULTY COURSE ALLOCATION MATRIX' : 'TEACHER SUBJECT & CLASS ALLOCATION'}
+        badge="FACULTY DEPLOYMENT"
       />
-      <div className={`${settingsInsetSurface} mb-4 p-4 sm:p-5`}>
-      <div className={`grid grid-cols-1 gap-3 ${isTertiary ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
-        <select
-          value={selectedTeacher}
-          onChange={(e) => setSelectedTeacher(e.target.value)}
-          className="ac-input min-h-[44px] w-full bg-white text-slate-900 dark:bg-[#070B09] dark:text-white dark:border-white/15"
-          style={{ colorScheme: 'inherit' }}
-        >
-          <option value="" className="bg-white text-slate-900 dark:bg-[#070B09] dark:text-white">{v.selectTeacher}</option>
-          {teachers.map((t) => (
-            <option key={t.teacher_id} value={t.teacher_id} className="bg-white text-slate-900 dark:bg-[#070B09] dark:text-white">
-              {t.name}
-            </option>
-          ))}
-        </select>
-        {isTertiary ? (
-          <div className="md:col-span-2">
-            <TertiaryCohortPicker
-              selectedCohort={selectedClass}
-              onChange={(cohortKey) => {
-                setSelectedClass(cohortKey);
-                setSelectedStream('');
-                setSelectedSubjects([]);
-              }}
-              layout="grid"
-              programmeLabel="Select Programme"
-              semesterLabel="Select Year & Semester"
-            />
+
+      {/* Assignment Setup Card */}
+      <div className="gov-card p-5 space-y-4">
+        <div className="border-b border-[#E2E8F0] pb-2 mb-2 flex items-center justify-between">
+          <span className="text-xs font-mono uppercase font-bold text-[#111111] tracking-wider">
+            ALLOCATE TUTOR TO COHORT & COURSE UNITS
+          </span>
+        </div>
+
+        <div className={`grid grid-cols-1 gap-4 ${isTertiary ? 'md:grid-cols-5' : 'md:grid-cols-4'} items-end`}>
+          <div>
+            <label className="mb-1 block text-xs font-mono uppercase font-bold text-[#555555]">
+              {v.selectTeacher}
+            </label>
+            <select
+              value={selectedTeacher}
+              onChange={(e) => setSelectedTeacher(e.target.value)}
+              className="gov-select w-full"
+            >
+              <option value="">{v.selectTeacher}...</option>
+              {teachers.map((t) => (
+                <option key={t.teacher_id} value={t.teacher_id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
           </div>
-        ) : (
-          <select
-            value={selectedClass}
-            onChange={(e) => {
-              setSelectedClass(e.target.value);
-              setSelectedStream('');
-              setSelectedSubjects([]);
-            }}
-            className="ac-input min-h-[44px] w-full"
-          >
-            <option value="">{v.selectClass}</option>
-            {classOptions.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        )}
-        {selectedClass && streamsByClass[selectedClass] && streamsByClass[selectedClass].length >= 2 && (
-          <select
-            value={selectedStream}
-            onChange={(e) => setSelectedStream(e.target.value)}
-            className="ac-input min-h-[44px] w-full"
-          >
-            <option value="">{isTertiary ? 'All sets (no restriction)' : 'All streams (no restriction)'}</option>
-            {streamsByClass[selectedClass].map((sn) => (
-              <option key={sn} value={sn}>{sn}</option>
-            ))}
-          </select>
-        )}
-        <div className="min-h-[44px] rounded-lg border border-[var(--pw-border)] bg-[var(--pw-s2)] px-3 py-2 ac-text-primary">
-          {selectedClass ? (
-            <div className="flex flex-wrap gap-2">
-              {classSubjects.length === 0 ? (
-                <span className="text-sm ac-text-muted">{isTertiary ? 'No course units in this programme yet' : 'No subjects in this class yet'}</span>
-              ) : (
-                classSubjects.map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    className={`rounded-lg border px-3 py-1.5 text-sm min-h-[36px] ${
-                      selectedSubjects.includes(s)
-                        ? 'border-blue-400 bg-blue-600/80 text-white'
-                        : 'border-[var(--pw-border)] bg-[var(--pw-s3)] ac-text-secondary hover:brightness-110'
-                    }`}
-                    onClick={() =>
-                      setSelectedSubjects((prev) =>
-                        prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
-                      )
-                    }
-                  >
-                    {s}
-                  </button>
-                ))
-              )}
+
+          {isTertiary ? (
+            <div className="md:col-span-2">
+              <TertiaryCohortPicker
+                selectedCohort={selectedClass}
+                onChange={(cohortKey) => {
+                  setSelectedClass(cohortKey);
+                  setSelectedStream('');
+                  setSelectedSubjects([]);
+                }}
+                layout="grid"
+                showLabels
+                programmeLabel="PROGRAMME"
+                semesterLabel="YEAR & SEMESTER"
+              />
             </div>
           ) : (
-            <span className="text-sm ac-text-muted">{isTertiary ? 'Select a programme/stage to view course units' : 'Select a class to view subjects'}</span>
-          )}
-        </div>
-        <button
-          type="button"
-          disabled={
-            !selectedTeacher || !selectedClass || selectedSubjects.length === 0 || saving
-          }
-          onClick={assign}
-          className={settingsPrimaryActionClass}
-        >
-          {saving ? 'Assigning...' : 'Assign'}
-        </button>
-      </div>
-      </div>
-
-      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-sm font-medium ac-text-secondary">Current assignments</div>
-        <div className="relative min-w-0 flex-1 sm:max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ac-text-muted" aria-hidden />
-          <input
-            type="search"
-            value={assignmentsQuery}
-            onChange={(e) => setAssignmentsQuery(e.target.value)}
-            placeholder={isTertiary ? 'Search tutor, programme, course unit…' : 'Search teacher, class, subject…'}
-            className="ac-glass-card ac-input min-h-0 w-full rounded-xl border py-2 pl-9 pr-3 text-sm placeholder:ac-text-muted"
-            disabled={loading || assignments.length === 0}
-          />
-        </div>
-      </div>
-
-      <div className="ac-glass-card overflow-hidden rounded-xl border border-[var(--ac-border)]">
-        {loading ? (
-          <div className="mx-auto grid max-w-6xl grid-cols-1 gap-4 p-3 sm:p-5 md:grid-cols-2">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={`sk-${i}`}
-                className="flex min-h-[180px] flex-col rounded-2xl border border-[var(--ac-border)] p-4"
+            <div>
+              <label className="mb-1 block text-xs font-mono uppercase font-bold text-[#555555]">
+                {v.selectClass}
+              </label>
+              <select
+                value={selectedClass}
+                onChange={(e) => {
+                  setSelectedClass(e.target.value);
+                  setSelectedStream('');
+                  setSelectedSubjects([]);
+                }}
+                className="gov-select w-full"
               >
-                <div className="mb-3 h-4 w-32 rounded ac-skeleton-block animate-pulse" />
-                <div className="mb-2 h-3 w-24 rounded ac-skeleton-block animate-pulse" />
-                <div className="mt-4 space-y-3">
-                  <div className="h-16 w-full rounded-lg ac-skeleton-block animate-pulse" />
-                  <div className="h-16 w-full rounded-lg ac-skeleton-block animate-pulse" />
+                <option value="">{v.selectClass}...</option>
+                {classOptions.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {selectedClass && streamsByClass[selectedClass] && streamsByClass[selectedClass].length >= 2 && (
+            <div>
+              <label className="mb-1 block text-xs font-mono uppercase font-bold text-[#555555]">
+                STREAM / SET
+              </label>
+              <select
+                value={selectedStream}
+                onChange={(e) => setSelectedStream(e.target.value)}
+                className="gov-select w-full"
+              >
+                <option value="">{isTertiary ? 'All sets' : 'All streams'}</option>
+                {streamsByClass[selectedClass].map((sn) => (
+                  <option key={sn} value={sn}>{sn}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div>
+            <button
+              type="button"
+              disabled={
+                !selectedTeacher || !selectedClass || selectedSubjects.length === 0 || saving
+              }
+              onClick={assign}
+              className="gov-btn gov-btn-sm gov-btn-primary w-full h-[38px]"
+            >
+              {saving ? 'ASSIGNING...' : 'CONFIRM ALLOCATION'}
+            </button>
+          </div>
+        </div>
+
+        {/* Course Unit Chips */}
+        <div>
+          <label className="mb-1.5 block text-xs font-mono uppercase font-bold text-[#555555]">
+            SELECT COURSE UNITS / PAPERS
+          </label>
+          <div className="min-h-[48px] rounded border border-[#CCCCCC] bg-[#FDFDFD] p-3">
+            {selectedClass ? (
+              <div className="flex flex-wrap gap-2">
+                {classSubjects.length === 0 ? (
+                  <span className="text-xs font-mono text-[#888888]">
+                    {isTertiary ? 'NO COURSE UNITS RECORDED FOR THIS COHORT' : 'NO SUBJECTS IN THIS CLASS YET'}
+                  </span>
+                ) : (
+                  classSubjects.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      className={`gov-btn gov-btn-sm font-mono text-xs ${
+                        selectedSubjects.includes(s)
+                          ? 'gov-btn-primary'
+                          : 'border-[#CCCCCC] bg-white text-[#222222]'
+                      }`}
+                      onClick={() =>
+                        setSelectedSubjects((prev) =>
+                          prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
+                        )
+                      }
+                    >
+                      {s}
+                    </button>
+                  ))
+                )}
+              </div>
+            ) : (
+              <span className="text-xs font-mono text-[#888888]">
+                {isTertiary ? 'SELECT A PROGRAMME AND SEMESTER TO VIEW REGISTERED COURSE UNITS' : 'SELECT A CLASS TO VIEW SUBJECTS'}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Control bar search */}
+      <div className="gov-control-bar">
+        <div className="gov-control-bar-left">
+          <div className="relative min-w-0 w-full sm:w-80">
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#888888]" aria-hidden />
+            <input
+              type="search"
+              value={assignmentsQuery}
+              onChange={(e) => setAssignmentsQuery(e.target.value)}
+              placeholder={isTertiary ? 'SEARCH FACULTY, COHORT, COURSE UNIT...' : 'SEARCH TEACHER, CLASS, SUBJECT...'}
+              className="gov-input w-full pl-9 text-xs uppercase"
+              disabled={loading || assignments.length === 0}
+            />
+          </div>
+        </div>
+        <div className="gov-control-bar-right">
+          <span className="text-xs font-mono text-[#555555]">
+            TOTAL ALLOCATIONS: <span className="font-bold text-[#111111]">{assignments.length}</span>
+          </span>
+        </div>
+      </div>
+
+      {/* Current assignments list */}
+      <div>
+        {loading ? (
+          <div className="py-12 flex items-center justify-center">
+            <GovRollingBox size="md" />
+          </div>
+        ) : assignments.length === 0 ? (
+          <div className="px-4 py-12 text-center text-xs font-mono text-[#888888] gov-card">NO ALLOCATIONS RECORDED YET.</div>
+        ) : groupedTeachers.length === 0 ? (
+          <div className="px-4 py-12 text-center text-xs font-mono text-[#888888] gov-card">NO MATCHES FOUND FOR QUERY.</div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {groupedTeachers.map((card) => (
+              <div
+                key={card.teacherId}
+                className="gov-card p-0 overflow-hidden flex flex-col justify-between"
+              >
+                <div className="border-b border-[#E2E8F0] bg-[#FDFDFD] px-4 py-3 flex items-start justify-between gap-3">
+                  <div>
+                    <span className="text-[10px] font-mono uppercase font-bold text-[#666666] tracking-wider block">FACULTY MEMBER</span>
+                    <h3 className="text-sm font-mono font-bold text-[#111111] uppercase mt-0.5">{card.teacherName}</h3>
+                  </div>
+                  {card.classTeacherOf.length > 0 && (
+                    <div className="flex flex-wrap gap-1 items-center">
+                      {card.classTeacherOf.map((c) => (
+                        <span
+                          key={c}
+                          className="gov-tag gov-tag-approved text-[10px] font-mono uppercase"
+                        >
+                          COHORT TUTOR: {c}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-4 space-y-4 flex-1">
+                  {card.byClass.map(({ className, rows }) => (
+                    <div key={`${card.teacherId}-${className}`} className="border-b border-[#EEEEEE] pb-3 last:border-b-0 last:pb-0">
+                      <div className="text-xs font-mono font-bold text-[#111111] uppercase tracking-wide mb-2 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 bg-[#111111] rounded-full inline-block" />
+                        <span>{className}</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {rows.map((a) => {
+                          const role = assignmentRoleLabel(a.assignment_role);
+                          return (
+                            <div
+                              key={a.id}
+                              className="flex items-center justify-between gap-3 border border-[#E2E8F0] bg-[#FAFAFA] p-2.5 rounded"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <div className="text-xs font-mono font-bold text-[#111111] uppercase truncate">{a.subject}</div>
+                                <div className="mt-1 flex items-center gap-2">
+                                  <span className="text-[10px] font-mono uppercase text-[#666666]">
+                                    [{role}]
+                                  </span>
+                                  {(a as { stream_name?: string | null }).stream_name && (
+                                    <span className="text-[10px] font-mono uppercase font-bold bg-[#EAEAEA] px-1.5 py-0.2 border border-[#CCCCCC] rounded">
+                                      {(a as { stream_name?: string | null }).stream_name}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                className="gov-btn gov-btn-sm text-red-600 border-[#CCCCCC] hover:bg-red-50"
+                                onClick={() => remove(a.id)}
+                              >
+                                REMOVE
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             ))}
           </div>
-        ) : assignments.length === 0 ? (
-          <div className="px-4 py-12 text-center text-sm ac-text-muted">No assignments yet.</div>
-        ) : groupedTeachers.length === 0 ? (
-          <div className="px-4 py-12 text-center text-sm ac-text-muted">No matches for your search.</div>
-        ) : (
-          <div className="mx-auto grid max-w-6xl grid-cols-1 gap-4 p-3 sm:gap-5 sm:p-5 md:grid-cols-2">
-            {groupedTeachers.map((card) => (
-              <article
-                key={card.teacherId}
-                className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--ac-border)] bg-white/[0.03] shadow-md shadow-black/5 transition-shadow hover:shadow-lg dark:bg-white/[0.04]"
-              >
-                <header className="border-b border-[var(--ac-border)] bg-[var(--pw-s2)]/50 px-4 py-4 dark:bg-white/[0.03]">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider ac-text-muted">Teacher</p>
-                  <h3 className="mt-1 text-lg font-bold leading-snug tracking-tight ac-text-primary">{card.teacherName}</h3>
-                  {card.classTeacherOf.length > 0 ? (
-                    <div className="mt-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider ac-text-muted">Class teacher</p>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {card.classTeacherOf.map((c) => (
-                          <span
-                            key={c}
-                            className="inline-flex rounded-full border border-sky-400/40 bg-sky-500/15 px-3 py-1 text-xs font-semibold text-sky-800 dark:text-sky-200"
-                          >
-                            {c}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
-                </header>
-                <div className="flex flex-1 flex-col gap-6 p-4">
-                  {card.byClass.map(({ className, rows }) => (
-                    <section key={`${card.teacherId}-${className}`}>
-                      <h4 className="mb-3 border-l-2 border-emerald-500/70 pl-3 text-sm font-bold uppercase tracking-wide ac-text-primary">
-                        {className}
-                      </h4>
-                      <ul className="space-y-2">
-                        {rows.map((a) => {
-                          const role = assignmentRoleLabel(a.assignment_role);
-                          return (
-                            <li
-                              key={a.id}
-                              className="rounded-xl border border-[var(--ac-border)] bg-white/[0.02] p-3 dark:bg-white/[0.02]"
-                            >
-                              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-[15px] font-semibold leading-snug ac-text-primary">{a.subject}</p>
-                                  <div className="mt-1 flex flex-wrap items-center gap-2">
-                                    <span
-                                      className={
-                                        a.assignment_role === 'co_teacher'
-                                          ? 'text-xs font-medium text-amber-700 dark:text-amber-300'
-                                          : 'text-xs font-medium text-emerald-700 dark:text-emerald-300'
-                                      }
-                                    >
-                                      {role}
-                                    </span>
-                                    {(a as { stream_name?: string | null }).stream_name && (
-                                      <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-bold uppercase text-purple-800 dark:bg-purple-900/40 dark:text-purple-300">
-                                        {(a as { stream_name?: string | null }).stream_name}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                                <button
-                                  type="button"
-                                  className="shrink-0 rounded-xl bg-rose-600/90 px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-500 active:bg-rose-700 sm:min-w-[7rem]"
-                                  onClick={() => remove(a.id)}
-                                >
-                                  Remove
-                                </button>
-                              </div>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </section>
-                  ))}
-                </div>
-              </article>
-            ))}
-          </div>
         )}
       </div>
+
       {error && (
-        <div className="mt-3 rounded-lg border border-red-400/40 bg-red-950/50 px-3 py-2 text-sm text-red-100">
+        <div className="rounded border border-red-300 bg-red-50 p-3 text-xs font-mono text-red-700">
           {error}
         </div>
       )}

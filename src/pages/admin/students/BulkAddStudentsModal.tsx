@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import NativeModal from '@/components/NativeModal';
-import LiquidGlassSelect from '@/components/ui/LiquidGlassSelect';
 import { addStudentSchoolQueryKey, fetchAddStudentSchoolContext } from './addStudentSchoolQuery';
 import { isTertiarySchool } from '@/hooks/useSchoolType';
 import { inferTertiaryAcademicStage } from '@/features/tertiary/services/tertiaryStageInference';
@@ -243,99 +242,117 @@ export default function BulkAddStudentsModal({ isOpen, onClose }: Props) {
   const activeClassLabel = isTertiary ? derivedTertiaryClass : selectedClass;
 
   return (
-    <NativeModal isOpen={isOpen} onClose={handleClose} title="Bulk Add Students" size="lg">
-      <div className="space-y-4 text-white">
+    <NativeModal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title={isTertiary ? 'Bulk Trainee Enrolment' : 'Bulk Student Enrolment'}
+      subtitle="Rapid single-line registration directly into academic cohorts"
+      icon={GraduationCap}
+      size="lg"
+      variant="government"
+    >
+      <div className="space-y-4 text-slate-900 font-sans">
         {/* Cohort / Class Selector */}
         {isTertiary ? (
-          <div className="space-y-3 p-4 bg-black/25 rounded-2xl border border-white/20 backdrop-blur-sm shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)]">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 relative z-30">
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               {/* Course / Award */}
               <div>
-                <label className="block text-[11px] font-bold text-white/90 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Course / Award
                 </label>
-                <LiquidGlassSelect
+                <select
                   value={tertiaryCourseCode}
-                  onChange={(val) => setTertiaryCourseCode(val as 'CN' | 'DN' | 'CM' | 'DM')}
-                  options={TERTIARY_AWARDS.map((c) => ({ value: c.code, label: c.name }))}
-                />
+                  onChange={(e) => setTertiaryCourseCode(e.target.value as 'CN' | 'DN' | 'CM' | 'DM')}
+                  className="w-full px-3 py-2 text-xs font-sans bg-white border border-slate-300 rounded-lg focus:border-slate-800 focus:outline-none transition-colors"
+                >
+                  {TERTIARY_AWARDS.map((c) => (
+                    <option key={c.code} value={c.code}>{c.name}</option>
+                  ))}
+                </select>
               </div>
 
               {/* Intake Year */}
               <div>
-                <label className="block text-[11px] font-bold text-white/90 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Intake Year
                 </label>
-                <LiquidGlassSelect
+                <select
                   value={String(tertiaryIntakeYear)}
-                  onChange={(val) => setTertiaryIntakeYear(Number(val))}
-                  options={INTAKE_YEARS.map((yr) => ({ value: String(yr), label: `${yr} Intake` }))}
-                />
+                  onChange={(e) => setTertiaryIntakeYear(Number(e.target.value))}
+                  className="w-full px-3 py-2 text-xs font-sans bg-white border border-slate-300 rounded-lg focus:border-slate-800 focus:outline-none transition-colors"
+                >
+                  {INTAKE_YEARS.map((yr) => (
+                    <option key={yr} value={String(yr)}>{yr} Intake</option>
+                  ))}
+                </select>
               </div>
 
               {/* Intake Session */}
               <div>
-                <label className="block text-[11px] font-bold text-white/90 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Intake Session
                 </label>
-                <LiquidGlassSelect
+                <select
                   value={tertiaryIntakeBatch}
-                  onChange={(val) => setTertiaryIntakeBatch(val)}
-                  options={[
-                    { value: "March Intake", label: `March Intake (Set ${yrSuffix})` },
-                    { value: "August Intake", label: `August Intake (Set ${yrSuffix})` },
-                  ]}
-                />
+                  onChange={(e) => setTertiaryIntakeBatch(e.target.value)}
+                  className="w-full px-3 py-2 text-xs font-sans bg-white border border-slate-300 rounded-lg focus:border-slate-800 focus:outline-none transition-colors"
+                >
+                  <option value="March Intake">March Intake (Set {yrSuffix})</option>
+                  <option value="August Intake">August Intake (Set {yrSuffix})</option>
+                </select>
               </div>
 
               {/* Academic Stage & Standing */}
               <div>
-                <label className="block text-[11px] font-bold text-white/90 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Academic Stage & Standing
                 </label>
-                <LiquidGlassSelect
+                <select
                   value={tertiaryStageCode}
-                  onChange={(val) => setTertiaryStageCode(val)}
-                  options={stageOptions.map((st) => ({ value: st.code, label: st.label }))}
-                />
+                  onChange={(e) => setTertiaryStageCode(e.target.value)}
+                  className="w-full px-3 py-2 text-xs font-sans bg-white border border-slate-300 rounded-lg focus:border-slate-800 focus:outline-none transition-colors"
+                >
+                  {stageOptions.map((st) => (
+                    <option key={st.code} value={st.code}>{st.label}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
-            {/* Smart Cohort Summary Card */}
-            <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-emerald-500/15 border border-emerald-400/30 text-xs text-white">
+            {/* Smooth Cohort Confirmation Banner */}
+            <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs">
               <div className="flex items-center gap-2">
-                <GraduationCap className="w-4 h-4 text-emerald-300 shrink-0" />
-                <span className="font-bold text-white">{derivedTertiaryClass}</span>
-                <span className="text-white/40">•</span>
-                <span className="text-white/80">{autoStream}</span>
+                <GraduationCap className="w-4 h-4 text-slate-700 shrink-0" />
+                <span className="font-semibold text-slate-900">{derivedTertiaryClass}</span>
+                <span className="text-slate-400">•</span>
+                <span className="text-slate-600">{autoStream}</span>
               </div>
-              <span
-                className={`px-2 py-0.5 rounded-full font-medium text-[11px] ${
-                  isGrad
-                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
-                    : 'bg-emerald-500/25 text-emerald-200 border border-emerald-400/40'
-                }`}
-              >
-                {isGrad ? 'Graduated / Alumni' : 'Active Student'}
+              <span className="px-2.5 py-0.5 text-[11px] font-semibold rounded-full bg-slate-200/80 text-slate-800">
+                {isGrad ? 'Alumni / Completed' : 'Active Student'}
               </span>
             </div>
           </div>
         ) : (
-          <div className="relative z-30">
-            <label className="block text-[11px] font-bold text-white/90 uppercase tracking-wider mb-1.5">
-              Class
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Class / Level
             </label>
-            <LiquidGlassSelect
+            <select
               value={selectedClass}
-              onChange={(val) => setSelectedClass(val)}
-              options={classOptions.map((c) => ({ value: c, label: c }))}
-            />
+              onChange={(e) => setSelectedClass(e.target.value)}
+              className="w-full px-3 py-2 text-xs font-sans bg-white border border-slate-300 rounded-lg focus:border-slate-800 focus:outline-none"
+            >
+              {classOptions.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
           </div>
         )}
 
-        {/* Name input + Add button */}
-        <div className="relative z-10">
-          <label className="block text-[11px] font-bold text-white/90 uppercase tracking-wider mb-1.5">
+        {/* Rapid Name Input Box */}
+        <div className="pt-1">
+          <label className="block text-xs font-semibold text-slate-700 mb-1.5">
             Student Name — press Enter or click Add
           </label>
           <div className="flex gap-2">
@@ -346,63 +363,88 @@ export default function BulkAddStudentsModal({ isOpen, onClose }: Props) {
               onChange={(e) => { setName(e.target.value); setInputError(null); }}
               onKeyDown={handleKey}
               placeholder="Type student full name..."
-              className="flex-1 px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 text-white placeholder-white/40 focus:border-emerald-400/80 focus:bg-black/35 backdrop-blur-sm text-xs transition-all shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] outline-none"
+              className="flex-1 px-3 py-2 text-xs font-sans bg-white border border-slate-300 rounded-lg placeholder-slate-400 focus:border-slate-800 focus:outline-none transition-colors"
             />
             <button
               type="button"
               onClick={handleAdd}
               disabled={!name.trim() || !schoolId}
-              className="px-5 py-2.5 rounded-xl text-xs font-bold text-emerald-950 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:brightness-110 border border-emerald-300/60 shadow-[0_4px_16px_rgba(16,185,129,0.35)] transition-all active:scale-[0.98] disabled:opacity-40"
+              className="px-4 py-2 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors disabled:opacity-40 shrink-0 shadow-sm"
             >
-              Add
+              <span>+ Add Student</span>
             </button>
           </div>
           {inputError && (
-            <p className="mt-1 text-xs text-rose-300 flex items-center gap-1">
+            <p className="mt-1 text-xs text-rose-600 flex items-center gap-1 font-sans">
               <AlertCircle className="w-3.5 h-3.5 shrink-0" />
               <span>{inputError}</span>
             </p>
           )}
         </div>
 
-        {/* Live list */}
+        {/* Batch Enrollment Ledger Table */}
         {entries.length > 0 && (
-          <div className="relative z-0">
-            <div className="flex items-center justify-between mb-1.5 text-xs text-white/70">
-              <span className="font-semibold uppercase tracking-wider text-[11px]">
-                {doneCount} saved{savingCount > 0 ? ` · ${savingCount} saving...` : ''}
+          <div className="space-y-1.5 pt-1">
+            <div className="flex items-center justify-between text-xs text-slate-600">
+              <span className="font-semibold text-[11px] uppercase tracking-wider">
+                {doneCount} Enrolled {savingCount > 0 ? ` · ${savingCount} saving…` : ''}
               </span>
-              <span>{activeClassLabel}</span>
+              <span className="font-medium text-slate-800">{activeClassLabel}</span>
             </div>
-            <div className="max-h-60 overflow-y-auto rounded-2xl border border-white/20 divide-y divide-white/10 bg-black/35 backdrop-blur-sm no-scrollbar">
-              {entries.map((e) => (
-                <div key={e.id} className="flex items-center justify-between px-3.5 py-2.5 gap-3">
-                  <span className="text-xs font-medium text-white truncate">{e.name}</span>
-                  {e.status === 'saving' && (
-                    <span className="text-xs text-white/50 shrink-0 animate-pulse">saving...</span>
-                  )}
-                  {e.status === 'done' && (
-                    <span className="text-xs text-emerald-300 font-mono shrink-0 flex items-center gap-1 font-bold">
-                      <Check className="w-3.5 h-3.5" />
-                      <span>{e.admission_number ?? 'Saved'}</span>
-                    </span>
-                  )}
-                  {e.status === 'error' && (
-                    <span className="text-xs text-rose-300 shrink-0 font-bold" title={e.errorMsg}>
-                      Failed
-                    </span>
-                  )}
-                </div>
-              ))}
+            <div className="max-h-56 overflow-y-auto border border-slate-200 rounded-xl bg-white">
+              <table className="w-full text-left text-xs border-collapse font-sans">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold text-[11px]">
+                    <th className="py-2.5 px-3 w-10 text-center border-r border-slate-200">#</th>
+                    <th className="py-2.5 px-3 border-r border-slate-200">Trainee Name</th>
+                    <th className="py-2.5 px-3 border-r border-slate-200">Assigned ID</th>
+                    <th className="py-2.5 px-3 text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {entries.map((e, idx) => (
+                    <tr key={e.id} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="py-2 px-3 text-center border-r border-slate-200 text-slate-400 font-mono text-[11px]">
+                        {entries.length - idx}
+                      </td>
+                      <td className="py-2 px-3 font-medium text-slate-900 border-r border-slate-200">
+                        {e.name}
+                      </td>
+                      <td className="py-2 px-3 text-slate-600 border-r border-slate-200 font-mono text-[11px]">
+                        {e.admission_number || (e.status === 'saving' ? 'Generating…' : '—')}
+                      </td>
+                      <td className="py-2 px-3 text-right">
+                        {e.status === 'saving' && (
+                          <span className="text-[11px] text-slate-400 animate-pulse font-medium">Saving…</span>
+                        )}
+                        {e.status === 'done' && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                            <Check className="w-3 h-3" /> Saved
+                          </span>
+                        )}
+                        {e.status === 'error' && (
+                          <span className="text-[11px] font-semibold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full" title={e.errorMsg}>
+                            Failed
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
 
-        <div className="flex justify-end pt-2 border-t border-white/15 relative z-0">
+        {/* Modal Footer */}
+        <div className="flex items-center justify-between pt-3 border-t border-slate-200">
+          <span className="text-xs text-slate-500 font-sans">
+            {doneCount > 0 ? `${doneCount} trainee(s) added to database` : 'Ready to record trainees'}
+          </span>
           <button
             type="button"
             onClick={handleClose}
-            className="px-5 py-2.5 rounded-xl text-xs font-bold text-white/90 hover:text-white bg-white/10 hover:bg-white/15 border border-white/20 backdrop-blur-md transition-all active:scale-[0.98]"
+            className="px-4 py-2 text-xs font-semibold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg transition-colors shadow-sm"
           >
             Done
           </button>

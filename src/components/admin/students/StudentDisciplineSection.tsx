@@ -1,12 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
-import { motion } from "framer-motion";
-import { ShieldAlert } from "lucide-react";
+import { ShieldAlert, AlertCircle, RotateCcw } from "lucide-react";
 import NativeModal from "@/components/NativeModal";
-import LiquidGlassSelect from "@/components/ui/LiquidGlassSelect";
 
 export type DisciplineDisplayStatus = "Active" | "Warned" | "Suspended" | "Deactivated" | "Deleted";
 
@@ -25,18 +22,20 @@ export function resolveDisciplineDisplayStatus(
   return "Active";
 }
 
-const STATUS_STYLES: Record<DisciplineDisplayStatus, string> = {
-  Active:
-    "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 dark:bg-emerald-500/20 dark:border-emerald-500/40",
-  Warned:
-    "bg-amber-500/15 text-amber-800 dark:text-amber-200 border-amber-500/30 dark:bg-amber-500/20 dark:border-amber-500/40",
-  Suspended:
-    "bg-orange-500/15 text-orange-800 dark:text-orange-200 border-orange-500/30 dark:bg-orange-500/20 dark:border-orange-500/40",
-  Deactivated:
-    "bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30 dark:bg-slate-500/20 dark:border-slate-500/50",
-  Deleted:
-    "bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30 dark:bg-red-500/20 dark:border-red-500/40",
-};
+function getGovTagClass(status: DisciplineDisplayStatus): string {
+  switch (status) {
+    case "Active":
+      return "gov-tag-approved";
+    case "Warned":
+      return "gov-tag-warned";
+    case "Suspended":
+    case "Deleted":
+      return "gov-tag-suspended";
+    case "Deactivated":
+    default:
+      return "";
+  }
+}
 
 type DisciplineRow = {
   record_id: string;
@@ -58,7 +57,6 @@ type Props = {
     suspension_period_start?: string | null;
     suspension_period_end?: string | null;
   };
-  /** When true, parent already counted a warning row (avoids flicker before records load). */
   initialHasWarning?: boolean;
   canManageDiscipline: boolean;
   isOwner: boolean;
@@ -71,10 +69,8 @@ export function StudentDisciplineStatusBadge({
   status: DisciplineDisplayStatus;
 }) {
   return (
-    <span
-      className={`inline-flex items-center rounded-lg border px-3 py-1 text-sm font-semibold ${STATUS_STYLES[status]}`}
-    >
-      Current status: {status}
+    <span className={`gov-tag ${getGovTagClass(status)}`}>
+      {status}
     </span>
   );
 }
@@ -250,76 +246,95 @@ export default function StudentDisciplineSection({
   };
 
   return (
-    <motion.div
-      id="discipline"
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-4 scroll-mt-24 text-slate-900 dark:text-slate-100"
-    >
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-200/70 dark:border-white/10">
+    <div id="discipline" className="gov-card p-4 sm:p-5 space-y-4">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-[#EAEAEA]">
         <div>
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+          <div className="text-xs font-bold font-mono text-[#111111] uppercase">
             Discipline History &amp; Actions
-          </h3>
-          <p className="text-xs text-slate-500 dark:text-white/60 mt-0.5">
-            Timeline of all disciplinary actions (newest first).
+          </div>
+          <p className="text-[11px] font-mono text-[#777777] mt-0.5">
+            Official chronological timeline of student conduct, sanctions, and warnings.
           </p>
         </div>
         {canManageDiscipline && displayStatus !== "Deleted" && (
           <button
             type="button"
             onClick={openModal}
-            className="inline-flex items-center justify-center rounded-lg bg-violet-600 hover:bg-violet-500 text-white px-3.5 py-2 text-xs font-semibold shadow-sm transition"
+            className="gov-btn gov-btn-sm gov-btn-primary"
           >
-            {isDeactivatedOnly ? "Archive student (deletion)" : "+ Add discipline action"}
+            {isDeactivatedOnly ? "Archive Student (Deletion)" : "+ Add Discipline Action"}
           </button>
         )}
         {canManageDiscipline && isDeactivatedOnly && (
-          <p className="text-amber-800 dark:text-amber-200 text-xs max-w-xl font-medium">
-            Student is deactivated. You can only record a deletion (archive) from here; other actions are blocked.
+          <p className="text-amber-800 text-xs font-mono font-medium">
+            Student is deactivated. You can only record a deletion (archive) from here.
           </p>
         )}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-        <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 dark:border-white/10 dark:bg-white/[0.04] p-3 transition-colors">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-white/50">Warnings</div>
-          <div className="text-slate-900 dark:text-white text-xl font-bold mt-1">{summary.warnings}</div>
+      {/* 4 Metrics Summary Boxes */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="p-3 bg-[#FAFAFA] border border-[#E0E0E0] rounded-lg text-center">
+          <div className="text-[10px] uppercase font-mono font-bold tracking-wider text-[#777777]">
+            Warnings
+          </div>
+          <div className="text-xl font-bold font-mono text-[#111111] mt-1">
+            {summary.warnings}
+          </div>
         </div>
-        <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 dark:border-white/10 dark:bg-white/[0.04] p-3 transition-colors">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-white/50">Suspensions</div>
-          <div className="text-slate-900 dark:text-white text-xl font-bold mt-1">{summary.suspensions}</div>
+
+        <div className="p-3 bg-[#FAFAFA] border border-[#E0E0E0] rounded-lg text-center">
+          <div className="text-[10px] uppercase font-mono font-bold tracking-wider text-[#777777]">
+            Suspensions
+          </div>
+          <div className="text-xl font-bold font-mono text-[#111111] mt-1">
+            {summary.suspensions}
+          </div>
         </div>
-        <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 dark:border-white/10 dark:bg-white/[0.04] p-3 transition-colors">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-white/50">Current status</div>
+
+        <div className="p-3 bg-[#FAFAFA] border border-[#E0E0E0] rounded-lg text-center">
+          <div className="text-[10px] uppercase font-mono font-bold tracking-wider text-[#777777]">
+            Current Status
+          </div>
           <div className="mt-1">
-            <span className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold ${STATUS_STYLES[displayStatus]}`}>
+            <span className={`gov-tag ${getGovTagClass(displayStatus)} text-[10px]`}>
               {displayStatus}
             </span>
           </div>
         </div>
-        <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 dark:border-white/10 dark:bg-white/[0.04] p-3 transition-colors">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-white/50">Last action</div>
-          <div className="text-slate-700 dark:text-white/90 text-xs font-medium mt-1">
-            {summary.lastAt ? new Date(summary.lastAt).toLocaleString() : "—"}
+
+        <div className="p-3 bg-[#FAFAFA] border border-[#E0E0E0] rounded-lg text-center">
+          <div className="text-[10px] uppercase font-mono font-bold tracking-wider text-[#777777]">
+            Last Action
+          </div>
+          <div className="text-xs font-mono font-bold text-[#111111] mt-1.5 truncate">
+            {summary.lastAt ? new Date(summary.lastAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
           </div>
         </div>
       </div>
 
+      {/* Active Suspension Alert Banner */}
       {studentSnapshot.suspension_open &&
         (studentSnapshot.suspension_period_start || studentSnapshot.suspension_period_end) && (
-          <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 px-3.5 py-2.5 text-xs text-orange-900 dark:text-orange-100 font-medium">
-            Scheduled suspension period: {studentSnapshot.suspension_period_start || "—"} →{" "}
-            {studentSnapshot.suspension_period_end || "—"} (status stays suspended until staff ends it)
+          <div className="border border-orange-300 bg-[#FFF3E0] px-3.5 py-2.5 rounded-lg text-xs font-mono text-orange-950 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-orange-600 shrink-0" />
+            <span>
+              <strong>Active Suspension Period:</strong> {studentSnapshot.suspension_period_start || "—"} →{" "}
+              {studentSnapshot.suspension_period_end || "—"} (Official status remains Suspended until lifted by administration).
+            </span>
           </div>
         )}
 
+      {/* Archived Student Restore Box */}
       {displayStatus === "Deleted" && isOwner && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 space-y-2.5">
-          <p className="text-red-900 dark:text-red-100 text-sm font-semibold">This student is archived (soft deleted).</p>
+        <div className="border border-red-300 bg-[#FFEBEE] p-4 rounded-lg space-y-2.5">
+          <p className="text-red-900 text-xs font-mono font-bold">
+            Notice: This student dossier has been archived (soft-deleted).
+          </p>
           <textarea
-            className="w-full rounded-lg border border-red-300 dark:border-white/15 bg-white dark:bg-white/10 text-slate-900 dark:text-white text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
-            placeholder="Optional note for restore log…"
+            className="gov-textarea text-xs"
+            placeholder="Official rationale for restoration log..."
             value={restoreNotes}
             onChange={(e) => setRestoreNotes(e.target.value)}
             rows={2}
@@ -328,51 +343,82 @@ export default function StudentDisciplineSection({
             type="button"
             disabled={saving}
             onClick={submitRestore}
-            className="rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-medium px-4 py-2 text-sm shadow-sm transition"
+            className="gov-btn gov-btn-sm gov-btn-primary"
           >
-            {saving ? "Restoring…" : "Restore student (owner only)"}
+            <RotateCcw className="w-3.5 h-3.5 inline mr-1" />
+            {saving ? "Restoring..." : "Restore Student Dossier (Owner Authorization)"}
           </button>
         </div>
       )}
 
+      {/* Disciplinary Table / Empty State */}
       {loading ? (
-        <div className="text-slate-500 dark:text-white/60 text-sm py-8 text-center">Loading discipline records…</div>
+        <div className="p-6 text-center text-xs font-mono text-[#666666] bg-[#FAFAFA] border border-[#EAEAEA] rounded-lg">
+          Loading discipline records...
+        </div>
       ) : records.length === 0 ? (
-        <div className="py-8 text-center border border-dashed border-slate-200 dark:border-white/15 rounded-xl bg-slate-50/50 dark:bg-white/[0.02]">
-          <p className="text-sm font-medium text-slate-600 dark:text-white/70">No discipline records yet.</p>
-          <p className="text-xs text-slate-400 dark:text-white/40 mt-1">Disciplinary warnings, suspensions, and notes recorded by staff will appear here.</p>
+        <div className="p-6 text-center text-xs font-mono text-[#666666] bg-[#FAFAFA] border border-[#EAEAEA] rounded-lg">
+          No disciplinary records yet. Warnings, formal sanctions, and notes logged by staff will appear here.
         </div>
       ) : (
-        <ul className="space-y-3">
-          {records.map((r) => (
-            <li
-              key={r.record_id}
-              className="rounded-xl border border-slate-200/80 bg-slate-50/70 dark:border-white/10 dark:bg-white/[0.04] p-4 text-sm transition-colors"
-            >
-              <div className="flex flex-wrap items-center gap-2 justify-between">
-                <span className="font-semibold capitalize text-violet-700 dark:text-violet-300">
-                  {r.action_type.replace(/_/g, " ")}
-                </span>
-                <span className="text-xs text-slate-500 dark:text-white/50">
-                  {new Date(r.created_at).toLocaleString()}
-                </span>
-              </div>
-              <p className="mt-2.5 whitespace-pre-wrap text-slate-800 dark:text-white/90 leading-relaxed font-normal">
-                {r.notes}
-              </p>
-              {(r.suspension_start_date || r.suspension_end_date) && (
-                <div className="mt-2 rounded-lg bg-orange-500/10 border border-orange-500/20 px-2.5 py-1 text-xs text-orange-900 dark:text-orange-200 font-medium">
-                  Period: {r.suspension_start_date || "—"} → {r.suspension_end_date || "—"}
-                </div>
-              )}
-              <p className="text-xs text-slate-400 dark:text-white/45 mt-2.5">
-                Recorded by: {r.recorded_by ? namesByUser[r.recorded_by] || "Staff" : "—"}
-              </p>
-            </li>
-          ))}
-        </ul>
+        <div className="gov-table-container">
+          <table className="gov-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Sanction / Action</th>
+                <th>Suspension Period</th>
+                <th>Notes / Findings</th>
+                <th>Logged By</th>
+              </tr>
+            </thead>
+            <tbody>
+              {records.map((r) => {
+                const actionBadgeClass =
+                  r.action_type === "warning"
+                    ? "gov-tag-warned"
+                    : r.action_type === "suspension"
+                    ? "gov-tag-suspended"
+                    : "";
+
+                return (
+                  <tr key={r.record_id}>
+                    <td className="font-mono text-xs whitespace-nowrap">
+                      {new Date(r.created_at).toLocaleDateString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </td>
+                    <td>
+                      <span className={`gov-tag ${actionBadgeClass} text-[10px]`}>
+                        {r.action_type.replace(/_/g, " ")}
+                      </span>
+                    </td>
+                    <td className="font-mono text-xs whitespace-nowrap">
+                      {r.suspension_start_date || r.suspension_end_date ? (
+                        <span>
+                          {r.suspension_start_date || "—"} → {r.suspension_end_date || "—"}
+                        </span>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="text-xs max-w-md">
+                      <div className="whitespace-pre-wrap">{r.notes}</div>
+                    </td>
+                    <td className="font-mono text-xs text-[#666666] whitespace-nowrap">
+                      {r.recorded_by ? namesByUser[r.recorded_by] || "Staff" : "—"}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
 
+      {/* Add Discipline Action Modal */}
       <NativeModal
         isOpen={modalOpen}
         onClose={closeModal}
@@ -380,49 +426,56 @@ export default function StudentDisciplineSection({
         subtitle="Record official disciplinary sanction, suspension, or warning for this trainee."
         icon={ShieldAlert}
         size="md"
+        variant="government"
       >
-        <div className="p-6 space-y-4 text-xs text-white flex flex-col">
-          <div className="relative z-[30] focus-within:z-[50]">
-            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+        <div className="p-5 space-y-4 text-xs font-sans">
+          <div>
+            <label className="block text-[11px] font-bold font-mono text-[#555555] uppercase tracking-wider mb-1.5">
               Action Type *
             </label>
-            <LiquidGlassSelect
+            <select
               value={actionType}
-              onChange={(val) => setActionType(val)}
-              options={
-                isDeactivatedOnly
-                  ? [{ value: "deletion", label: "Deletion (Archive)" }]
-                  : [
-                      { value: "warning", label: "Formal Warning" },
-                      { value: "suspension", label: "Suspension", disabled: !!studentSnapshot.suspension_open },
-                      { value: "lift_suspension", label: "End Suspension", disabled: !studentSnapshot.suspension_open },
-                      { value: "deactivation", label: "Deactivation" },
-                      { value: "deletion", label: "Deletion (Archive)" },
-                    ]
-              }
-            />
+              onChange={(e) => setActionType(e.target.value)}
+              className="gov-select text-xs"
+            >
+              {isDeactivatedOnly ? (
+                <option value="deletion">Deletion (Archive)</option>
+              ) : (
+                <>
+                  <option value="warning">Formal Warning</option>
+                  <option value="suspension" disabled={!!studentSnapshot.suspension_open}>
+                    Suspension
+                  </option>
+                  <option value="lift_suspension" disabled={!studentSnapshot.suspension_open}>
+                    End Suspension
+                  </option>
+                  <option value="deactivation">Deactivation</option>
+                  <option value="deletion">Deletion (Archive)</option>
+                </>
+              )}
+            </select>
           </div>
 
           {actionType === "suspension" && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-white/70">
-                  Start Date
+                <label className="block text-[11px] font-bold font-mono text-[#555555] uppercase tracking-wider mb-1.5">
+                  Start Date *
                 </label>
                 <input
                   type="date"
-                  className="w-full px-3 py-2.5 rounded-xl border border-white/20 bg-black/25 text-white text-xs outline-none focus:border-emerald-400/80 focus:bg-black/35 backdrop-blur-sm"
+                  className="gov-input text-xs"
                   value={suspStart}
                   onChange={(e) => setSuspStart(e.target.value)}
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-white/70">
-                  End Date
+                <label className="block text-[11px] font-bold font-mono text-[#555555] uppercase tracking-wider mb-1.5">
+                  End Date *
                 </label>
                 <input
                   type="date"
-                  className="w-full px-3 py-2.5 rounded-xl border border-white/20 bg-black/25 text-white text-xs outline-none focus:border-emerald-400/80 focus:bg-black/35 backdrop-blur-sm"
+                  className="gov-input text-xs"
                   value={suspEnd}
                   onChange={(e) => setSuspEnd(e.target.value)}
                 />
@@ -431,21 +484,21 @@ export default function StudentDisciplineSection({
           )}
 
           <div>
-            <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-white/70">
-              Notes (Required)
+            <label className="block text-[11px] font-bold font-mono text-[#555555] uppercase tracking-wider mb-1.5">
+              Official Notes &amp; Findings (Required) *
             </label>
             <textarea
-              className="min-h-[100px] w-full rounded-xl border border-white/20 bg-black/25 p-3 text-xs text-white placeholder-white/40 outline-none focus:border-emerald-400/80 focus:bg-black/35 backdrop-blur-sm resize-none no-scrollbar"
+              className="gov-textarea text-xs min-h-[90px]"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Description / disciplinary committee context..."
+              placeholder="Disciplinary committee context, incident details, or warning rationale..."
             />
           </div>
 
-          <div className="pt-3 border-t border-white/15 flex items-center justify-end gap-2.5">
+          <div className="pt-3 border-t border-[#EAEAEA] flex items-center justify-end gap-2.5">
             <button
               type="button"
-              className="px-4 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 text-white/80 hover:text-white font-semibold transition-all backdrop-blur-sm text-xs"
+              className="gov-btn gov-btn-sm"
               onClick={closeModal}
               disabled={saving}
             >
@@ -453,15 +506,15 @@ export default function StudentDisciplineSection({
             </button>
             <button
               type="button"
-              className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold text-emerald-950 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:brightness-110 border border-emerald-300/60 shadow-[0_4px_16px_rgba(16,185,129,0.35)] transition-all active:scale-[0.98] disabled:opacity-50"
+              className="gov-btn gov-btn-sm gov-btn-primary"
               onClick={submitAction}
               disabled={saving}
             >
-              {saving ? "Saving..." : "Save Record"}
+              {saving ? "Saving..." : "Save Disciplinary Record"}
             </button>
           </div>
         </div>
       </NativeModal>
-    </motion.div>
+    </div>
   );
 }

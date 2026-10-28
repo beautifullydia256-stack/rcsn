@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { GovRollingBox } from '@/components/ui/GovLoadingIndicator';
 import SectionHeader from './SectionHeader';
-import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -208,85 +208,123 @@ export default function SettingsSchoolRequirements({
 
   if (loading) {
     return (
-      <div>
-        <SectionHeader
-          embedded={embedded}
-          title="School Requirements"
-          desc="Manage mandatory school materials, uniforms, books, and other requirements with their costs."
-        />
-        <div className="ac-text-muted">Loading requirements...</div>
+      <div className="py-20 flex items-center justify-center w-full">
+        <GovRollingBox size="lg" />
       </div>
     );
   }
 
   return (
-    <div>
+    <div className="space-y-6">
       <SectionHeader
         embedded={embedded}
-        title="School Requirements"
-        desc="Manage mandatory school materials, uniforms, books, and other requirements with their costs."
+        title="STUDENT REQUIREMENTS & MATERIAL FEES"
+        badge="INSTITUTIONAL REQUIREMENTS"
       />
 
       {error && (
-        <div className="mb-4 rounded-lg border border-red-400/40 bg-red-950/50 p-3 text-sm text-red-100">
+        <div className="rounded border border-red-300 bg-red-50 p-3 text-xs font-mono text-red-700">
           {error}
         </div>
       )}
       {success && (
-        <div className="mb-4 rounded-lg border border-emerald-400/35 bg-emerald-950/45 p-3 text-sm text-emerald-100">
+        <div className="rounded border border-emerald-300 bg-emerald-50 p-3 text-xs font-mono text-emerald-800">
           {success}
         </div>
       )}
 
-      <div className={`mb-6 ${settingsInsetSurface} p-4 sm:p-5`}>
-        <h3 className="mb-3 font-medium ac-text-primary">
-          {editingId ? '✏️ Edit Requirement' : '➕ Add New Requirement'}
-        </h3>
+      {/* Summary Metrics */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="gov-card p-3 text-center border border-[#CCCCCC]">
+          <span className="text-[11px] font-mono uppercase font-bold text-[#666666] tracking-wider block">
+            REGISTERED ITEMS
+          </span>
+          <span className="text-xl font-mono font-bold text-[#111111] mt-1 block">
+            {requirements.length}
+          </span>
+        </div>
+        <div className="gov-card p-3 text-center border border-[#CCCCCC]">
+          <span className="text-[11px] font-mono uppercase font-bold text-[#666666] tracking-wider block">
+            ACTIVE REQUIREMENTS
+          </span>
+          <span className="text-xl font-mono font-bold text-[#111111] mt-1 block">
+            {requirements.filter((r) => r.status === 'Active').length}
+          </span>
+        </div>
+        <div className="gov-card p-3 text-center border border-[#CCCCCC]">
+          <span className="text-[11px] font-mono uppercase font-bold text-[#666666] tracking-wider block">
+            CUMULATIVE VALUE
+          </span>
+          <span className="text-xl font-mono font-bold text-[#111111] mt-1 block">
+            UGX {new Intl.NumberFormat('en-UG').format(requirements.reduce((sum, r) => sum + Number(r.cost || 0), 0))}
+          </span>
+        </div>
+      </div>
+
+      {/* Entry Form Card */}
+      <div className="gov-card p-5 space-y-4">
+        <div className="border-b border-[#E2E8F0] pb-2 mb-2 flex items-center justify-between">
+          <span className="text-xs font-mono uppercase font-bold text-[#111111] tracking-wider">
+            {editingId ? 'EDIT REQUIREMENT RECORD' : 'REGISTER NEW REQUIREMENT SPECIFICATION'}
+          </span>
+          {editingId && (
+            <span className="text-[11px] font-mono text-[#888888] uppercase">[EDITING MODE]</span>
+          )}
+        </div>
+
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           <div>
-            <label className="mb-1 block text-sm font-medium ac-text-secondary">Requirement Name *</label>
+            <label className="mb-1 block text-xs font-mono uppercase font-bold text-[#555555]">
+              REQUIREMENT NAME *
+            </label>
             <input
               type="text"
               value={requirementName}
               onChange={(e) => setRequirementName(e.target.value)}
-              className="ac-input min-h-[44px] w-full"
-              placeholder="e.g., School Uniform"
+              className="gov-input w-full"
+              placeholder="e.g. Clinical Uniform / Medical Kit"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium ac-text-secondary">Cost (UGX) *</label>
+            <label className="mb-1 block text-xs font-mono uppercase font-bold text-[#555555]">
+              COST (UGX) *
+            </label>
             <input
               type="number"
               min={0}
-              step={0.01}
+              step={100}
               value={cost}
               onChange={(e) => setCost(e.target.value)}
-              className="ac-input min-h-[44px] w-full"
-              placeholder="e.g., 50000"
+              className="gov-input w-full font-mono text-xs"
+              placeholder="e.g. 50000"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium ac-text-secondary">Residency / Accommodation *</label>
+            <label className="mb-1 block text-xs font-mono uppercase font-bold text-[#555555]">
+              RESIDENCY APPLICABILITY *
+            </label>
             <select
               value={boardingType}
               onChange={(e) =>
-                setBoardingType(e.target.value as any)
+                setBoardingType(e.target.value as 'Day Scholar' | 'Boarding' | 'Both')
               }
-              className="ac-input min-h-[44px] w-full"
+              className="gov-select w-full"
             >
-              <option value="Non-Resident">Non-Resident</option>
-              <option value="Resident">Resident</option>
-              <option value="Both">Both (All Students)</option>
+              <option value="Day Scholar">Non-Resident Only</option>
+              <option value="Boarding">Resident (Boarding) Only</option>
+              <option value="Both">Both (All Trainees)</option>
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium ac-text-secondary">Class (Optional)</label>
+            <label className="mb-1 block text-xs font-mono uppercase font-bold text-[#555555]">
+              COHORT / CLASS SPECIFICATION
+            </label>
             <select
               value={className}
               onChange={(e) => setClassName(e.target.value)}
-              className="ac-input min-h-[44px] w-full"
+              className="gov-select w-full"
             >
-              <option value="">All Classes</option>
+              <option value="">All Programmes & Cohorts</option>
               {classOptions.map((cls) => (
                 <option key={cls} value={cls}>
                   {cls}
@@ -295,154 +333,159 @@ export default function SettingsSchoolRequirements({
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium ac-text-secondary">Status</label>
+            <label className="mb-1 block text-xs font-mono uppercase font-bold text-[#555555]">
+              STATUS
+            </label>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as 'Active' | 'Inactive')}
-              className="ac-input min-h-[44px] w-full"
+              className="gov-select w-full"
             >
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium ac-text-secondary">Description (Optional)</label>
+            <label className="mb-1 block text-xs font-mono uppercase font-bold text-[#555555]">
+              DESCRIPTION / SPECIFICATIONS
+            </label>
             <input
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="ac-input min-h-[44px] w-full"
-              placeholder="Brief description"
+              className="gov-input w-full"
+              placeholder="e.g. 2 Pairs with institutional crest"
             />
           </div>
         </div>
-        <div className="mt-4 flex flex-wrap gap-3">
+
+        <div className="flex items-center gap-2 pt-2">
           <button
             type="button"
             onClick={handleSave}
             disabled={saving || !requirementName.trim()}
-            className={settingsPrimaryActionClass}
+            className="gov-btn gov-btn-sm gov-btn-primary"
           >
-            {saving ? 'Saving...' : editingId ? 'Update' : 'Add'}
+            {saving ? 'SAVING...' : editingId ? 'UPDATE RECORD' : 'SAVE REQUIREMENT'}
           </button>
           {editingId && (
             <button
               type="button"
               onClick={handleCancel}
-              className="ac-glass-btn-secondary min-h-[44px] rounded-lg px-4 py-2 ac-text-primary"
+              className="gov-btn gov-btn-sm"
             >
-              Cancel
+              CANCEL
             </button>
           )}
         </div>
       </div>
 
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row">
-        <input
-          type="text"
-          placeholder="Search requirements..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="ac-input min-h-[44px] flex-1"
-        />
-        <div className="flex flex-wrap gap-2">
+      {/* Filter and Control Bar */}
+      <div className="gov-control-bar">
+        <div className="gov-control-bar-left">
+          <input
+            type="text"
+            placeholder="SEARCH REQUIREMENTS BY TITLE, COHORT, RESIDENCY..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="gov-input w-72 text-xs uppercase"
+          />
+        </div>
+        <div className="gov-control-bar-right">
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-            className="ac-input min-h-[44px] grow sm:grow-0"
+            className="gov-select w-auto text-xs"
           >
-            <option value="name">Sort by Name</option>
-            <option value="cost">Sort by Cost</option>
-            <option value="boarding_type">Sort by Residency</option>
-            <option value="class_name">Sort by Class</option>
-            <option value="status">Sort by Status</option>
-            <option value="created_at">Sort by Date</option>
+            <option value="name">SORT: NAME</option>
+            <option value="cost">SORT: COST</option>
+            <option value="boarding_type">SORT: RESIDENCY</option>
+            <option value="class_name">SORT: COHORT</option>
+            <option value="status">SORT: STATUS</option>
+            <option value="created_at">SORT: DATE</option>
           </select>
           <button
             type="button"
             onClick={() => setSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'))}
-            className="ac-glass-btn-secondary min-h-[44px] min-w-[44px] ac-text-primary"
+            className="gov-btn gov-btn-sm font-mono"
             aria-label={sortOrder === 'asc' ? 'Sort descending' : 'Sort ascending'}
           >
-            {sortOrder === 'asc' ? '↑' : '↓'}
+            {sortOrder === 'asc' ? 'ASC ↑' : 'DESC ↓'}
           </button>
         </div>
       </div>
 
-      <div className={`overflow-x-auto ${settingsInsetSurface}`}>
-        <table className="min-w-full min-w-[640px] text-sm md:min-w-0">
-          <thead className="bg-[var(--pw-s3)]">
-            <tr className="text-left">
-              <th className="px-4 py-3 font-medium ac-text-muted">Requirement Name</th>
-              <th className="px-4 py-3 font-medium ac-text-muted">Residency</th>
-              <th className="px-4 py-3 font-medium ac-text-muted">Class</th>
-              <th className="px-4 py-3 font-medium ac-text-muted">Description</th>
-              <th className="px-4 py-3 font-medium ac-text-muted">Cost (UGX)</th>
-              <th className="px-4 py-3 font-medium ac-text-muted">Status</th>
-              <th className="px-4 py-3 font-medium ac-text-muted">Actions</th>
+      {/* Table */}
+      <div className="gov-table-container">
+        <table className="gov-table">
+          <thead>
+            <tr>
+              <th className="font-mono">REQUIREMENT TITLE</th>
+              <th className="font-mono">RESIDENCY</th>
+              <th className="font-mono">COHORT / CLASS</th>
+              <th className="font-mono">SPECIFICATION DETAILS</th>
+              <th className="font-mono text-right">COST (UGX)</th>
+              <th className="font-mono">STATUS</th>
+              <th className="font-mono text-right w-32">ACTIONS</th>
             </tr>
           </thead>
-          <tbody className="[&>tr:nth-child(even)]:bg-[var(--pw-s3)]/40">
+          <tbody>
             {filteredAndSorted.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center ac-text-muted">
-                  {searchTerm ? 'No requirements found.' : 'No requirements added yet.'}
+                <td colSpan={7} className="text-center py-8 text-xs font-mono text-[#888888]">
+                  {searchTerm ? 'NO REQUIREMENTS MATCHING CRITERIA' : 'NO REQUIREMENTS REGISTERED IN SYSTEM'}
                 </td>
               </tr>
             ) : (
               filteredAndSorted.map((req) => (
-                <tr key={req.id} className="border-t border-[var(--pw-border)]">
-                  <td className="px-4 py-3 font-medium ac-text-primary">{req.requirement_name}</td>
-                  <td className="px-4 py-3">
+                <tr key={req.id}>
+                  <td className="font-bold text-[#111111]">{req.requirement_name}</td>
+                  <td>
                     <span
-                      className={`rounded px-2 py-1 text-xs ${
+                      className={`gov-tag ${
                         req.boarding_type === 'Boarding' || req.boarding_type === 'Resident'
-                          ? 'bg-blue-600/25 text-blue-200'
-                          : 'bg-emerald-600/25 text-emerald-200'
+                          ? 'gov-tag-approved'
+                          : req.boarding_type === 'Both'
+                          ? 'bg-[#EAEAEA] text-[#222222] border border-[#CCCCCC]'
+                          : 'gov-tag-warned'
                       }`}
                     >
                       {req.boarding_type === 'Boarding' || req.boarding_type === 'Resident'
-                        ? 'Resident'
+                        ? 'RESIDENT'
                         : req.boarding_type === 'Both'
-                        ? 'Both'
-                        : 'Non-Resident'}
+                        ? 'ALL TRAINEES'
+                        : 'NON-RESIDENT'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 ac-text-secondary">{req.class_name || 'All Classes'}</td>
-                  <td className="px-4 py-3 ac-text-secondary">{req.description || '-'}</td>
-                  <td className="px-4 py-3 ac-text-primary">
-                    {new Intl.NumberFormat('en-UG', {
-                      style: 'currency',
-                      currency: 'UGX',
-                      minimumFractionDigits: 0,
-                    }).format(req.cost)}
+                  <td className="font-mono text-xs text-[#555555]">{req.class_name || 'ALL COHORTS'}</td>
+                  <td className="text-xs text-[#666666]">{req.description || '—'}</td>
+                  <td className="text-right font-mono font-bold text-[#111111]">
+                    {new Intl.NumberFormat('en-UG').format(req.cost)}
                   </td>
-                  <td className="px-4 py-3">
+                  <td>
                     <span
-                      className={`rounded px-2 py-1 text-xs ${
-                        req.status === 'Active'
-                          ? 'bg-emerald-600/25 text-emerald-200'
-                          : 'bg-red-600/25 text-red-200'
+                      className={`gov-tag ${
+                        req.status === 'Active' ? 'gov-tag-approved' : 'gov-tag-rejected'
                       }`}
                     >
-                      {req.status}
+                      {req.status.toUpperCase()}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2">
+                  <td className="text-right">
+                    <div className="flex items-center justify-end gap-1.5">
                       <button
                         type="button"
                         onClick={() => handleEdit(req)}
-                        className="rounded bg-green-600 px-2 py-1 text-xs text-white hover:bg-green-700"
+                        className="gov-btn gov-btn-sm"
                       >
-                        Edit
+                        EDIT
                       </button>
                       <button
                         type="button"
                         onClick={() => handleDelete(req.id)}
-                        className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700"
+                        className="gov-btn gov-btn-sm text-red-600 border-[#CCCCCC] hover:bg-red-50"
                       >
-                        Delete
+                        DEL
                       </button>
                     </div>
                   </td>
@@ -452,21 +495,6 @@ export default function SettingsSchoolRequirements({
           </tbody>
         </table>
       </div>
-
-      {requirements.length > 0 && (
-        <div className="mt-4 rounded-lg border border-[var(--pw-border)] bg-[var(--pw-s2)] p-3">
-          <div className="text-sm ac-text-secondary">
-            <strong className="ac-text-primary">Total Requirements:</strong> {requirements.length} |{' '}
-            <strong className="ac-text-primary">Active:</strong> {requirements.filter((r) => r.status === 'Active').length} |{' '}
-            <strong className="ac-text-primary">Total Value:</strong>{' '}
-            {new Intl.NumberFormat('en-UG', {
-              style: 'currency',
-              currency: 'UGX',
-              minimumFractionDigits: 0,
-            }).format(requirements.reduce((sum, r) => sum + Number(r.cost), 0))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -9,6 +9,8 @@ import PosEmptyState from '@/components/finance/pos/PosEmptyState';
 import ExcelJS from 'exceljs';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { GovRollingBox } from '@/components/ui/GovLoadingIndicator';
+import '@/styles/government-system.css';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -827,25 +829,16 @@ export default function AttendanceRecordsPage() {
   }, [filteredStudentRows, studyingDays, attendanceRecords, totalStudentsMonitored, totalRecordedDays]);
 
   return (
-    <div
-      className="min-h-screen p-4 sm:p-6 lg:p-8 space-y-6 transition-colors"
-      style={{ background: t.screenBg, color: t.textHi, fontFamily: INTER }}
-    >
-      {/* HEADER SECTION */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="h-2 w-2 rounded-full" style={{ background: t.mint }} />
-            <span className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: t.mint }}>
-              Academic Operations
-            </span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight" style={{ color: t.textHi, fontFamily: SORA }}>
-            Attendance Records
+    <AdminPageWrapper>
+      {/* INSTITUTIONAL GOVERNMENT HEADER */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#CCCCCC] pb-4">
+        <div className="flex items-center gap-3">
+          <h1 className="text-[17px] font-bold tracking-tight text-[#111111] uppercase font-sans">
+            CLINICAL & LECTURE ATTENDANCE REGISTRY
           </h1>
-          <p className="text-xs sm:text-sm mt-1" style={{ color: t.textMid }}>
-            Review official roll call sheets, monitor daily attendance rates, track absenteeism, and export ministry registers.
-          </p>
+          <span className="inline-flex items-center px-2 py-0.5 text-[11px] font-mono font-bold bg-[#EAEAEA] text-[#222222] border border-[#CCCCCC]">
+            {attendanceAggregates.rate}% PRESENT
+          </span>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -853,154 +846,88 @@ export default function AttendanceRecordsPage() {
             type="button"
             onClick={() => exportToExcel(filteredStudentRows, studyingDays, reportTitle)}
             disabled={filteredStudentRows.length === 0 || studyingDays.length === 0}
-            className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all border shadow-sm hover:scale-[1.01] disabled:opacity-40"
-            style={{
-              background: t.panel,
-              borderColor: t.stroke,
-              color: t.mint,
-            }}
+            className="gov-btn gov-btn-sm"
           >
-            <FileSpreadsheet className="h-4 w-4" />
-            <span>Export Excel (.xlsx)</span>
+            <FileSpreadsheet className="w-3.5 h-3.5 mr-1" />
+            EXPORT EXCEL
           </button>
           <button
             type="button"
             onClick={() => exportToPDF(filteredStudentRows, studyingDays, reportTitle, schoolName)}
             disabled={filteredStudentRows.length === 0 || studyingDays.length === 0}
-            className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all border shadow-sm hover:scale-[1.01] disabled:opacity-40"
-            style={{
-              background: t.panel,
-              borderColor: t.stroke,
-              color: t.blue,
-            }}
+            className="gov-btn gov-btn-sm"
           >
-            <FileText className="h-4 w-4" />
-            <span>Export PDF</span>
+            <FileText className="w-3.5 h-3.5 mr-1" />
+            EXPORT PDF
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard/admin/attendance-code')}
+            className="gov-btn gov-btn-sm"
+          >
+            VERIFICATION CODE
           </button>
           <button
             type="button"
             onClick={() => navigate('/dashboard/admin/attendance/teachers')}
-            className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all border shadow-sm hover:scale-[1.01]"
-            style={{
-              background: `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`,
-              color: t.ctaText,
-              borderColor: 'transparent',
-            }}
+            className="gov-btn gov-btn-sm gov-btn-primary"
           >
-            <GraduationCap className="h-4 w-4" />
-            <span>Teacher Attendance</span>
+            <GraduationCap className="w-3.5 h-3.5 mr-1" />
+            TEACHER ATTENDANCE
           </button>
         </div>
       </div>
 
-      {/* KPI STRIP */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {/* Present Rate */}
-        <div className="rounded-2xl p-4 sm:p-5 border shadow-sm transition-all" style={{ background: t.panel, borderColor: t.stroke }}>
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
-              Attendance Rate
-            </span>
-            <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ background: t.mintDim, color: t.mint }}>
-              <TrendingUp className="h-4 w-4" />
-            </div>
+      {/* METRIC CARDS STRIP */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="gov-card p-3 rounded-lg text-center border border-[#CCCCCC]">
+          <div className="text-[10px] font-mono uppercase text-[#666666] tracking-wider">ATTENDANCE RATE</div>
+          <div className="text-xl font-bold font-mono text-[#111111] mt-0.5 flex items-center justify-center min-h-[28px]">
+            {isLoading ? <GovRollingBox size="xs" /> : `${attendanceAggregates.rate}%`}
           </div>
-          <div className="text-2xl sm:text-3xl font-black mt-2 tabular-nums" style={{ color: t.mint, fontFamily: SORA }}>
-            {isLoading ? '…' : `${attendanceAggregates.rate}%`}
-          </div>
-          <p className="text-[11px] mt-1" style={{ color: t.textMid }}>
-            Average presence across selected range
-          </p>
         </div>
-
-        {/* Monitored Students */}
-        <div className="rounded-2xl p-4 sm:p-5 border shadow-sm transition-all" style={{ background: t.panel, borderColor: t.stroke }}>
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
-              Students In View
-            </span>
-            <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ background: t.blueDim, color: t.blue }}>
-              <Users className="h-4 w-4" />
-            </div>
+        <div className="gov-card p-3 rounded-lg text-center border border-[#CCCCCC]">
+          <div className="text-[10px] font-mono uppercase text-[#666666] tracking-wider">STUDENTS MONITORED</div>
+          <div className="text-xl font-bold font-mono text-[#111111] mt-0.5 flex items-center justify-center min-h-[28px]">
+            {isLoading ? <GovRollingBox size="xs" /> : totalStudentsMonitored}
           </div>
-          <div className="text-2xl sm:text-3xl font-black mt-2 tabular-nums" style={{ color: t.textHi, fontFamily: SORA }}>
-            {isLoading ? '…' : totalStudentsMonitored}
-          </div>
-          <p className="text-[11px] mt-1" style={{ color: t.textMid }}>
-            Learners matching current cohort filter
-          </p>
         </div>
-
-        {/* Present Instances */}
-        <div className="rounded-2xl p-4 sm:p-5 border shadow-sm transition-all" style={{ background: t.panel, borderColor: t.stroke }}>
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
-              Days Recorded
-            </span>
-            <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ background: t.goldDim, color: t.gold }}>
-              <Calendar className="h-4 w-4" />
-            </div>
+        <div className="gov-card p-3 rounded-lg text-center border border-[#CCCCCC]">
+          <div className="text-[10px] font-mono uppercase text-[#666666] tracking-wider">DAYS RECORDED</div>
+          <div className="text-xl font-bold font-mono text-[#111111] mt-0.5 flex items-center justify-center min-h-[28px]">
+            {isLoading ? <GovRollingBox size="xs" /> : totalRecordedDays}
           </div>
-          <div className="text-2xl sm:text-3xl font-black mt-2 tabular-nums" style={{ color: t.gold, fontFamily: SORA }}>
-            {isLoading ? '…' : totalRecordedDays}
-          </div>
-          <p className="text-[11px] mt-1" style={{ color: t.textMid }}>
-            Weekdays active in selected timeline
-          </p>
         </div>
-
-        {/* Late Arrivals */}
-        <div className="rounded-2xl p-4 sm:p-5 border shadow-sm transition-all" style={{ background: t.panel, borderColor: t.stroke }}>
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
-              Late Arrivals
-            </span>
-            <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ background: t.warnDim, color: t.warn }}>
-              <Clock className="h-4 w-4" />
-            </div>
+        <div className="gov-card p-3 rounded-lg text-center border border-[#CCCCCC]">
+          <div className="text-[10px] font-mono uppercase text-[#666666] tracking-wider">TARDY / LATE ARRIVALS</div>
+          <div className="text-xl font-bold font-mono text-[#111111] mt-0.5 flex items-center justify-center min-h-[28px]">
+            {isLoading ? <GovRollingBox size="xs" /> : attendanceAggregates.late}
           </div>
-          <div className="text-2xl sm:text-3xl font-black mt-2 tabular-nums" style={{ color: t.warn, fontFamily: SORA }}>
-            {isLoading ? '…' : attendanceAggregates.late}
-          </div>
-          <p className="text-[11px] mt-1" style={{ color: t.textMid }}>
-            Flagged tardy arrivals across period
-          </p>
         </div>
       </div>
 
       {/* FILTER AND SELECTION WORKSPACE */}
-      <div className="rounded-2xl p-5 sm:p-6 border shadow-sm space-y-4" style={{ background: t.panel, borderColor: t.stroke }}>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-4" style={{ borderColor: t.divider }}>
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4" style={{ color: t.mint }} />
-            <h3 className="text-sm font-bold uppercase tracking-wider" style={{ color: t.textHi }}>
-              Attendance Query & Scope
-            </h3>
+      <div className="gov-card p-4 rounded-lg border border-[#CCCCCC] bg-white space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#CCCCCC] pb-3">
+          <div className="text-[12px] font-bold uppercase tracking-wider text-[#111111] font-mono">
+            ATTENDANCE SCOPE & TIMELINE
           </div>
 
           {/* Mode Switcher */}
-          <div className="flex items-center gap-1 rounded-xl p-1 border" style={{ background: t.fieldBg, borderColor: t.stroke }}>
+          <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={() => setFilterMode('custom')}
-              className="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all"
-              style={{
-                background: filterMode === 'custom' ? t.mintDim : 'transparent',
-                color: filterMode === 'custom' ? t.mint : t.textMid,
-              }}
+              className={`gov-btn gov-btn-sm ${filterMode === 'custom' ? 'gov-btn-primary' : ''}`}
             >
-              Date Range
+              DATE RANGE
             </button>
             <button
               type="button"
               onClick={() => setFilterMode('term')}
-              className="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all"
-              style={{
-                background: filterMode === 'term' ? t.mintDim : 'transparent',
-                color: filterMode === 'term' ? t.mint : t.textMid,
-              }}
+              className={`gov-btn gov-btn-sm ${filterMode === 'term' ? 'gov-btn-primary' : ''}`}
             >
-              Academic Term
+              ACADEMIC TERM
             </button>
           </div>
         </div>
@@ -1009,8 +936,8 @@ export default function AttendanceRecordsPage() {
           {filterMode === 'term' ? (
             <>
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: t.textLow }}>
-                  Academic Year
+                <label className="block text-[11px] font-mono uppercase text-[#666666] mb-1 font-bold">
+                  ACADEMIC YEAR
                 </label>
                 <select
                   value={selectedYear}
@@ -1020,8 +947,7 @@ export default function AttendanceRecordsPage() {
                     const tm = terms.find((t) => t.year === y);
                     if (tm) setSelectedTerm(tm.id);
                   }}
-                  className="w-full px-3 py-2 text-xs font-medium rounded-xl focus:outline-none transition-all"
-                  style={{ background: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
+                  className="gov-select w-full"
                 >
                   {availableYears.map((y) => (
                     <option key={y} value={y}>
@@ -1032,14 +958,13 @@ export default function AttendanceRecordsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: t.textLow }}>
-                  Academic Term
+                <label className="block text-[11px] font-mono uppercase text-[#666666] mb-1 font-bold">
+                  ACADEMIC TERM
                 </label>
                 <select
                   value={selectedTerm}
                   onChange={(e) => setSelectedTerm(e.target.value)}
-                  className="w-full px-3 py-2 text-xs font-medium rounded-xl focus:outline-none transition-all"
-                  style={{ background: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
+                  className="gov-select w-full"
                 >
                   {termsForYear.map((tm) => (
                     <option key={tm.id} value={tm.id}>
@@ -1052,28 +977,26 @@ export default function AttendanceRecordsPage() {
           ) : (
             <>
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: t.textLow }}>
-                  Start Date
+                <label className="block text-[11px] font-mono uppercase text-[#666666] mb-1 font-bold">
+                  START DATE
                 </label>
                 <input
                   type="date"
                   value={customStart}
                   onChange={(e) => setCustomStart(e.target.value)}
-                  className="w-full px-3 py-2 text-xs font-medium rounded-xl focus:outline-none transition-all"
-                  style={{ background: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
+                  className="gov-input w-full"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: t.textLow }}>
-                  End Date
+                <label className="block text-[11px] font-mono uppercase text-[#666666] mb-1 font-bold">
+                  END DATE
                 </label>
                 <input
                   type="date"
                   value={customEnd}
                   onChange={(e) => setCustomEnd(e.target.value)}
-                  className="w-full px-3 py-2 text-xs font-medium rounded-xl focus:outline-none transition-all"
-                  style={{ background: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
+                  className="gov-input w-full"
                 />
               </div>
             </>
@@ -1081,16 +1004,15 @@ export default function AttendanceRecordsPage() {
 
           {/* Class Filter */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: t.textLow }}>
-              Filter by Class
+            <label className="block text-[11px] font-mono uppercase text-[#666666] mb-1 font-bold">
+              FILTER BY CLASS / COHORT
             </label>
             <select
               value={selectedClass}
               onChange={(e) => setSelectedClass(e.target.value)}
-              className="w-full px-3 py-2 text-xs font-medium rounded-xl focus:outline-none transition-all"
-              style={{ background: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
+              className="gov-select w-full"
             >
-              <option value="all">All Classes & Grades</option>
+              <option value="all">ALL CLASSES & GRADES</option>
               {classes.map((cls) => (
                 <option key={cls} value={cls}>
                   {cls}
@@ -1101,11 +1023,11 @@ export default function AttendanceRecordsPage() {
 
           {/* Student Search & Select with Z-Index float */}
           <div className="relative student-search-container">
-            <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: t.textLow }}>
-              Search Student
+            <label className="block text-[11px] font-mono uppercase text-[#666666] mb-1 font-bold">
+              SEARCH STUDENT
             </label>
             <div className="relative">
-              <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: t.textLow }} />
+              <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#777777]" />
               <input
                 type="text"
                 value={studentSearchQuery}
@@ -1116,8 +1038,7 @@ export default function AttendanceRecordsPage() {
                   if (selectedStudent !== 'all') setSelectedStudent('all');
                 }}
                 placeholder="Type learner name…"
-                className="w-full pl-9 pr-8 py-2 text-xs font-medium rounded-xl focus:outline-none transition-all"
-                style={{ background: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
+                className="gov-input w-full pl-8 pr-8"
               />
               {selectedStudent !== 'all' && (
                 <button
@@ -1126,25 +1047,15 @@ export default function AttendanceRecordsPage() {
                     setSelectedStudent('all');
                     setStudentSearchQuery('');
                   }}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold px-1.5 py-0.5 rounded"
-                  style={{ background: t.stroke, color: t.textMid }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-[#EAEAEA] text-[#333333] hover:bg-[#CCCCCC]"
                 >
-                  Clear
+                  CLEAR
                 </button>
               )}
             </div>
 
             {showStudentDropdown && filteredAvailableStudents.length > 0 && (
-              <div
-                className="absolute top-full left-0 right-0 mt-1.5 rounded-xl shadow-2xl max-h-60 overflow-y-auto z-50 border"
-                style={{
-                  background: t.panel,
-                  borderColor: t.strokeHi,
-                  boxShadow: isDark
-                    ? '0 20px 25px -5px rgba(0, 0, 0, 0.7), 0 10px 10px -5px rgba(0, 0, 0, 0.5)'
-                    : '0 20px 25px -5px rgba(0, 0, 0, 0.12), 0 10px 10px -5px rgba(0, 0, 0, 0.06)',
-                }}
-              >
+              <div className="absolute top-full left-0 right-0 mt-1 rounded-md shadow-lg max-h-60 overflow-y-auto z-50 border border-[#CCCCCC] bg-white">
                 <button
                   type="button"
                   onClick={() => {
@@ -1152,10 +1063,9 @@ export default function AttendanceRecordsPage() {
                     setStudentSearchQuery('');
                     setShowStudentDropdown(false);
                   }}
-                  className="w-full text-left px-3.5 py-2 text-xs font-semibold border-b transition-colors"
-                  style={{ borderColor: t.divider, color: t.mint }}
+                  className="w-full text-left px-3 py-2 text-xs font-mono font-bold border-b border-[#CCCCCC] text-[#111111] hover:bg-[#F3F4F6]"
                 >
-                  All Students in Selected Class
+                  ALL LEARNERS IN SELECTED CLASS
                 </button>
                 {filteredAvailableStudents.slice(0, 20).map((st) => (
                   <button
@@ -1166,13 +1076,10 @@ export default function AttendanceRecordsPage() {
                       setStudentSearchQuery(st.name);
                       setShowStudentDropdown(false);
                     }}
-                    className="w-full text-left px-3.5 py-2 text-xs transition-colors flex items-center justify-between"
-                    style={{ color: t.textHi }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = t.fieldBg)}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                    className="w-full text-left px-3 py-2 text-xs flex items-center justify-between border-b border-[#F0F0F0] hover:bg-[#F9FAFB]"
                   >
-                    <span className="font-medium">{st.name}</span>
-                    <span className="text-[10px] rounded px-2 py-0.5" style={{ background: t.fieldBg, color: t.textMid }}>
+                    <span className="font-medium text-[#111111]">{st.name}</span>
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 bg-[#EAEAEA] text-[#333333] rounded">
                       {st.class}
                     </span>
                   </button>
@@ -1184,13 +1091,13 @@ export default function AttendanceRecordsPage() {
 
         {/* Quick Date Range Shortcuts (Custom mode only) */}
         {filterMode === 'custom' && (
-          <div className="flex flex-wrap items-center gap-2 pt-1">
-            <span className="text-[11px] font-semibold uppercase tracking-wider mr-1" style={{ color: t.textLow }}>
-              Quick Presets:
+          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[#F0F0F0]">
+            <span className="text-[10px] font-mono font-bold uppercase text-[#666666] mr-1">
+              PRESETS:
             </span>
             {[
               {
-                label: 'Today',
+                label: 'TODAY',
                 action: () => {
                   const now = new Date().toISOString().split('T')[0];
                   setCustomStart(now);
@@ -1198,7 +1105,7 @@ export default function AttendanceRecordsPage() {
                 },
               },
               {
-                label: 'Yesterday',
+                label: 'YESTERDAY',
                 action: () => {
                   const yest = new Date();
                   yest.setDate(yest.getDate() - 1);
@@ -1208,7 +1115,7 @@ export default function AttendanceRecordsPage() {
                 },
               },
               {
-                label: 'This Week',
+                label: 'THIS WEEK',
                 action: () => {
                   const today = new Date();
                   const mon = new Date(today);
@@ -1220,7 +1127,7 @@ export default function AttendanceRecordsPage() {
                 },
               },
               {
-                label: 'Last Week',
+                label: 'LAST WEEK',
                 action: () => {
                   const today = new Date();
                   const lastMon = new Date(today);
@@ -1232,7 +1139,7 @@ export default function AttendanceRecordsPage() {
                 },
               },
               {
-                label: 'This Month',
+                label: 'THIS MONTH',
                 action: () => {
                   const today = new Date();
                   const start = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -1246,8 +1153,7 @@ export default function AttendanceRecordsPage() {
                 key={preset.label}
                 type="button"
                 onClick={preset.action}
-                className="px-3 py-1 text-xs font-semibold rounded-lg border transition-all hover:scale-[1.02]"
-                style={{ background: t.fieldBg, borderColor: t.stroke, color: t.textMid }}
+                className="gov-btn gov-btn-sm"
               >
                 {preset.label}
               </button>
@@ -1258,26 +1164,17 @@ export default function AttendanceRecordsPage() {
 
       {/* ATTENDANCE TABLES CONTENT */}
       {isLoading ? (
-        <div
-          className="rounded-2xl p-12 border text-center text-xs font-medium animate-pulse shadow-sm"
-          style={{ background: t.panel, borderColor: t.stroke, color: t.textMid }}
-        >
-          Loading official attendance register records…
+        <div className="gov-card p-16 flex items-center justify-center border border-[#CCCCCC]">
+          <GovRollingBox size="lg" />
         </div>
       ) : !canFetch ? (
-        <PosEmptyState
-          icon={<ClipboardList className="w-8 h-8" style={{ color: t.mint }} />}
-          title="Select Attendance Scope"
-          description="Choose a date range or active academic term above to inspect attendance roll calls."
-          accentColor="mint"
-        />
+        <div className="gov-card p-12 text-center text-xs font-mono text-[#666666] uppercase border border-[#CCCCCC]">
+          CHOOSE A DATE RANGE OR ACTIVE ACADEMIC TERM ABOVE TO INSPECT ATTENDANCE ROLL CALLS.
+        </div>
       ) : filteredStudentRows.length === 0 ? (
-        <PosEmptyState
-          icon={<Search className="w-8 h-8" style={{ color: t.gold }} />}
-          title="No Attendance Records Found"
-          description="No attendance entries were found matching your current filter criteria. Try adjusting the date range or class."
-          accentColor="gold"
-        />
+        <div className="gov-card p-12 text-center text-xs font-mono text-[#666666] uppercase border border-[#CCCCCC]">
+          NO ATTENDANCE ENTRIES FOUND MATCHING YOUR CURRENT FILTER CRITERIA.
+        </div>
       ) : (
         <div className="space-y-6">
           {Array.from(groupedByClass.entries()).map(([cls, classStudents]) => (
@@ -1286,13 +1183,11 @@ export default function AttendanceRecordsPage() {
               className={cls}
               students={classStudents}
               studyingDays={studyingDays}
-              t={t}
-              isDark={isDark}
             />
           ))}
         </div>
       )}
-    </div>
+    </AdminPageWrapper>
   );
 }
 
@@ -1302,88 +1197,60 @@ function PosClassAttendanceTable({
   className,
   students,
   studyingDays,
-  t,
-  isDark,
 }: {
   className: string;
   students: StudentRow[];
   studyingDays: string[];
-  t: any;
-  isDark: boolean;
+  t?: any;
+  isDark?: boolean;
 }) {
   return (
-    <div
-      className="rounded-2xl border shadow-sm overflow-hidden"
-      style={{ background: t.panel, borderColor: t.stroke }}
-    >
+    <div className="gov-card rounded-lg border border-[#CCCCCC] bg-white overflow-hidden mb-6">
       {/* Class header bar */}
-      <div
-        className="flex items-center justify-between p-4 sm:px-6 border-b"
-        style={{ borderColor: t.divider }}
-      >
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-xl flex items-center justify-center font-bold text-xs" style={{ background: t.mintDim, color: t.mint }}>
-            <School className="h-4 w-4" />
-          </div>
-          <div>
-            <h3 className="text-base font-bold" style={{ color: t.textHi, fontFamily: SORA }}>
-              {className}
-            </h3>
-            <p className="text-[11px]" style={{ color: t.textMid }}>
-              {students.length} {students.length === 1 ? 'student enrolled' : 'students enrolled'}
-            </p>
-          </div>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[#CCCCCC] bg-[#F8F9FA]">
+        <div className="flex items-center gap-2">
+          <span className="text-[13px] font-bold text-[#111111] uppercase font-mono tracking-tight">
+            {className}
+          </span>
+          <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-bold bg-[#EAEAEA] text-[#333333] border border-[#CCCCCC]">
+            {students.length} ENROLLED
+          </span>
         </div>
-
-        <PosClassAvgBadge students={students} studyingDays={studyingDays} t={t} />
+        <PosClassAvgBadge students={students} studyingDays={studyingDays} />
       </div>
 
-      {/* High-Definition Responsive Table */}
+      {/* High-Definition Government Table */}
       <div className="overflow-x-auto">
-        <table className="min-w-full text-xs border-collapse">
+        <table className="gov-table w-full text-xs">
           <thead>
-            <tr style={{ background: t.fieldBg, borderBottom: `1px solid ${t.stroke}` }}>
-              <th
-                className="sticky left-0 z-10 text-left px-4 py-3 font-bold border-r min-w-[200px]"
-                style={{ background: t.fieldBg, borderColor: t.stroke, color: t.textHi }}
-              >
-                Student Name & LIN
+            <tr>
+              <th className="sticky left-0 z-10 bg-[#FAFAFA] text-left px-3 py-2 font-mono uppercase text-[11px] text-[#555555] border-r border-[#CCCCCC] min-w-[200px]">
+                STUDENT NAME & LIN
               </th>
               {studyingDays.map((d, i) => {
                 const isMonday = new Date(d).getDay() === 1 && i > 0;
                 return (
                   <th
                     key={d}
-                    className="px-1.5 py-2.5 text-center min-w-[42px] border-l"
-                    style={{
-                      borderColor: isMonday ? t.strokeHi : t.stroke,
-                    }}
+                    className={`px-1.5 py-2 text-center min-w-[44px] font-mono border-l ${
+                      isMonday ? 'border-l-[#999999]' : 'border-l-[#E5E5E5]'
+                    }`}
                   >
-                    <div className="font-bold text-[11px]" style={{ color: t.textHi }}>
-                      {getDayLabel(d)}
-                    </div>
-                    <div className="text-[9px] font-medium" style={{ color: t.textLow }}>
-                      {formatDate(d)}
-                    </div>
+                    <div className="font-bold text-[10px] text-[#111111]">{getDayLabel(d)}</div>
+                    <div className="text-[9px] text-[#666666]">{formatDate(d)}</div>
                   </th>
                 );
               })}
-              <th
-                className="px-3 py-3 text-center font-bold border-l min-w-[80px]"
-                style={{ borderColor: t.strokeHi, color: t.textHi }}
-              >
-                Absent %
+              <th className="px-2 py-2 text-center font-mono uppercase text-[10px] text-[#555555] border-l border-[#CCCCCC] min-w-[70px]">
+                ABSENT %
               </th>
-              <th
-                className="px-4 py-3 text-center font-bold border-l min-w-[130px]"
-                style={{ borderColor: t.stroke, color: t.textHi }}
-              >
-                Present Rate
+              <th className="px-3 py-2 text-center font-mono uppercase text-[10px] text-[#555555] border-l border-[#CCCCCC] min-w-[120px]">
+                PRESENT RATE
               </th>
             </tr>
           </thead>
           <tbody>
-            {students.map((student, idx) => {
+            {students.map((student) => {
               const presentCount = studyingDays.filter((d) => student.days[d] === true).length;
               const total = studyingDays.length;
               const attendedPct = total > 0 ? Math.round((presentCount / total) * 100) : 0;
@@ -1391,108 +1258,53 @@ function PosClassAttendanceTable({
               const isGood = attendedPct >= 75;
 
               return (
-                <tr
-                  key={student.student_id}
-                  className="border-b transition-colors"
-                  style={{
-                    borderColor: t.divider,
-                    background: idx % 2 === 0 ? 'transparent' : isDark ? 'rgba(255,255,255,0.015)' : 'rgba(0,0,0,0.012)',
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = t.fieldBg)}
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.background =
-                      idx % 2 === 0 ? 'transparent' : isDark ? 'rgba(255,255,255,0.015)' : 'rgba(0,0,0,0.012)')
-                  }
-                >
-                  {/* Student Name */}
-                  <td
-                    className="sticky left-0 z-10 px-4 py-2.5 border-r font-medium"
-                    style={{ background: t.panel, borderColor: t.stroke }}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div
-                        className="h-6 w-6 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0"
-                        style={{ background: t.mintDim, color: t.mint }}
-                      >
-                        {student.student_name.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="font-semibold truncate" style={{ color: t.textHi }}>
-                          {student.student_name}
-                        </div>
-                        {student.admission_number && (
-                          <div className="text-[10px]" style={{ color: t.textLow }}>
-                            {student.admission_number}
-                          </div>
-                        )}
-                      </div>
+                <tr key={student.student_id} className="hover:bg-[#F9FAFB] transition-colors border-b border-[#E5E5E5]">
+                  <td className="sticky left-0 z-10 bg-white px-3 py-2 border-r border-[#CCCCCC]">
+                    <div className="font-bold text-[#111111] uppercase font-sans text-xs">
+                      {student.student_name}
                     </div>
+                    {student.admission_number && (
+                      <div className="text-[10px] font-mono text-[#666666]">
+                        {student.admission_number}
+                      </div>
+                    )}
                   </td>
-
-                  {/* Day Columns */}
                   {studyingDays.map((d, i) => {
                     const val = student.days[d];
                     const isMonday = new Date(d).getDay() === 1 && i > 0;
                     return (
                       <td
                         key={d}
-                        className="px-1 py-2 text-center border-l"
-                        style={{ borderColor: isMonday ? t.strokeHi : t.stroke }}
+                        className={`px-1 py-1 text-center font-mono text-xs border-l ${
+                          isMonday ? 'border-l-[#999999]' : 'border-l-[#E5E5E5]'
+                        }`}
                       >
                         {val === true ? (
-                          <span
-                            className="inline-flex items-center justify-center h-5 w-5 rounded-full font-bold text-[11px]"
-                            style={{ background: t.mintDim, color: t.mint }}
-                            title="Present"
-                          >
-                            ✓
-                          </span>
+                          <span className="font-bold text-[#15803D]" title="Present">✓</span>
                         ) : val === false ? (
-                          <span
-                            className="inline-flex items-center justify-center h-5 w-5 rounded-full font-bold text-[11px]"
-                            style={{ background: t.redDim, color: t.red }}
-                            title="Absent"
-                          >
-                            ✕
-                          </span>
+                          <span className="font-bold text-[#B91C1C]" title="Absent">✕</span>
                         ) : (
-                          <span className="text-[10px]" style={{ color: t.textLow }}>
-                            —
-                          </span>
+                          <span className="text-[#9CA3AF]">—</span>
                         )}
                       </td>
                     );
                   })}
-
-                  {/* Absent % */}
-                  <td className="px-3 py-2 text-center border-l font-semibold tabular-nums" style={{ borderColor: t.strokeHi }}>
-                    <span
-                      className="px-2 py-0.5 rounded text-[11px]"
-                      style={{
-                        background: absentPct > 25 ? t.redDim : 'transparent',
-                        color: absentPct > 25 ? t.red : t.textLow,
-                      }}
-                    >
+                  <td className="px-2 py-1 text-center font-mono text-xs border-l border-[#CCCCCC]">
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                      absentPct > 25 ? 'bg-[#FEE2E2] text-[#B91C1C] border border-[#FCA5A5]' : 'text-[#666666]'
+                    }`}>
                       {absentPct}%
                     </span>
                   </td>
-
-                  {/* Attended Rate & Progress Bar */}
-                  <td className="px-4 py-2 border-l" style={{ borderColor: t.stroke }}>
+                  <td className="px-3 py-1 border-l border-[#CCCCCC]">
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 rounded-full h-1.5 overflow-hidden" style={{ background: t.stroke }}>
+                      <div className="flex-1 rounded-full h-1.5 bg-[#E5E5E5] overflow-hidden">
                         <div
-                          className="h-full rounded-full transition-all"
-                          style={{
-                            width: `${attendedPct}%`,
-                            background: isGood ? t.mint : t.gold,
-                          }}
+                          className={`h-full ${isGood ? 'bg-[#15803D]' : 'bg-[#D97706]'}`}
+                          style={{ width: `${attendedPct}%` }}
                         />
                       </div>
-                      <span
-                        className="text-xs font-bold w-9 text-right tabular-nums"
-                        style={{ color: isGood ? t.mint : t.gold }}
-                      >
+                      <span className={`text-[11px] font-mono font-bold w-8 text-right ${isGood ? 'text-[#15803D]' : 'text-[#D97706]'}`}>
                         {attendedPct}%
                       </span>
                     </div>
@@ -1512,11 +1324,10 @@ function PosClassAttendanceTable({
 function PosClassAvgBadge({
   students,
   studyingDays,
-  t,
 }: {
   students: StudentRow[];
   studyingDays: string[];
-  t: any;
+  t?: any;
 }) {
   const totals = students.reduce(
     (acc, s) => {
@@ -1531,19 +1342,17 @@ function PosClassAvgBadge({
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs font-semibold" style={{ color: t.textLow }}>
-        Cohort Average:
+      <span className="text-[10px] font-mono uppercase text-[#666666]">
+        COHORT AVERAGE:
       </span>
-      <span
-        className="text-xs font-bold px-3 py-1 rounded-xl border tabular-nums"
-        style={{
-          background: isGood ? t.mintDim : t.goldDim,
-          borderColor: isGood ? t.mintRing : t.gold,
-          color: isGood ? t.mint : t.gold,
-        }}
-      >
+      <span className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded border ${
+        isGood
+          ? 'bg-[#DCFCE7] text-[#15803D] border-[#86EFAC]'
+          : 'bg-[#FEF3C7] text-[#B45309] border-[#FCD34D]'
+      }`}>
         {pct}%
       </span>
     </div>
   );
 }
+

@@ -11,21 +11,21 @@ import {
   AlertCircle,
   FileCheck,
   AlertTriangle,
-  Layers,
   ChevronRight,
   TrendingUp,
+  Camera,
+  Check,
+  User,
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useAuthStore } from '@/store/authStore';
-import { useUIStore } from '@/store/uiStore';
 import { supabase } from '@/lib/supabase';
 import { registerApiUrl } from '@/lib/registerApiOrigin';
-import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
 import NativeModal from '@/components/NativeModal';
-import PosEmptyState from '@/components/finance/pos/PosEmptyState';
 import { useAcademicPeriod } from '@/lib/academicPeriodTerminology';
-import { SORA, INTER } from '@/styles/posThemeTokens';
+import { GovPageLoader, GovRollingBox, GovTableLoader } from '@/components/ui/GovLoadingIndicator';
+import '@/styles/government-system.css';
 
 /* ─── Types ────────────────────────────────────────────────────────── */
 type LogStatus = 'started' | 'completed' | 'approved' | 'auto_expired';
@@ -42,6 +42,7 @@ interface SchoolTerm {
 interface LessonLog {
   log_id: string;
   teacher_id: string;
+  teacher_name?: string;
   class_name: string;
   subject: string;
   lesson_date: string;
@@ -50,9 +51,8 @@ interface LessonLog {
   started_at: string | null;
   ended_at: string | null;
   status: LogStatus;
-  approved_by: string | null;
-  approved_at: string | null;
-  teacher_name?: string;
+  approved_by?: string | null;
+  approved_at?: string | null;
 }
 
 interface PhotoUrls {
@@ -60,7 +60,6 @@ interface PhotoUrls {
   endUrl: string | null;
 }
 
-/* ─── Helpers ──────────────────────────────────────────────────────── */
 function fmtDate(d: string) {
   return new Date(d + 'T00:00:00').toLocaleDateString('en-UG', {
     weekday: 'short',
@@ -69,54 +68,57 @@ function fmtDate(d: string) {
     year: 'numeric',
   });
 }
+
 function fmtTime(iso: string | null) {
   if (!iso) return '—';
   return new Date(iso).toLocaleTimeString('en-UG', { hour: '2-digit', minute: '2-digit' });
 }
+
 function hhmm(t: string) {
-  const [h, m] = t.split(':').map(Number);
+  if (!t) return '—';
+  const parts = t.split(':').map(Number);
+  const h = parts[0] ?? 0;
+  const m = parts[1] ?? 0;
   const ap = h >= 12 ? 'PM' : 'AM';
   return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ap}`;
 }
 
-const STATUS_BADGE: Record<LogStatus, { label: string; cls: string; dot: string }> = {
+const STATUS_CONFIG: Record<LogStatus, { label: string; tagCls: string; dotCls: string }> = {
   started: {
-    label: 'In Progress',
-    cls: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
-    dot: 'bg-amber-500',
+    label: 'IN PROGRESS',
+    tagCls: 'border-amber-400 bg-amber-50 text-amber-800',
+    dotCls: 'bg-amber-500',
   },
   completed: {
-    label: 'Pending Review',
-    cls: 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30',
-    dot: 'bg-blue-500',
+    label: 'PENDING REVIEW',
+    tagCls: 'border-blue-400 bg-blue-50 text-blue-800',
+    dotCls: 'bg-blue-600',
   },
   approved: {
-    label: 'Approved',
-    cls: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
-    dot: 'bg-emerald-500',
+    label: 'VERIFIED & APPROVED',
+    tagCls: 'border-emerald-400 bg-emerald-50 text-emerald-800',
+    dotCls: 'bg-emerald-600',
   },
   auto_expired: {
-    label: 'Missed / Expired',
-    cls: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30',
-    dot: 'bg-rose-500',
+    label: 'MISSED / EXPIRED',
+    tagCls: 'border-rose-400 bg-rose-50 text-rose-800',
+    dotCls: 'bg-rose-600',
   },
 };
 
-/* ─── Photo modal ──────────────────────────────────────────────────── */
+/* ─── Photo Inspection Modal ───────────────────────────────────────── */
 function PhotoModal({
   log,
   schoolId,
   onClose,
   onApprove,
   approving,
-  isDark,
 }: {
   log: LessonLog;
   schoolId: string;
   onClose: () => void;
   onApprove: (logId: string) => void;
   approving: boolean;
-  isDark: boolean;
 }) {
   const [photos, setPhotos] = useState<PhotoUrls | null>(null);
   const [photoLoading, setPhotoLoading] = useState(true);
@@ -138,14 +140,14 @@ function PhotoModal({
         if (d.startUrl || d.endUrl) {
           setPhotos({ startUrl: d.startUrl ?? null, endUrl: d.endUrl ?? null });
         } else {
-          setPhotoErr(d.error ?? 'No photos available');
+          setPhotoErr(d.error ?? 'No photos captured for this session');
         }
       })
-      .catch(() => setPhotoErr('Failed to load photos'))
+      .catch(() => setPhotoErr('Unable to communicate with verification photo vault'))
       .finally(() => setPhotoLoading(false));
   }, [log.log_id, log.status, schoolId]);
 
-  const badge = STATUS_BADGE[log.status];
+  const cfg = STATUS_CONFIG[log.status];
 
   return (
     <NativeModal
@@ -156,79 +158,79 @@ function PhotoModal({
       icon={BookOpen}
       size="xl"
     >
-      <div className="space-y-4 text-white">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="text-sm text-white/70">
-            {log.teacher_name && <span className="text-white font-semibold">{log.teacher_name}</span>}
-            {log.started_at && <span className="ml-2">· Started {fmtTime(log.started_at)}</span>}
-            {log.ended_at && <span>· Closed {fmtTime(log.ended_at)}</span>}
+      <div className="space-y-4">
+        {/* Header metadata bar */}
+        <div className="flex items-center justify-between flex-wrap gap-3 p-3 bg-[#F8F9FA] border border-[#E5E7EB]">
+          <div className="text-xs">
+            <span className="font-semibold text-[#111111]">{log.teacher_name ?? `Tutor ID: ${log.teacher_id}`}</span>
+            {log.started_at && <span className="ml-2 font-mono text-[#555555]">· Start: {fmtTime(log.started_at)}</span>}
+            {log.ended_at && <span className="ml-2 font-mono text-[#555555]">· End: {fmtTime(log.ended_at)}</span>}
           </div>
-          <span className={`inline-flex items-center gap-1.5 text-xs font-semibold rounded-full border px-3 py-1 ${badge.cls}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
-            {badge.label}
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[10px] font-mono font-bold tracking-wider uppercase border ${cfg.tagCls}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${cfg.dotCls}`} />
+            {cfg.label}
           </span>
         </div>
 
         {log.status === 'approved' ? (
-          <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/15 px-5 py-8 text-center">
-            <div className="mb-3 flex justify-center text-emerald-400">
-              <CheckCircle2 className="w-10 h-10" />
+          <div className="border border-emerald-300 bg-emerald-50/50 p-6 text-center">
+            <div className="mb-2 flex justify-center text-emerald-600">
+              <CheckCircle2 className="w-8 h-8" />
             </div>
-            <p className="text-emerald-300 font-bold text-base" style={{ fontFamily: SORA }}>
-              Lesson Approved
+            <p className="text-emerald-950 font-bold text-sm uppercase tracking-wide">
+              Instruction Officially Verified &amp; Approved
             </p>
             {log.approved_at && (
-              <p className="text-xs text-white/60 mt-1">
-                Approved on{' '}
-                {new Date(log.approved_at).toLocaleDateString('en-UG', {
-                  weekday: 'short',
-                  day: 'numeric',
-                  month: 'short',
-                  year: 'numeric',
-                })}
+              <p className="text-xs font-mono text-emerald-800 mt-1">
+                Audit Timestamp: {new Date(log.approved_at).toLocaleString('en-UG')}
               </p>
             )}
           </div>
         ) : (
           <>
             {photoLoading && (
-              <div className="text-sm text-white/50 py-12 text-center">
-                <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-teal-500 border-t-transparent mb-2" />
-                <p>Loading lesson verification photos…</p>
+              <div className="py-12">
+                <GovPageLoader message="LOADING INSTRUCTION AUDIT PHOTOGRAPHS..." minHeight="min-h-[140px]" />
               </div>
             )}
             {photoErr && !photoLoading && (
-              <div className="rounded-xl border border-rose-500/30 bg-rose-500/20 px-4 py-3 text-sm text-rose-200">
+              <div className="border border-rose-300 bg-rose-50 p-3 text-xs text-rose-800 font-mono">
                 {photoErr}
               </div>
             )}
             {photos && !photoLoading && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs font-semibold text-white/60 mb-1.5">Start Photo (Arrival / Board)</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="border border-[#CCCCCC] p-2 bg-white">
+                  <div className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-[#555555] mb-2 font-semibold">
+                    <Camera className="w-3.5 h-3.5" />
+                    Session Entry Photo (Arrival / Board)
+                  </div>
                   {photos.startUrl ? (
                     <img
                       src={photos.startUrl}
-                      alt="Start"
-                      className="w-full h-48 object-cover rounded-xl border border-white/15 bg-black/40"
+                      alt="Session Entry"
+                      className="w-full h-48 object-cover border border-[#E5E7EB]"
                     />
                   ) : (
-                    <div className="w-full h-48 rounded-xl border border-dashed border-white/20 bg-white/5 flex items-center justify-center text-xs text-white/40">
-                      No start photo captured
+                    <div className="w-full h-48 border border-dashed border-[#CCCCCC] bg-[#F8F9FA] flex items-center justify-center text-xs font-mono text-[#888888]">
+                      NO ENTRY PHOTO CAPTURED
                     </div>
                   )}
                 </div>
-                <div>
-                  <p className="text-xs font-semibold text-white/60 mb-1.5">End Photo (Lesson Work)</p>
+                <div className="border border-[#CCCCCC] p-2 bg-white">
+                  <div className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-[#555555] mb-2 font-semibold">
+                    <Camera className="w-3.5 h-3.5" />
+                    Session Exit Photo (Instruction Evidence)
+                  </div>
                   {photos.endUrl ? (
                     <img
                       src={photos.endUrl}
-                      alt="End"
-                      className="w-full h-48 object-cover rounded-xl border border-white/15 bg-black/40"
+                      alt="Session Exit"
+                      className="w-full h-48 object-cover border border-[#E5E7EB]"
                     />
                   ) : (
-                    <div className="w-full h-48 rounded-xl border border-dashed border-white/20 bg-white/5 flex items-center justify-center text-xs text-white/40">
-                      No end photo captured
+                    <div className="w-full h-48 border border-dashed border-[#CCCCCC] bg-[#F8F9FA] flex items-center justify-center text-xs font-mono text-[#888888]">
+                      NO EXIT PHOTO CAPTURED
                     </div>
                   )}
                 </div>
@@ -236,22 +238,22 @@ function PhotoModal({
             )}
 
             {log.status === 'completed' && (
-              <div className="pt-3 flex justify-end gap-2 border-t border-white/10">
+              <div className="pt-3 flex justify-end gap-2 border-t border-[#E5E7EB]">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="rounded-xl px-4 py-2 text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition"
+                  className="gov-btn gov-btn-sm"
                 >
-                  Cancel
+                  Close Inspection
                 </button>
                 <button
                   type="button"
                   onClick={() => onApprove(log.log_id)}
                   disabled={approving}
-                  className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-5 py-2 text-xs font-semibold text-white shadow-lg shadow-emerald-500/25 hover:from-emerald-400 hover:to-teal-400 transition disabled:opacity-50 inline-flex items-center gap-2"
+                  className="gov-btn gov-btn-primary gov-btn-sm flex items-center gap-1.5"
                 >
-                  {approving && <div className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />}
-                  <span>Approve Lesson Log</span>
+                  {approving ? <GovRollingBox size="sm" /> : <Check className="w-3.5 h-3.5" />}
+                  <span>Authorize &amp; Verify Lesson Log</span>
                 </button>
               </div>
             )}
@@ -266,8 +268,6 @@ function PhotoModal({
 export default function LessonMonitorPage() {
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
-  const theme = useUIStore((s) => s.theme);
-  const isDark = theme === 'dark';
   const { labels, formatPeriod } = useAcademicPeriod();
 
   const [selectedLog, setSelectedLog] = useState<LessonLog | null>(null);
@@ -286,7 +286,7 @@ export default function LessonMonitorPage() {
   const [filterTermId, setFilterTermId] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<LogStatus | 'all'>('all');
 
-  // Resolve school ID and terms
+  // Resolve school ID
   const { data: schoolId } = useQuery({
     queryKey: ['school_id_for_lesson_monitor', user?.id],
     queryFn: async () => {
@@ -298,6 +298,7 @@ export default function LessonMonitorPage() {
     staleTime: 60 * 60 * 1000,
   });
 
+  // Resolve terms
   const { data: terms = [] } = useQuery({
     queryKey: ['school_terms', schoolId],
     queryFn: async () => {
@@ -314,7 +315,7 @@ export default function LessonMonitorPage() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Set default term when terms load
+  // Default current term
   useEffect(() => {
     if (terms.length > 0 && !filterTermId) {
       const cur = terms.find((t) => t.is_current) ?? terms[0];
@@ -392,7 +393,7 @@ export default function LessonMonitorPage() {
     }
 
     doc.setFontSize(14);
-    doc.text('Official Lesson Monitor Log Report', 14, 16);
+    doc.text('Rakai Community School of Nursing — Official Lecture & Lesson Monitor Registry', 14, 16);
     doc.setFontSize(9);
     doc.text(`Period Scope: ${periodLabel}`, 14, 22);
     doc.text(`Generated: ${new Date().toLocaleString('en-UG', { timeZone: 'Africa/Kampala' })}`, 14, 27);
@@ -406,19 +407,19 @@ export default function LessonMonitorPage() {
       hhmm(l.scheduled_end),
       l.started_at ? fmtTime(l.started_at) : '—',
       l.ended_at ? fmtTime(l.ended_at) : '—',
-      STATUS_BADGE[l.status]?.label ?? l.status,
+      STATUS_CONFIG[l.status]?.label ?? l.status,
     ]);
 
     autoTable(doc, {
-      head: [['Date', 'Teacher', 'Subject', 'Class', 'Sched. Start', 'Sched. End', 'Started', 'Ended', 'Status']],
+      head: [['Date', 'Tutor / Instructor', 'Subject / Unit', 'Cohort', 'Sched. Start', 'Sched. End', 'Entry Time', 'Exit Time', 'Audit Status']],
       body: rows,
       startY: 33,
       styles: { fontSize: 8 },
-      headStyles: { fillColor: [16, 217, 168] },
-      columnStyles: { 8: { cellWidth: 26 } },
+      headStyles: { fillColor: [17, 17, 17] },
+      columnStyles: { 8: { cellWidth: 32 } },
     });
 
-    doc.save(`lesson-monitor-report-${periodLabel}.pdf`);
+    doc.save(`RCSN-Lesson-Monitor-Report-${periodLabel}.pdf`);
   }
 
   const handleApprove = async (logId: string) => {
@@ -432,11 +433,11 @@ export default function LessonMonitorPage() {
       });
       const d = await res.json();
       if (!res.ok || !d.success) throw new Error(d.error ?? 'Approval failed');
-      showToast('Lesson officially approved!', true);
+      showToast('Instruction session officially authorized and logged!', true);
       setSelectedLog(null);
       void queryClient.invalidateQueries({ queryKey: ['lesson_logs'] });
     } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Error approving lesson', false);
+      showToast(e instanceof Error ? e.message : 'Error approving instruction session', false);
     } finally {
       setApproving(false);
     }
@@ -457,307 +458,302 @@ export default function LessonMonitorPage() {
   const pendingRate = totalLogs > 0 ? Math.round((counts.completed / totalLogs) * 100) : 0;
 
   return (
-    <AdminPageWrapper
-      title="Lesson Monitor"
-      subtitle="Track live classroom instruction, review teacher submissions, and verify photographic attendance logs."
-    >
-      <div className="w-full space-y-6">
-        {toast && (
-          <div
-            className={`rounded-xl border px-4 py-3 text-sm flex items-center gap-2 ${
-              toast.ok
-                ? 'border-emerald-500/30 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200'
-                : 'border-rose-500/30 bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-200'
-            }`}
-          >
-            {toast.ok ? <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" /> : <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />}
-            <span>{toast.msg}</span>
-          </div>
-        )}
-
-        {/* ─── 4 Executive KPI Cards Strip (POS / Admin Dashboard Aesthetics) ─── */}
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
-          {/* Card 1: In Progress */}
-          <div
-            className="relative overflow-hidden rounded-2xl bg-white dark:bg-[#0d1512] p-4 transition-all hover:scale-[1.01] border border-slate-200 dark:border-white/10 shadow-sm"
-          >
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 to-orange-500" />
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400" style={{ fontFamily: INTER }}>
-                In Progress
-              </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-500">
-                <Clock className="h-4 w-4" />
-              </div>
-            </div>
-            <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100" style={{ fontFamily: SORA }}>
-              {counts.started}
-            </p>
-            <p className="mt-1 text-xs text-amber-600 dark:text-amber-400 font-medium">
-              Currently in session
-            </p>
-          </div>
-
-          {/* Card 2: Pending Review */}
-          <div
-            className="relative overflow-hidden rounded-2xl bg-white dark:bg-[#0d1512] p-4 transition-all hover:scale-[1.01] border border-slate-200 dark:border-white/10 shadow-sm"
-          >
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-indigo-500" />
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400" style={{ fontFamily: INTER }}>
-                Pending Review
-              </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/15 text-blue-500">
-                <FileCheck className="h-4 w-4" />
-              </div>
-            </div>
-            <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100" style={{ fontFamily: SORA }}>
-              {counts.completed}
-            </p>
-            <p className="mt-1 text-xs text-blue-600 dark:text-blue-400 font-medium">
-              {pendingRate}% awaiting approval
-            </p>
-          </div>
-
-          {/* Card 3: Approved */}
-          <div
-            className="relative overflow-hidden rounded-2xl bg-white dark:bg-[#0d1512] p-4 transition-all hover:scale-[1.01] border border-slate-200 dark:border-white/10 shadow-sm"
-          >
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-teal-500 to-emerald-500" />
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400" style={{ fontFamily: INTER }}>
-                Approved
-              </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-500">
-                <CheckCircle2 className="h-4 w-4" />
-              </div>
-            </div>
-            <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100" style={{ fontFamily: SORA }}>
-              {counts.approved}
-            </p>
-            <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-              {verifiedRate}% verified &amp; logged
-            </p>
-          </div>
-
-          {/* Card 4: Missed Lessons */}
-          <div
-            className="relative overflow-hidden rounded-2xl bg-white dark:bg-[#0d1512] p-4 transition-all hover:scale-[1.01] border border-slate-200 dark:border-white/10 shadow-sm"
-          >
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-500 to-red-600" />
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400" style={{ fontFamily: INTER }}>
-                Missed Lessons
-              </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-500/15 text-rose-500">
-                <AlertTriangle className="h-4 w-4" />
-              </div>
-            </div>
-            <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100" style={{ fontFamily: SORA }}>
-              {counts.missed}
-            </p>
-            <p className="mt-1 text-xs text-rose-600 dark:text-rose-400 font-medium">
-              Expired or unsubmitted
-            </p>
-          </div>
+    <div className="admin-terminal-page space-y-5">
+      {/* ── 1. TOP HEADER ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#CCCCCC] pb-4">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-[#111111] uppercase font-mono">
+            LECTURE &amp; LESSON MONITOR REGISTRY
+          </h1>
+          <p className="text-xs text-[#555555] font-mono tracking-wider uppercase mt-0.5">
+            ACADEMIC INSTRUCTION AUDIT &amp; CLASSROOM TIMEKEEPING VERIFICATION
+          </p>
         </div>
-
-        {/* ─── Progress & Completion Bar Strip ─── */}
-        {totalLogs > 0 && (
-          <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0d1512] p-4 shadow-sm space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                <TrendingUp className="w-3.5 h-3.5 text-teal-500" />
-                Lesson Verification Progression
-              </span>
-              <span className="font-mono font-bold text-teal-600 dark:text-teal-400">
-                {counts.approved} of {totalLogs} verified ({verifiedRate}%)
-              </span>
-            </div>
-            <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden flex">
-              <div style={{ width: `${verifiedRate}%` }} className="bg-emerald-500 transition-all duration-500" title="Approved" />
-              <div style={{ width: `${pendingRate}%` }} className="bg-blue-500 transition-all duration-500" title="Pending Review" />
-              <div
-                style={{ width: `${totalLogs > 0 ? Math.round((counts.started / totalLogs) * 100) : 0}%` }}
-                className="bg-amber-500 transition-all duration-500"
-                title="In Progress"
-              />
-              <div
-                style={{ width: `${totalLogs > 0 ? Math.round((counts.missed / totalLogs) * 100) : 0}%` }}
-                className="bg-rose-500 transition-all duration-500"
-                title="Missed"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* ─── Action & Filter Toolbar ─── */}
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0d1512] p-4 shadow-sm">
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Filter mode tabs */}
-            <div className="inline-flex rounded-xl p-1 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10">
-              {(['day', 'month', 'term'] as const).map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setFilterMode(m)}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg capitalize transition-all ${
-                    filterMode === m
-                      ? 'bg-white dark:bg-teal-600 text-teal-700 dark:text-white shadow-sm'
-                      : 'text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  {m === 'day' ? 'By Day' : m === 'month' ? 'By Month' : `By ${labels.periodNoun}`}
-                </button>
-              ))}
-            </div>
-
-            {filterMode === 'day' && (
-              <input
-                type="date"
-                value={filterDate}
-                onChange={(e) => setFilterDate(e.target.value)}
-                className="rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/30"
-              />
-            )}
-            {filterMode === 'month' && (
-              <input
-                type="month"
-                value={filterMonth}
-                onChange={(e) => setFilterMonth(e.target.value)}
-                className="rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/30"
-              />
-            )}
-            {filterMode === 'term' && (
-              <select
-                value={filterTermId}
-                onChange={(e) => setFilterTermId(e.target.value)}
-                className="rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/30"
-              >
-                <option value="">— Select {labels.periodNoun} —</option>
-                {terms.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {formatPeriod(t.term, t.year, { short: false })}{t.is_current ? ' (Current)' : ''}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as LogStatus | 'all')}
-              className="rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/30"
-            >
-              <option value="all">All statuses</option>
-              <option value="started">In Progress</option>
-              <option value="completed">Pending Review</option>
-              <option value="approved">Approved</option>
-              <option value="auto_expired">Missed / Expired</option>
-            </select>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => void refetch()}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-white/80 hover:bg-slate-100 dark:hover:bg-white/10 transition shadow-sm"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin text-teal-500' : ''}`} />
-              <span>Refresh</span>
-            </button>
-            <button
-              type="button"
-              onClick={downloadPDF}
-              disabled={logs.length === 0}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-3.5 py-1.5 text-xs font-bold text-white hover:from-emerald-500 hover:to-teal-500 disabled:opacity-40 transition shadow-sm"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>Download PDF</span>
-            </button>
-          </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            className="gov-btn gov-btn-sm flex items-center gap-1.5"
+            title="Refresh Registry"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+            <span>SYNC</span>
+          </button>
+          <button
+            type="button"
+            onClick={downloadPDF}
+            disabled={logs.length === 0}
+            className="gov-btn gov-btn-primary gov-btn-sm flex items-center gap-1.5"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>EXPORT AUDIT PDF</span>
+          </button>
         </div>
-
-        {queryError && (
-          <div className="rounded-xl border border-rose-500/30 bg-rose-50 dark:bg-rose-950/40 px-4 py-3 text-sm text-rose-800 dark:text-rose-200 flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
-            <span>{queryError instanceof Error ? queryError.message : 'Failed to load lesson logs'}</span>
-          </div>
-        )}
-
-        {/* ─── Lesson Logs Feed ─── */}
-        {loading ? (
-          <div className="text-sm text-slate-500 dark:text-white/40 py-20 text-center">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-teal-500 border-t-transparent mb-3" />
-            <p>Loading lesson instruction logs…</p>
-          </div>
-        ) : logs.length === 0 ? (
-          <PosEmptyState
-            icon={<BookOpen className="w-8 h-8 text-teal-500" />}
-            title="No Lesson Logs Found"
-            description="No teacher classroom logs match your selected date range and filter criteria."
-            accentColor="mint"
-          />
-        ) : (
-          <div className="space-y-2.5">
-            {logs.map((log) => {
-              const badge = STATUS_BADGE[log.status];
-              return (
-                <button
-                  key={log.log_id}
-                  type="button"
-                  onClick={() => setSelectedLog(log)}
-                  className="w-full text-left rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0d1512] hover:border-teal-500/50 hover:shadow-md p-4 transition-all shadow-sm group"
-                >
-                  <div className="flex items-start justify-between gap-3 flex-wrap">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-teal-600 dark:group-hover:text-teal-400 transition" style={{ fontFamily: SORA }}>
-                          {log.subject}
-                        </span>
-                        <span className="text-xs rounded-full border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 px-2.5 py-0.5 text-slate-700 dark:text-slate-300 font-medium">
-                          {log.class_name}
-                        </span>
-                      </div>
-                      <div className="mt-1 text-xs text-slate-500 dark:text-white/40 flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-slate-700 dark:text-slate-300">
-                          {log.teacher_name ?? `Teacher #${log.teacher_id.slice(0, 8)}`}
-                        </span>
-                        <span>·</span>
-                        <span>{fmtDate(log.lesson_date)}</span>
-                        <span>·</span>
-                        <span className="font-mono">{hhmm(log.scheduled_start)} – {hhmm(log.scheduled_end)}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className={`inline-flex items-center gap-1.5 text-xs font-semibold rounded-full border px-2.5 py-0.5 ${badge.cls}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
-                        {badge.label}
-                      </span>
-                      {log.status === 'completed' && (
-                        <span className="inline-flex items-center text-xs font-bold text-blue-600 dark:text-blue-400 ml-1">
-                          Review Photos <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {selectedLog && schoolId && (
-          <PhotoModal
-            log={selectedLog}
-            schoolId={schoolId}
-            onClose={() => setSelectedLog(null)}
-            onApprove={handleApprove}
-            approving={approving}
-            isDark={isDark}
-          />
-        )}
       </div>
-    </AdminPageWrapper>
+
+      {/* Toast */}
+      {toast && (
+        <div
+          className={`border px-3 py-2 text-xs font-mono flex items-center gap-2 ${
+            toast.ok
+              ? 'border-emerald-400 bg-emerald-50 text-emerald-900'
+              : 'border-rose-400 bg-rose-50 text-rose-900'
+          }`}
+        >
+          {toast.ok ? <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" /> : <AlertCircle className="w-4 h-4 text-rose-700 shrink-0" />}
+          <span>{toast.msg}</span>
+        </div>
+      )}
+
+      {/* ── 2. MONOCHROME KPI SUMMARY METRIC CARDS ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {/* KPI 1 */}
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            TOTAL SESSIONS
+          </div>
+          <div className="text-2xl font-bold font-mono text-[#111111] mt-1">
+            {totalLogs.toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1">
+            SCHEDULED TIMETABLE SCOPE
+          </div>
+        </div>
+
+        {/* KPI 2 */}
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            IN SESSION / STARTED
+          </div>
+          <div className="text-2xl font-bold font-mono text-amber-600 mt-1">
+            {counts.started.toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1">
+            CURRENTLY ACTIVE CLASSROOMS
+          </div>
+        </div>
+
+        {/* KPI 3 */}
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            AWAITING REVIEW
+          </div>
+          <div className="text-2xl font-bold font-mono text-blue-600 mt-1">
+            {counts.completed.toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1">
+            {pendingRate}% PHOTO AUDIT QUEUE
+          </div>
+        </div>
+
+        {/* KPI 4 */}
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            VERIFIED &amp; APPROVED
+          </div>
+          <div className="text-2xl font-bold font-mono text-emerald-700 mt-1">
+            {counts.approved.toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1">
+            {verifiedRate}% COMPLIANCE RATE
+          </div>
+        </div>
+      </div>
+
+      {/* Verification Progress Bar */}
+      {totalLogs > 0 && (
+        <div className="gov-card p-3 space-y-1.5">
+          <div className="flex items-center justify-between text-xs font-mono">
+            <span className="text-[#333333] font-semibold flex items-center gap-1.5 uppercase">
+              <TrendingUp className="w-3.5 h-3.5 text-[#111111]" />
+              Instructional Verification Progression
+            </span>
+            <span className="text-[#111111] font-bold">
+              {counts.approved} of {totalLogs} Verified ({verifiedRate}%) · Missed / Expired: {counts.missed}
+            </span>
+          </div>
+          <div className="h-2 w-full bg-[#E5E7EB] overflow-hidden flex">
+            <div style={{ width: `${verifiedRate}%` }} className="bg-emerald-600 transition-all duration-300" title="Verified" />
+            <div style={{ width: `${pendingRate}%` }} className="bg-blue-600 transition-all duration-300" title="Pending Review" />
+            <div
+              style={{ width: `${totalLogs > 0 ? Math.round((counts.started / totalLogs) * 100) : 0}%` }}
+              className="bg-amber-500 transition-all duration-300"
+              title="In Session"
+            />
+            <div
+              style={{ width: `${totalLogs > 0 ? Math.round((counts.missed / totalLogs) * 100) : 0}%` }}
+              className="bg-rose-600 transition-all duration-300"
+              title="Missed"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ── 3. CONTROL BAR ── */}
+      <div className="gov-control-bar flex flex-wrap items-center justify-between gap-3 p-3 bg-white border border-[#CCCCCC]">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Scope Mode */}
+          <div className="inline-flex border border-[#CCCCCC]">
+            {(['day', 'month', 'term'] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setFilterMode(m)}
+                className={`px-3 py-1 text-xs font-mono uppercase tracking-wider transition-colors ${
+                  filterMode === m
+                    ? 'bg-[#111111] text-white font-bold'
+                    : 'bg-white text-[#555555] hover:bg-[#F3F4F6]'
+                }`}
+              >
+                {m === 'day' ? 'DAILY' : m === 'month' ? 'MONTHLY' : labels.periodNoun.toUpperCase()}
+              </button>
+            ))}
+          </div>
+
+          {filterMode === 'day' && (
+            <input
+              type="date"
+              value={filterDate}
+              onChange={(e) => setFilterDate(e.target.value)}
+              className="gov-select text-xs font-mono"
+            />
+          )}
+
+          {filterMode === 'month' && (
+            <input
+              type="month"
+              value={filterMonth}
+              onChange={(e) => setFilterMonth(e.target.value)}
+              className="gov-select text-xs font-mono"
+            />
+          )}
+
+          {filterMode === 'term' && (
+            <select
+              value={filterTermId}
+              onChange={(e) => setFilterTermId(e.target.value)}
+              className="gov-select text-xs font-mono"
+            >
+              <option value="">— SELECT {labels.periodNoun.toUpperCase()} —</option>
+              {terms.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {formatPeriod(t.term, t.year, { short: false })}{t.is_current ? ' [CURRENT]' : ''}
+                </option>
+              ))}
+            </select>
+          )}
+
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value as LogStatus | 'all')}
+            className="gov-select text-xs font-mono"
+          >
+            <option value="all">STATUS: ALL ENTRIES</option>
+            <option value="started">IN PROGRESS</option>
+            <option value="completed">PENDING REVIEW</option>
+            <option value="approved">VERIFIED &amp; APPROVED</option>
+            <option value="auto_expired">MISSED / EXPIRED</option>
+          </select>
+        </div>
+
+        <div className="text-xs font-mono text-[#555555]">
+          RECORDS MATCHED: <span className="font-bold text-[#111111]">{logs.length}</span>
+        </div>
+      </div>
+
+      {/* Query error alert */}
+      {queryError && (
+        <div className="border border-rose-300 bg-rose-50 p-3 text-xs font-mono text-rose-800 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-rose-700 shrink-0" />
+          <span>{queryError instanceof Error ? queryError.message : 'Failed to query lesson instruction records'}</span>
+        </div>
+      )}
+
+      {/* ── 4. DATA TABLE ── */}
+      <div className="gov-card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="gov-table w-full text-left">
+            <thead>
+              <tr>
+                <th className="w-24">DATE</th>
+                <th>COURSE UNIT / SUBJECT</th>
+                <th>COHORT / CLASS</th>
+                <th>TUTOR / INSTRUCTOR</th>
+                <th>TIMETABLE SCHEDULE</th>
+                <th>SESSION ENTRY/EXIT</th>
+                <th>AUDIT STATUS</th>
+                <th className="text-right">ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <GovTableLoader colSpan={8} message="AUDITING CLASSROOM INSTRUCTION SESSIONS..." />
+              ) : logs.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="text-center py-12 text-xs font-mono text-[#777777]">
+                    NO LESSON INSTRUCTION SESSIONS FOUND FOR THE SPECIFIED PERIOD SCOPE
+                  </td>
+                </tr>
+              ) : (
+                logs.map((log) => {
+                  const cfg = STATUS_CONFIG[log.status];
+                  return (
+                    <tr key={log.log_id} className="hover:bg-[#F9FAFB] transition-colors">
+                      <td className="font-mono text-xs whitespace-nowrap text-[#555555]">
+                        {fmtDate(log.lesson_date)}
+                      </td>
+                      <td className="font-bold text-xs text-[#111111]">
+                        {log.subject}
+                      </td>
+                      <td className="font-mono text-xs text-[#333333]">
+                        {log.class_name}
+                      </td>
+                      <td className="text-xs text-[#333333]">
+                        <div className="flex items-center gap-1.5">
+                          <User className="w-3.5 h-3.5 text-[#777777] shrink-0" />
+                          <span>{log.teacher_name ?? `Tutor ID: ${log.teacher_id.slice(0, 8)}`}</span>
+                        </div>
+                      </td>
+                      <td className="font-mono text-xs text-[#555555] whitespace-nowrap">
+                        {hhmm(log.scheduled_start)} – {hhmm(log.scheduled_end)}
+                      </td>
+                      <td className="font-mono text-xs text-[#555555] whitespace-nowrap">
+                        {fmtTime(log.started_at)} / {fmtTime(log.ended_at)}
+                      </td>
+                      <td>
+                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-mono font-bold tracking-wider uppercase border ${cfg.tagCls}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${cfg.dotCls}`} />
+                          {cfg.label}
+                        </span>
+                      </td>
+                      <td className="text-right whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedLog(log)}
+                          className={`gov-btn gov-btn-sm ${log.status === 'completed' ? 'gov-btn-primary' : ''}`}
+                        >
+                          {log.status === 'completed' ? 'AUDIT PHOTOS' : 'INSPECT'}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Photo inspection modal */}
+      {selectedLog && schoolId && (
+        <PhotoModal
+          log={selectedLog}
+          schoolId={schoolId}
+          onClose={() => setSelectedLog(null)}
+          onApprove={handleApprove}
+          approving={approving}
+        />
+      )}
+    </div>
   );
 }

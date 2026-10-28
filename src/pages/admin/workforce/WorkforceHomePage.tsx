@@ -4,9 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { usePermission } from '@/hooks/usePermission';
 import { PERMISSION_KEYS } from '@/lib/permissions';
 import { useAuthStore } from '@/store/authStore';
-import { useUIStore } from '@/store/uiStore';
 import { supabase } from '@/lib/supabase';
-import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
 import {
   CalendarDays,
   DollarSign,
@@ -16,25 +14,23 @@ import {
   Briefcase,
   Users,
   Clock,
-  ArrowUpRight,
-  Plus,
-  ShieldAlert,
+  ArrowRight,
+  ShieldCheck,
+  Building2,
+  RefreshCw,
 } from 'lucide-react';
-import { getTokens, cardGrad, SORA, INTER } from '@/styles/posThemeTokens';
+import { GovPageLoader, GovRollingBox } from '@/components/ui/GovLoadingIndicator';
+import '@/styles/government-system.css';
 
 export default function WorkforceHomePage() {
   const navigate = useNavigate();
   const schoolId = useAuthStore((s) => s.schoolId);
-  const user = useAuthStore((s) => s.user);
-  const theme = useUIStore((s) => s.theme);
-  const isDark = theme === 'dark';
-  const t = getTokens(isDark);
 
   const canHr = usePermission(PERMISSION_KEYS.hrManage);
   const canPay = usePermission(PERMISSION_KEYS.hrPayroll);
 
   // Fetch live workforce KPIs
-  const { data: kpis } = useQuery({
+  const { data: kpis, isLoading, refetch } = useQuery({
     queryKey: ['workforce-home-kpis', schoolId],
     queryFn: async () => {
       if (!schoolId) {
@@ -67,241 +63,236 @@ export default function WorkforceHomePage() {
 
   const cards = [
     {
-      title: 'Leave Management',
-      subtitle: 'Staff leave types, requests, approvals, and annual quotas.',
+      title: 'LEAVE MANAGEMENT & PERMITS',
+      code: 'DESK-HR-01',
+      subtitle: 'Faculty and support staff leave requests, statutory quotas, and official clearance workflow.',
       to: '/dashboard/admin/workforce/leave',
       icon: CalendarDays,
-      badge: kpis?.pendingLeave ? `${kpis.pendingLeave} pending` : 'All cleared',
-      badgeColor: kpis?.pendingLeave ? 'amber' : 'mint',
-      colorToken: t.mint,
+      metricLabel: 'CLEARANCE QUEUE',
+      metricVal: kpis?.pendingLeave ? `${kpis.pendingLeave} PENDING` : 'ALL CLEARED',
+      isWarning: Boolean(kpis?.pendingLeave && kpis.pendingLeave > 0),
       visible: canHr,
     },
     {
-      title: 'Careers',
-      subtitle: 'Publish academic & clinical vacancies with public candidate links.',
+      title: 'CAREERS & VACANCIES REGISTRY',
+      code: 'DESK-HR-02',
+      subtitle: 'Publish academic & clinical vacancies, manage public job listings, and track submissions.',
       to: '/dashboard/admin/jobs',
       icon: Briefcase,
-      badge: kpis?.openJobs ? `${kpis.openJobs} active` : 'Manage posts',
-      badgeColor: 'blue',
-      colorToken: t.brand,
+      metricLabel: 'ACTIVE POSTINGS',
+      metricVal: kpis?.openJobs ? `${kpis.openJobs} OPEN ROLES` : '0 OPEN',
+      isWarning: false,
       visible: canHr,
     },
     {
-      title: 'Recruitment & ATS',
-      subtitle: 'Track incoming applicants across screening, interview, and offer.',
+      title: 'RECRUITMENT & APPLICANT ATS',
+      code: 'DESK-HR-03',
+      subtitle: 'Screen incoming candidate submissions, manage interview rounds, and issue appointment offers.',
       to: '/dashboard/admin/workforce/recruitment',
       icon: Kanban,
-      badge: kpis?.newApps ? `${kpis.newApps} new applicants` : 'Pipeline',
-      badgeColor: kpis?.newApps ? 'gold' : 'blue',
-      colorToken: t.gold,
+      metricLabel: 'INCOMING DOSSIERS',
+      metricVal: kpis?.newApps ? `${kpis.newApps} NEW APPLICANTS` : 'PIPELINE STABLE',
+      isWarning: Boolean(kpis?.newApps && kpis.newApps > 0),
       visible: canHr,
     },
     {
-      title: 'Staff Onboarding',
-      subtitle: 'Standardized onboarding task templates and active employee runs.',
+      title: 'EMPLOYEE ONBOARDING PROTOCOL',
+      code: 'DESK-HR-04',
+      subtitle: 'Standardized institutional checklists, document compliance, and active employee orientation.',
       to: '/dashboard/admin/workforce/onboarding',
       icon: ClipboardList,
-      badge: kpis?.activeRuns ? `${kpis.activeRuns} in progress` : 'Checklists',
-      badgeColor: 'purple',
-      colorToken: '#a78bfa',
+      metricLabel: 'ORIENTATION RUNS',
+      metricVal: kpis?.activeRuns ? `${kpis.activeRuns} IN PROGRESS` : 'NO ACTIVE RUNS',
+      isWarning: false,
       visible: canHr,
     },
     {
-      title: 'Performance & Goals',
-      subtitle: 'Appraisal cycles, employee KPI targets, and review evaluations.',
+      title: 'PERFORMANCE & FACULTY APPRAISAL',
+      code: 'DESK-HR-05',
+      subtitle: 'Institutional appraisal cycles, employee KPI objectives, and clinical supervision evaluations.',
       to: '/dashboard/admin/workforce/performance',
       icon: Award,
-      badge: kpis?.openCycles ? `${kpis.openCycles} open cycle` : 'Reviews',
-      badgeColor: 'amber',
-      colorToken: t.gold,
+      metricLabel: 'APPRAISAL CYCLE',
+      metricVal: kpis?.openCycles ? `${kpis.openCycles} ACTIVE CYCLE` : 'CONCLUDED',
+      isWarning: false,
       visible: canHr,
     },
     {
-      title: 'Staff Payroll',
-      subtitle: 'Scheduled pay runs, gross-to-net calculations, and payslips.',
+      title: 'INSTITUTIONAL PAYROLL DISBURSEMENT',
+      code: 'DESK-HR-06',
+      subtitle: 'Scheduled monthly salary runs, gross-to-net statutory deductions, and official payslips.',
       to: '/dashboard/admin/workforce/payroll',
       icon: DollarSign,
-      badge: kpis?.openPay ? `${kpis.openPay} pay run open` : 'Pay Runs',
-      badgeColor: 'mint',
-      colorToken: t.mint,
+      metricLabel: 'PAY DISBURSEMENT',
+      metricVal: kpis?.openPay ? `${kpis.openPay} CYCLE OPEN` : 'CURRENT PERIOD CONCLUDED',
+      isWarning: Boolean(kpis?.openPay && kpis.openPay > 0),
       visible: canPay,
     },
   ];
 
+  if (isLoading && !kpis) {
+    return (
+      <div className="admin-terminal-page space-y-5 p-4">
+        <GovPageLoader message="LOADING WORKFORCE & HUMAN RESOURCES REGISTRY..." minHeight="min-h-[40vh]" />
+      </div>
+    );
+  }
+
   return (
-    <AdminPageWrapper
-      eyebrow="Institution Workforce"
-      title="Workforce & Human Resources"
-      subtitle="Comprehensive staff administration: leave requests, hiring pipeline, onboarding checklists, performance appraisal, and payroll."
-    >
-      <div className="w-full space-y-6">
-        {/* KPI Strip */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-4">
-          <div
-            className="rounded-[18px] p-4 transition-all"
-            style={{
-              background: cardGrad(t),
-              border: `1px solid ${t.stroke}`,
-              boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.4)' : '0 2px 10px rgba(0,0,0,0.05)',
-            }}
-          >
-            <div className="flex items-center justify-between text-xs font-semibold" style={{ color: t.textLow }}>
-              <span>Total Staff</span>
-              <Users className="h-4 w-4" style={{ color: t.mint }} />
-            </div>
-            <div className="mt-2 text-2xl font-bold" style={{ color: t.textHi, fontFamily: SORA }}>
-              {kpis?.staffCount ?? '—'}
-            </div>
-            <div className="mt-1 text-[11px]" style={{ color: t.mint }}>
-              Active academic & support
-            </div>
-          </div>
+    <div className="admin-terminal-page space-y-5 p-4">
+      {/* ── 1. OFFICIAL INSTITUTIONAL MASTHEAD ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#CCCCCC] pb-4">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-[#111111] uppercase font-mono">
+            INSTITUTIONAL WORKFORCE &amp; HUMAN RESOURCES HUB
+          </h1>
+          <p className="text-xs text-[#555555] font-mono tracking-wider uppercase mt-0.5">
+            OFFICIAL FACULTY, CLINICAL INSTRUCTORS &amp; SUPPORT STAFF REGISTRY • REPUBLIC OF UGANDA
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void refetch()}
+          className="gov-btn gov-btn-secondary gov-btn-sm flex items-center gap-1.5"
+        >
+          <RefreshCw className="w-3.5 h-3.5" />
+          <span>REFRESH METRICS</span>
+        </button>
+      </div>
 
-          <div
-            className="rounded-[18px] p-4 transition-all"
-            style={{
-              background: cardGrad(t),
-              border: `1px solid ${t.stroke}`,
-              boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.4)' : '0 2px 10px rgba(0,0,0,0.05)',
-            }}
-          >
-            <div className="flex items-center justify-between text-xs font-semibold" style={{ color: t.textLow }}>
-              <span>Pending Leave</span>
-              <Clock className="h-4 w-4" style={{ color: t.gold }} />
-            </div>
-            <div className="mt-2 text-2xl font-bold" style={{ color: (kpis?.pendingLeave ?? 0) > 0 ? t.gold : t.textHi, fontFamily: SORA }}>
-              {kpis?.pendingLeave ?? 0}
-            </div>
-            <div className="mt-1 text-[11px]" style={{ color: t.textLow }}>
-              Awaiting admin approval
-            </div>
+      {/* ── 2. MONOCHROME KPI SUMMARY STRIP (6 BOXES) ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            TOTAL STAFF
           </div>
-
-          <div
-            className="rounded-[18px] p-4 transition-all"
-            style={{
-              background: cardGrad(t),
-              border: `1px solid ${t.stroke}`,
-              boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.4)' : '0 2px 10px rgba(0,0,0,0.05)',
-            }}
-          >
-            <div className="flex items-center justify-between text-xs font-semibold" style={{ color: t.textLow }}>
-              <span>Applicant Pipeline</span>
-              <Kanban className="h-4 w-4" style={{ color: t.brand }} />
-            </div>
-            <div className="mt-2 text-2xl font-bold" style={{ color: t.textHi, fontFamily: SORA }}>
-              {kpis?.newApps ?? 0}
-            </div>
-            <div className="mt-1 text-[11px]" style={{ color: t.textLow }}>
-              New submissions to review
-            </div>
+          <div className="text-2xl font-bold font-mono text-[#111111] mt-1">
+            {kpis?.staffCount ?? 0}
           </div>
-
-          <div
-            className="rounded-[18px] p-4 transition-all"
-            style={{
-              background: cardGrad(t),
-              border: `1px solid ${t.stroke}`,
-              boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.4)' : '0 2px 10px rgba(0,0,0,0.05)',
-            }}
-          >
-            <div className="flex items-center justify-between text-xs font-semibold" style={{ color: t.textLow }}>
-              <span>Active Pay Runs</span>
-              <DollarSign className="h-4 w-4" style={{ color: t.mint }} />
-            </div>
-            <div className="mt-2 text-2xl font-bold" style={{ color: t.mint, fontFamily: SORA }}>
-              {kpis?.openPay ?? 0}
-            </div>
-            <div className="mt-1 text-[11px]" style={{ color: t.textLow }}>
-              Open payroll periods
-            </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            ACTIVE FACULTY
           </div>
         </div>
 
-        {/* Modules Grid */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {cards.filter((c) => c.visible).map((card) => {
-            const Icon = card.icon;
-            return (
-              <Link
-                key={card.to}
-                to={card.to}
-                className="group relative flex flex-col justify-between rounded-[20px] p-6 transition-all duration-200 hover:-translate-y-0.5"
-                style={{
-                  background: cardGrad(t),
-                  border: `1px solid ${t.stroke}`,
-                  boxShadow: isDark ? '0 8px 30px rgba(0,0,0,0.4)' : '0 4px 14px rgba(0,0,0,0.06)',
-                }}
-              >
-                <div>
-                  <div className="flex items-start justify-between">
-                    <div
-                      className="flex h-12 w-12 items-center justify-center rounded-[16px] transition-transform duration-200 group-hover:scale-105"
-                      style={{
-                        background: `${card.colorToken}15`,
-                        border: `1px solid ${card.colorToken}35`,
-                      }}
-                    >
-                      <Icon className="h-6 w-6" style={{ color: card.colorToken }} />
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
-                        style={{
-                          background: `${card.colorToken}15`,
-                          color: card.colorToken,
-                          border: `1px solid ${card.colorToken}30`,
-                        }}
-                      >
-                        {card.badge}
-                      </span>
-                      <ArrowUpRight
-                        className="h-4 w-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
-                        style={{ color: card.colorToken }}
-                      />
-                    </div>
-                  </div>
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            PENDING LEAVE
+          </div>
+          <div className={`text-2xl font-bold font-mono mt-1 ${
+            (kpis?.pendingLeave ?? 0) > 0 ? 'text-amber-700' : 'text-[#111111]'
+          }`}>
+            {kpis?.pendingLeave ?? 0}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            AWAITING ACTION
+          </div>
+        </div>
 
-                  <h3
-                    className="mt-4 text-base font-bold transition-colors"
-                    style={{ color: t.textHi, fontFamily: SORA }}
-                  >
-                    {card.title}
-                  </h3>
-                  <p className="mt-1.5 text-xs leading-relaxed" style={{ color: t.textLow, fontFamily: INTER }}>
-                    {card.subtitle}
-                  </p>
-                </div>
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            OPEN VACANCIES
+          </div>
+          <div className="text-2xl font-bold font-mono text-[#111111] mt-1">
+            {kpis?.openJobs ?? 0}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            CAREER POSTINGS
+          </div>
+        </div>
 
-                <div
-                  className="mt-5 flex items-center gap-1 text-xs font-semibold"
-                  style={{ color: card.colorToken }}
-                >
-                  <span>Open module</span>
-                  <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
-                </div>
-              </Link>
-            );
-          })}
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            APPLICANTS
+          </div>
+          <div className={`text-2xl font-bold font-mono mt-1 ${
+            (kpis?.newApps ?? 0) > 0 ? 'text-blue-700' : 'text-[#111111]'
+          }`}>
+            {kpis?.newApps ?? 0}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            NEW DOSSIERS
+          </div>
+        </div>
 
-          {!canHr && !canPay && (
-            <div
-              className="col-span-full flex items-center gap-3 rounded-[18px] p-5"
-              style={{
-                background: 'rgba(245, 158, 11, 0.08)',
-                border: '1px solid rgba(245, 158, 11, 0.25)',
-                color: '#fef3c7',
-              }}
-            >
-              <ShieldAlert className="h-6 w-6 shrink-0 text-amber-400" />
-              <div className="text-sm">
-                You currently do not have workforce management permissions. An administrator can grant{' '}
-                <strong>Workforce and HR</strong> or <strong>Payroll</strong> rights under Access & Permissions.
-              </div>
-            </div>
-          )}
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            ONBOARDING
+          </div>
+          <div className="text-2xl font-bold font-mono text-[#111111] mt-1">
+            {kpis?.activeRuns ?? 0}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            IN ORIENTATION
+          </div>
+        </div>
+
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            PAY RUNS
+          </div>
+          <div className={`text-2xl font-bold font-mono mt-1 ${
+            (kpis?.openPay ?? 0) > 0 ? 'text-emerald-700' : 'text-[#111111]'
+          }`}>
+            {kpis?.openPay ?? 0}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            CYCLES OPEN
+          </div>
         </div>
       </div>
-    </AdminPageWrapper>
+
+      {/* ── 3. OPERATIONAL WORKFORCE DESKS GRID ── */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {cards.filter((c) => c.visible).map((card) => {
+          const Icon = card.icon;
+          return (
+            <Link
+              key={card.to}
+              to={card.to}
+              className="gov-card p-4 flex flex-col justify-between hover:bg-[#F9F9FB] transition-colors border border-[#CCCCCC] group"
+            >
+              <div>
+                <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB]">
+                  <span className="text-[10px] font-mono font-bold text-[#777777] uppercase tracking-wider">
+                    {card.code}
+                  </span>
+                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 border ${
+                    card.isWarning
+                      ? 'bg-amber-50 text-amber-900 border-amber-300'
+                      : 'bg-[#F1F3F5] text-[#111111] border-[#CCCCCC]'
+                  }`}>
+                    {card.metricVal}
+                  </span>
+                </div>
+
+                <div className="flex items-start gap-3 mt-3">
+                  <div className="w-9 h-9 border border-[#111111] bg-white flex items-center justify-center shrink-0">
+                    <Icon className="w-4 h-4 text-[#111111]" />
+                  </div>
+                  <div>
+                    <h2 className="text-xs font-bold font-mono uppercase text-[#111111] group-hover:underline">
+                      {card.title}
+                    </h2>
+                    <p className="text-[11px] font-mono text-[#555555] mt-1 leading-relaxed">
+                      {card.subtitle}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-[#E5E7EB] flex items-center justify-between">
+                <span className="text-[10px] font-mono text-[#777777] uppercase tracking-wider">
+                  {card.metricLabel}
+                </span>
+                <span className="text-xs font-mono font-bold text-[#111111] flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                  <span>ENTER DESK</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </span>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
   );
 }

@@ -28,6 +28,8 @@ import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
 import { registerApiUrl } from '@/lib/registerApiOrigin';
+import { GovPageLoader, GovRollingBox } from '@/components/ui/GovLoadingIndicator';
+import '@/styles/government-system.css';
 
 export interface InstitutionalEmail {
   id: string;
@@ -640,126 +642,173 @@ export default function AdminEmailsPage() {
   }, [emails]);
 
   return (
-    <AdminPageWrapper title="Emails">
-      <div className="space-y-3 relative pb-28 sm:pb-16 min-h-[calc(100vh-140px)]">
-        {/* Top Search Bar & Controls */}
-        <div className="space-y-3">
-          {/* Top Row: Search Input + Professional Compose Button */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search in emails"
-                className="w-full pl-11 pr-10 py-2.5 sm:py-3 rounded-full bg-slate-800/90 dark:bg-slate-900 border border-slate-700 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
+    <div className="admin-terminal-page space-y-4 p-4">
+      {/* ── 1. OFFICIAL INSTITUTIONAL MASTHEAD ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#CCCCCC] pb-4">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-[#111111] uppercase font-mono">
+            OFFICIAL INSTITUTIONAL CORRESPONDENCE DESK
+          </h1>
+          <p className="text-xs text-[#555555] font-mono tracking-wider uppercase mt-0.5">
+            CAMPUS CENTRAL INBOX, DISPATCHES &amp; OFFICIAL CORRESPONDENCE • REPUBLIC OF UGANDA
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="gov-btn gov-btn-secondary gov-btn-sm flex items-center gap-1.5"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+            <span>REFRESH</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setComposeOpen(true)}
+            className="gov-btn gov-btn-primary gov-btn-sm flex items-center gap-1.5 font-mono"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>NEW CORRESPONDENCE</span>
+          </button>
+        </div>
+      </div>
 
+      {/* ── 2. MONOCHROME KPI SUMMARY STRIP ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            TOTAL CORRESPONDENCE
+          </div>
+          <div className="text-2xl font-bold font-mono text-[#111111] mt-1">
+            {emails.length.toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            RECORDS IN REPOSITORY
+          </div>
+        </div>
+
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            UNREAD INBOUND
+          </div>
+          <div className={`text-2xl font-bold font-mono mt-1 ${
+            unreadCount > 0 ? 'text-amber-700' : 'text-[#111111]'
+          }`}>
+            {unreadCount.toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            AWAITING ACKNOWLEDGEMENT
+          </div>
+        </div>
+
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            SENT DISPATCHES
+          </div>
+          <div className="text-2xl font-bold font-mono text-[#111111] mt-1">
+            {emails.filter((e) => e.direction === 'outbound').length.toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            OUTBOUND LETTERS &amp; REPLIES
+          </div>
+        </div>
+
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            ACTIVE MAILBOX
+          </div>
+          <div className="text-xs font-bold font-mono text-[#111111] mt-2 truncate uppercase">
+            {selectedMailbox === 'all' ? 'ALL OFFICIAL DESKS' : selectedMailbox}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            CONNECTED ENDPOINT
+          </div>
+        </div>
+      </div>
+
+      {/* ── 3. HIGH-DENSITY CONTROL BAR ── */}
+      <div className="gov-control-bar flex flex-wrap items-center justify-between gap-3 p-3 bg-white border border-[#CCCCCC]">
+        <div className="flex items-center gap-2 flex-1 min-w-[240px]">
+          <Search className="w-4 h-4 text-[#777777]" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search subject, recipient, sender, body text…"
+            className="gov-input text-xs font-mono w-full"
+          />
+          {searchQuery && (
             <button
               type="button"
-              onClick={() => setComposeOpen(true)}
-              className="inline-flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 shrink-0"
-              title="Compose New Email"
+              onClick={() => setSearchQuery('')}
+              className="p-1 hover:bg-[#F3F4F6] text-[#555555]"
             >
-              <Plus className="w-4 h-4" />
-              <span>Compose</span>
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center border border-[#CCCCCC]">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('inbox');
+                setSelectedEmailId(null);
+              }}
+              className={`px-3 py-1 text-xs font-mono uppercase font-bold transition-colors ${
+                activeTab === 'inbox'
+                  ? 'bg-[#111111] text-white'
+                  : 'bg-white text-[#555555] hover:bg-[#F9F9FB]'
+              }`}
+            >
+              INBOX {unreadCount > 0 ? `(${unreadCount})` : ''}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('sent');
+                setSelectedEmailId(null);
+              }}
+              className={`px-3 py-1 text-xs font-mono uppercase font-bold transition-colors border-l border-[#CCCCCC] ${
+                activeTab === 'sent'
+                  ? 'bg-[#111111] text-white'
+                  : 'bg-white text-[#555555] hover:bg-[#F9F9FB]'
+              }`}
+            >
+              SENT
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('all');
+                setSelectedEmailId(null);
+              }}
+              className={`px-3 py-1 text-xs font-mono uppercase font-bold transition-colors border-l border-[#CCCCCC] ${
+                activeTab === 'all'
+                  ? 'bg-[#111111] text-white'
+                  : 'bg-white text-[#555555] hover:bg-[#F9F9FB]'
+              }`}
+            >
+              ALL ({emails.length})
             </button>
           </div>
 
-          {/* Filter Pills & Actions */}
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('inbox');
-                  setSelectedEmailId(null);
-                }}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
-                  activeTab === 'inbox'
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300'
-                }`}
-              >
-                <Inbox className="w-3.5 h-3.5" />
-                <span>Inbox</span>
-                {unreadCount > 0 && (
-                  <span className="ml-1 px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[10px] font-bold">
-                    {unreadCount}
-                  </span>
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('sent');
-                  setSelectedEmailId(null);
-                }}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
-                  activeTab === 'sent'
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300'
-                }`}
-              >
-                <Send className="w-3.5 h-3.5" />
-                <span>Sent</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('all');
-                  setSelectedEmailId(null);
-                }}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
-                  activeTab === 'all'
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300'
-                }`}
-              >
-                <Mail className="w-3.5 h-3.5" />
-                <span>All Mail ({emails.length})</span>
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <select
-                value={selectedMailbox}
-                onChange={(e) => setSelectedMailbox(e.target.value)}
-                className="px-3 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-xs text-slate-200 font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500"
-              >
-                <option value="all">All Mailboxes</option>
-                {OFFICIAL_MAILBOXES.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-
-              <button
-                type="button"
-                onClick={() => refetch()}
-                disabled={isFetching}
-                className="p-2 rounded-full bg-slate-800 border border-slate-700 text-slate-300 hover:text-white transition disabled:opacity-50"
-                title="Refresh"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
-              </button>
-            </div>
-          </div>
+          <select
+            value={selectedMailbox}
+            onChange={(e) => setSelectedMailbox(e.target.value)}
+            className="gov-input text-xs font-mono"
+          >
+            <option value="all">ALL OFFICIAL MAILBOXES</option>
+            {OFFICIAL_MAILBOXES.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
         </div>
+      </div>
 
         {/* ========================================================================= */}
         {/* VIEW 1: EMAIL READER VIEW (Shown when an email is selected)               */}
@@ -1634,7 +1683,6 @@ export default function AdminEmailsPage() {
             </div>
           </div>
         )}
-      </div>
-    </AdminPageWrapper>
+    </div>
   );
 }

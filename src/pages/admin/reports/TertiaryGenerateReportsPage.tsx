@@ -40,6 +40,8 @@ import {
   Users,
 } from 'lucide-react';
 import { getTokens, cardGrad, SORA, INTER } from '@/styles/posThemeTokens';
+import { GovPageLoader, GovRollingBox } from '@/components/ui/GovLoadingIndicator';
+import '@/styles/government-system.css';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 const EMPTY_RAW_STUDENTS: any[] = [];
@@ -512,253 +514,186 @@ export default function TertiaryGenerateReportsPage() {
 
   if (studentsLoading) {
     return (
-      <AdminPageWrapper
-        eyebrow="Academic Records &amp; Transcripts"
-        title="Examination Broadsheets &amp; Transcripts Hub"
-        subtitle="Generate whole-class notice board broadsheets, official semester result slips, and cumulative transcripts."
-      >
-        <div
-          className="rounded-2xl p-12 flex flex-col items-center justify-center gap-3 text-center"
-          style={{
-            backgroundColor: t.panel,
-            border: `1px solid ${t.stroke}`,
-          }}
-        >
-          <Loader2 className="w-8 h-8 text-teal-400 animate-spin" />
-          <p className="text-sm text-slate-300 font-medium">Loading academic records...</p>
-        </div>
-      </AdminPageWrapper>
+      <div className="admin-terminal-page space-y-5">
+        <GovPageLoader message="LOADING ACADEMIC RECORDS &amp; EXAMINATION DATA..." minHeight="min-h-[40vh]" />
+      </div>
     );
   }
 
   if (students.length === 0) {
     return (
-      <AdminPageWrapper
-        title="Result Slips, Transcripts &amp; Broadsheets"
-        subtitle="Generate official UNMEB result slips, academic transcripts, and notice board broadsheets."
-      >
-        <div
-          className="rounded-2xl p-8"
-          style={{
-            backgroundColor: t.panel,
-            border: `1px solid ${t.stroke}`,
-          }}
-        >
-          <PosEmptyState
-            icon={<GraduationCap className="w-8 h-8 text-teal-400" />}
-            title="No Tertiary Students Enrolled"
-            description="Enroll students in your institution to generate verified result slips, hospital clinical postings, and transcripts."
-            accentColor="mint"
-          />
+      <div className="admin-terminal-page space-y-5">
+        <div className="gov-card p-12 text-center text-xs font-mono text-[#777777]">
+          NO TERTIARY TRAINEES CURRENTLY ENROLLED IN RECORD SYSTEM
         </div>
-      </AdminPageWrapper>
+      </div>
     );
   }
 
   return (
-    <AdminPageWrapper
-      eyebrow="Academic Records &amp; Transcripts"
-      title="Examination Broadsheets &amp; Transcripts Hub"
-      subtitle="Generate whole-class notice board broadsheets, official semester result slips, and cumulative transcripts."
-    >
-      <div className="w-full space-y-6">
-        {/* 4-Card Summary Strip */}
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
-          <div
-            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
-            style={{
-              background: cardGrad(t, 'blue'),
-              border: `1px solid ${t.stroke}`,
-            }}
+    <div className="admin-terminal-page space-y-5">
+      {/* ── 1. TOP HEADER ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#CCCCCC] pb-4">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-[#111111] uppercase font-mono">
+            RESULT SLIPS, TRANSCRIPTS &amp; BROADSHEETS HUB
+          </h1>
+          <p className="text-xs text-[#555555] font-mono tracking-wider uppercase mt-0.5">
+            OFFICIAL UNMEB/UHPAB BROADSHEETS, SEMESTER PROGRESS &amp; ACCREDITED TRANSCRIPTS
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleDownloadActiveDocPdf}
+            disabled={isGeneratingDocPdf}
+            className="gov-btn gov-btn-primary gov-btn-sm flex items-center gap-1.5"
           >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
-                {docType === 'broadsheet' ? 'Cohort Trainees' : 'Selected Trainee'}
-              </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/15 text-blue-400">
-                <Users className="h-4 w-4" />
-              </div>
-            </div>
-            <p className="mt-2 text-lg font-bold text-slate-100 truncate" style={{ fontFamily: SORA }}>
-              {docType === 'broadsheet'
-                ? `${filteredStudents.length} Trainees in Cohort`
-                : activeStudent?.fullName || 'None Selected'}
-            </p>
-            <p className="mt-1 text-xs text-blue-400/90 font-medium">
-              {docType === 'broadsheet'
-                ? selectedCohort === 'all' ? 'All Registered Cohorts' : selectedCohort
-                : `Reg: ${activeStudent?.collegeRegNo}`}
-            </p>
-          </div>
+            {isGeneratingDocPdf ? (
+              <GovRollingBox size="sm" />
+            ) : (
+              <Download className="w-3.5 h-3.5" />
+            )}
+            <span>
+              {isGeneratingDocPdf
+                ? 'GENERATING DOCUMENT...'
+                : docType === 'broadsheet'
+                ? 'EXPORT BROADSHEET PDF'
+                : docType === 'slip'
+                ? 'EXPORT RESULT SLIP PDF'
+                : 'EXPORT TRANSCRIPT PDF'}
+            </span>
+          </button>
+        </div>
+      </div>
 
-          <div
-            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
-            style={{
-              background: cardGrad(t, 'emerald'),
-              border: `1px solid ${t.stroke}`,
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
-                {docType === 'broadsheet' ? 'Class Pass Rate' : 'Semester GPA'}
-              </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
-                <Award className="h-4 w-4" />
-              </div>
-            </div>
-            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
-              {docType === 'broadsheet'
-                ? broadsheetSummary
-                  ? `${Math.round((broadsheetSummary.passedCount / (broadsheetSummary.totalStudents || 1)) * 100)}%`
-                  : '—'
-                : semesterGPA > 0
-                ? semesterGPA.toFixed(2)
-                : '—'}
-            </p>
-            <p className="mt-1 text-xs text-emerald-400/90 font-medium">
-              {docType === 'broadsheet'
-                ? `Normal Progress: ${broadsheetSummary?.passedCount ?? 0} / ${broadsheetSummary?.totalStudents ?? 0}`
-                : `CGPA: ${cumulativeCGPA > 0 ? cumulativeCGPA.toFixed(2) : '—'}`}
-            </p>
+      {/* ── 2. MONOCHROME KPI SUMMARY METRIC CARDS ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            {docType === 'broadsheet' ? 'COHORT TRAINEES' : 'SELECTED CANDIDATE'}
           </div>
-
-          <div
-            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
-            style={{
-              background: cardGrad(t, 'purple'),
-              border: `1px solid ${t.stroke}`,
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
-                {docType === 'broadsheet' ? 'Class Average CGPA' : 'Academic Standing'}
-              </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/15 text-purple-400">
-                <CheckCircle2 className="h-4 w-4" />
-              </div>
-            </div>
-            <p className="mt-2 text-xl font-bold text-slate-100 truncate" style={{ fontFamily: SORA }}>
-              {docType === 'broadsheet'
-                ? broadsheetSummary ? `${broadsheetSummary.averageCGPA.toFixed(2)} CGPA` : '—'
-                : academicStanding === 'NORMAL_PROGRESS'
-                ? 'Normal Progress (NP)'
-                : 'Probation (PB)'}
-            </p>
-            <p className="mt-1 text-xs text-purple-400/90 font-medium">
-              {docType === 'broadsheet'
-                ? `Highest: ${broadsheetSummary?.highestCGPA.toFixed(2) ?? '—'}`
-                : awardClassification}
-            </p>
+          <div className="text-xl font-bold font-mono text-[#111111] mt-1 truncate">
+            {docType === 'broadsheet'
+              ? `${filteredStudents.length} ENROLLED`
+              : activeStudent?.fullName || 'NONE SELECTED'}
           </div>
-
-          <div
-            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
-            style={{
-              background: cardGrad(t, 'amber'),
-              border: `1px solid ${t.stroke}`,
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
-                Notice Board Status
-              </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-400">
-                <Building2 className="h-4 w-4" />
-              </div>
-            </div>
-            <p className="mt-2 text-xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
-              Notice Board Ready
-            </p>
-            <p className="mt-1 text-xs text-amber-400/90 font-medium">
-              Ranked 1st to last • Landscape
-            </p>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase truncate">
+            {docType === 'broadsheet'
+              ? (selectedCohort === 'all' ? 'ALL REGISTERED COHORTS' : selectedCohort)
+              : `REG: ${activeStudent?.collegeRegNo}`}
           </div>
         </div>
 
-        {/* Configuration Toolbar Card */}
-        <div
-          className="rounded-2xl p-5 shadow-sm space-y-4"
-          style={{
-            backgroundColor: t.panel,
-            border: `1px solid ${t.stroke}`,
-          }}
-        >
-          <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-white/10">
-            {/* 3-Way Mode Switcher: Whole Class Broadsheet | Single Student Slip | Academic Transcript */}
-            <div className="inline-flex rounded-xl p-1 gap-1" style={{ backgroundColor: t.fieldBg }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setDocType('broadsheet');
-                  setSelectedStudentId('ALL');
-                }}
-                className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition ${
-                  docType === 'broadsheet'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Table className="h-4 w-4" />
-                Notice Board Broadsheet (Whole Class)
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setDocType('slip');
-                  if (selectedStudentId === 'ALL' && filteredStudents.length > 0) {
-                    setSelectedStudentId(filteredStudents[0].id);
-                  }
-                }}
-                className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition ${
-                  docType === 'slip'
-                    ? 'bg-teal-500/20 text-teal-300 shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <FileText className="h-4 w-4" />
-                Semester Result Slip (Single Trainee)
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setDocType('transcript');
-                  if (selectedStudentId === 'ALL' && filteredStudents.length > 0) {
-                    setSelectedStudentId(filteredStudents[0].id);
-                  }
-                }}
-                className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition ${
-                  docType === 'transcript'
-                    ? 'bg-purple-500/20 text-purple-300 shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <GraduationCap className="h-4 w-4" />
-                Academic Transcript
-              </button>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleDownloadActiveDocPdf}
-              disabled={isGeneratingDocPdf}
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-emerald-900/20 hover:from-emerald-500 hover:to-teal-500 transition disabled:opacity-60 cursor-pointer"
-            >
-              {isGeneratingDocPdf ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Download className="h-3.5 w-3.5" />
-              )}
-              <span>
-                {isGeneratingDocPdf
-                  ? 'Generating PDF...'
-                  : docType === 'broadsheet'
-                  ? 'Download Broadsheet PDF (Landscape)'
-                  : docType === 'slip'
-                  ? 'Download Result Slip PDF'
-                  : 'Download Transcript PDF'}
-              </span>
-            </button>
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            {docType === 'broadsheet' ? 'COHORT PASS RATE' : 'SEMESTER GPA'}
           </div>
+          <div className="text-2xl font-bold font-mono text-emerald-700 mt-1">
+            {docType === 'broadsheet'
+              ? broadsheetSummary
+                ? `${Math.round((broadsheetSummary.passedCount / (broadsheetSummary.totalStudents || 1)) * 100)}%`
+                : '—'
+              : semesterGPA > 0
+              ? semesterGPA.toFixed(2)
+              : '—'}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            {docType === 'broadsheet'
+              ? `NORMAL PROGRESS: ${broadsheetSummary?.passedCount ?? 0} / ${broadsheetSummary?.totalStudents ?? 0}`
+              : `CUMULATIVE CGPA: ${cumulativeCGPA > 0 ? cumulativeCGPA.toFixed(2) : '—'}`}
+          </div>
+        </div>
+
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            {docType === 'broadsheet' ? 'AVERAGE CGPA' : 'ACADEMIC STANDING'}
+          </div>
+          <div className="text-xl font-bold font-mono text-[#111111] mt-1">
+            {docType === 'broadsheet'
+              ? broadsheetSummary ? `${broadsheetSummary.averageCGPA.toFixed(2)} CGPA` : '—'
+              : academicStanding === 'NORMAL_PROGRESS'
+              ? 'NORMAL PROGRESS (NP)'
+              : 'PROBATION (PB)'}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            {docType === 'broadsheet'
+              ? `HIGHEST: ${broadsheetSummary?.highestCGPA.toFixed(2) ?? '—'}`
+              : awardClassification}
+          </div>
+        </div>
+
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            NOTICE BOARD STATUS
+          </div>
+          <div className="text-xl font-bold font-mono text-emerald-700 mt-1">
+            OFFICIAL &amp; READY
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            RANKED LEDGER · LANDSCAPE
+          </div>
+        </div>
+      </div>
+
+      {/* ── 3. CONTROL BAR & DOCUMENT MODE SWITCHER ── */}
+      <div className="gov-control-bar flex flex-wrap items-center justify-between gap-3 p-3 bg-white border border-[#CCCCCC]">
+        <div className="inline-flex border border-[#CCCCCC]">
+          <button
+            type="button"
+            onClick={() => {
+              setDocType('broadsheet');
+              setSelectedStudentId('ALL');
+            }}
+            className={`px-3 py-1.5 text-xs font-mono uppercase tracking-wider transition-colors ${
+              docType === 'broadsheet'
+                ? 'bg-[#111111] text-white font-bold'
+                : 'bg-white text-[#555555] hover:bg-[#F3F4F6]'
+            }`}
+          >
+            Notice Board Broadsheet (Whole Cohort)
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setDocType('slip');
+              if (selectedStudentId === 'ALL' && filteredStudents.length > 0) {
+                setSelectedStudentId(filteredStudents[0].id);
+              }
+            }}
+            className={`px-3 py-1.5 text-xs font-mono uppercase tracking-wider transition-colors ${
+              docType === 'slip'
+                ? 'bg-[#111111] text-white font-bold'
+                : 'bg-white text-[#555555] hover:bg-[#F3F4F6]'
+            }`}
+          >
+            Semester Result Slip (Individual)
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setDocType('transcript');
+              if (selectedStudentId === 'ALL' && filteredStudents.length > 0) {
+                setSelectedStudentId(filteredStudents[0].id);
+              }
+            }}
+            className={`px-3 py-1.5 text-xs font-mono uppercase tracking-wider transition-colors ${
+              docType === 'transcript'
+                ? 'bg-[#111111] text-white font-bold'
+                : 'bg-white text-[#555555] hover:bg-[#F3F4F6]'
+            }`}
+          >
+            Official Transcript
+          </button>
+        </div>
+
+        <div className="text-xs font-mono text-[#555555]">
+          TRAINEES SCOPE: <span className="font-bold text-[#111111]">{filteredStudents.length}</span>
+        </div>
+      </div>
+
+      {/* Selectors Grid */}
+      <div className="gov-card p-4 space-y-3 bg-white border border-[#CCCCCC]">
 
           {/* Selectors Grid */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 text-xs">
@@ -1095,7 +1030,6 @@ export default function TertiaryGenerateReportsPage() {
           )}
           </div>
         </div>
-      </div>
-    </AdminPageWrapper>
+    </div>
   );
 }

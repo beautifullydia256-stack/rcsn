@@ -3,7 +3,6 @@ import { supabase } from '@/lib/supabase';
 import { REPORT_HEADER_DEFAULTS } from '@/lib/reportHeaderBrandingDefaults';
 import { compressSchoolBadge, validateImageFile } from '@/lib/imageCompression';
 import SectionHeader from './SectionHeader';
-import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
 
 const H = REPORT_HEADER_DEFAULTS;
 
@@ -198,176 +197,194 @@ export default function SettingsBranding({
     <div className="space-y-6">
       <SectionHeader
         embedded={embedded}
-        title="School Branding"
-        desc="Upload your school badge and customize branding information."
+        title="INSTITUTIONAL BRANDING & IDENTITY"
+        badge="IDENTITY PROFILE"
       />
 
-      <div className={`${settingsInsetSurface} p-5 sm:p-6`}>
-        <h3 className="mb-4 text-lg font-semibold ac-text-primary">School Badge / Logo</h3>
+      {/* School Badge Card */}
+      <div className="gov-card p-5">
+        <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3 mb-4">
+          <span className="text-xs font-mono uppercase font-bold text-[#111111] tracking-wider">
+            INSTITUTIONAL CREST / BADGE
+          </span>
+          <span className="text-[11px] font-mono text-[#666666]">MAX 2MB · PNG / JPG</span>
+        </div>
         <div className="flex flex-col items-start gap-6 md:flex-row">
           <div className="flex-shrink-0">
-            <div className="flex h-40 w-40 items-center justify-center overflow-hidden rounded-lg border-2 border-[var(--pw-border)] bg-[var(--pw-s3)]">
+            <div className="flex h-36 w-36 items-center justify-center overflow-hidden rounded-md border border-[#CCCCCC] bg-[#F9F9F9]">
               {logo ? (
                 <img src={logo} alt="School Badge" className="h-full w-full object-contain p-2" />
               ) : (
-                <div className="p-4 text-center text-sm ac-text-muted">
-                  <span className="block">No badge uploaded</span>
+                <div className="p-4 text-center text-xs font-mono text-[#888888]">
+                  <span>NO BADGE</span>
                 </div>
               )}
             </div>
-            <p className="mt-2 text-center text-xs ac-text-muted">Current Badge</p>
+            <p className="mt-1.5 text-center text-[11px] font-mono uppercase text-[#666666]">CURRENT LOGO</p>
           </div>
-          <div className="min-w-0 flex-1">
-            <label className="mb-2 block text-sm font-medium ac-text-secondary">
-              Upload New Badge
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleBadgeUpload}
-              disabled={uploading}
-              className="block w-full min-h-[44px] text-sm ac-text-secondary file:mr-4 file:rounded-lg file:border-0 file:bg-green-600 file:px-4 file:py-2 file:font-semibold file:text-white hover:file:bg-emerald-500 file:cursor-pointer disabled:opacity-50"
-            />
-            <p className="mt-2 text-xs ac-text-muted">
-              Recommended: PNG or JPG, max 2MB, square ratio (e.g., 500x500px)
-            </p>
+          <div className="min-w-0 flex-1 space-y-3">
+            <div>
+              <label className="mb-1 block text-xs font-mono uppercase font-bold text-[#555555]">
+                UPLOAD NEW FILE
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleBadgeUpload}
+                disabled={uploading}
+                className="gov-input w-full text-xs font-mono file:mr-3 file:border-0 file:bg-[#111111] file:px-3 file:py-1 file:text-xs file:font-mono file:text-white file:rounded hover:file:bg-[#333333] cursor-pointer"
+              />
+            </div>
             {uploading && (
-              <p className="mt-3 flex items-center gap-2 text-sm" style={{ color: 'var(--pw-blue, #3d8ef8)' }}>
-                <span
-                  className="h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"
-                  style={{ borderColor: 'var(--pw-blue, #3d8ef8)' }}
-                />
-                Uploading badge...
+              <p className="flex items-center gap-2 text-xs font-mono text-[#111111]">
+                <span className="h-3 w-3 animate-spin rounded-full border border-black border-t-transparent" />
+                UPLOADING BADGE FILE...
               </p>
             )}
           </div>
         </div>
-        <div className="mt-4 rounded-lg border border-[var(--pw-blue)]/35 bg-[var(--pw-s3)]/80 p-4">
-          <h4 className="mb-2 text-sm font-medium" style={{ color: 'var(--pw-blue, #3d8ef8)' }}>
-            📌 Where Your Badge Appears
-          </h4>
-          <ul className="space-y-1 text-xs ac-text-muted">
-            <li>• Student report cards (all templates)</li>
-            <li>• Headed paper and official documents</li>
-            <li>• Exam result sheets</li>
-            <li>• Fee receipts and invoices</li>
-          </ul>
-        </div>
       </div>
 
-      <div className={`${settingsInsetSurface} p-5 sm:p-6`}>
-        <h3 className="mb-4 text-lg font-semibold ac-text-primary">School Information</h3>
+      {/* School Information Card */}
+      <div className="gov-card p-5">
+        <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3 mb-4">
+          <span className="text-xs font-mono uppercase font-bold text-[#111111] tracking-wider">
+            INSTITUTIONAL METADATA & CONTACT PARTICULARS
+          </span>
+          <button
+            type="button"
+            onClick={handleSaveBranding}
+            disabled={saving}
+            className="gov-btn gov-btn-sm gov-btn-primary"
+          >
+            {saving ? 'SAVING...' : 'SAVE DETAILS'}
+          </button>
+        </div>
+
         <div className="space-y-4">
           <div>
-            <label className="mb-2 block text-sm font-medium ac-text-secondary">School Name</label>
+            <label className="mb-1 block text-xs font-mono uppercase font-bold text-[#555555]">
+              REGISTERED INSTITUTION NAME
+            </label>
             <input
               type="text"
               value={schoolName}
               disabled
-              className="ac-input w-full cursor-not-allowed opacity-70"
-            />
-            <p className="mt-1 text-xs ac-text-muted">Contact support to change school name</p>
-          </div>
-          <div>
-            <label className="mb-2 block text-sm font-medium ac-text-secondary">School Subtitle</label>
-            <input
-              type="text"
-              value={subtitle}
-              onChange={(e) => setSubtitle(e.target.value)}
-              placeholder="e.g., Premier Academy Ltd"
-              className="ac-input min-h-[44px] w-full"
-            />
-          </div>
-          <div>
-            <label className="mb-2 block text-sm font-medium ac-text-secondary">School Motto</label>
-            <input
-              type="text"
-              value={motto}
-              onChange={(e) => setMotto(e.target.value)}
-              placeholder="e.g., Excellence in Education"
-              className="ac-input min-h-[44px] w-full"
+              className="gov-input w-full font-bold cursor-not-allowed bg-[#F4F4F4] text-[#444444]"
             />
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="mb-2 block text-sm font-medium ac-text-secondary">Address</label>
+              <label className="mb-1 block text-xs font-mono uppercase font-bold text-[#555555]">
+                INSTITUTION SUBTITLE / DESCRIPTOR
+              </label>
+              <input
+                type="text"
+                value={subtitle}
+                onChange={(e) => setSubtitle(e.target.value)}
+                placeholder="e.g. Health Training Institute"
+                className="gov-input w-full"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-mono uppercase font-bold text-[#555555]">
+                INSTITUTION MOTTO
+              </label>
+              <input
+                type="text"
+                value={motto}
+                onChange={(e) => setMotto(e.target.value)}
+                placeholder="e.g. Caring with Excellence"
+                className="gov-input w-full"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs font-mono uppercase font-bold text-[#555555]">
+                CAMPUS ADDRESS & LOCATION
+              </label>
               <input
                 type="text"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                placeholder="e.g., Saddler Way, Naguru"
-                className="ac-input min-h-[44px] w-full"
+                placeholder="e.g. Rakai Town Council, Rakai District"
+                className="gov-input w-full"
               />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium ac-text-secondary">P.O.Box</label>
+              <label className="mb-1 block text-xs font-mono uppercase font-bold text-[#555555]">
+                POSTAL ADDRESS (P.O. BOX)
+              </label>
               <input
                 type="text"
                 value={pobox}
                 onChange={(e) => setPobox(e.target.value)}
-                placeholder="e.g., P.O.Box 3673, Kampala Uganda"
-                className="ac-input min-h-[44px] w-full"
+                placeholder="e.g. P.O. Box 123, Rakai"
+                className="gov-input w-full"
               />
             </div>
           </div>
+
           <div>
-            <label className="mb-2 block text-sm font-medium ac-text-secondary">Website</label>
+            <label className="mb-1 block text-xs font-mono uppercase font-bold text-[#555555]">
+              OFFICIAL WEBSITE URL
+            </label>
             <input
               type="url"
               value={website}
               onChange={(e) => setWebsite(e.target.value)}
-              placeholder="https://www.yourschool.com"
-              className="ac-input min-h-[44px] w-full"
+              placeholder="https://rcsn.ac.ug"
+              className="gov-input w-full font-mono text-xs"
             />
           </div>
+
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="mb-2 block text-sm font-medium ac-text-secondary">Contact Email</label>
+              <label className="mb-1 block text-xs font-mono uppercase font-bold text-[#555555]">
+                REGISTRY EMAIL ADDRESS
+              </label>
               <input
                 type="email"
                 value={contactEmail}
                 onChange={(e) => setContactEmail(e.target.value)}
-                placeholder="info@yourschool.com"
-                className="ac-input min-h-[44px] w-full"
+                placeholder="registry@rcsn.ac.ug"
+                className="gov-input w-full font-mono text-xs"
               />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium ac-text-secondary">Contact Phone</label>
+              <label className="mb-1 block text-xs font-mono uppercase font-bold text-[#555555]">
+                ADMINISTRATION TELEPHONE CONTACT
+              </label>
               <input
                 type="tel"
                 value={contactPhone}
                 onChange={(e) => setContactPhone(e.target.value)}
-                placeholder="+256 XXX XXX XXX"
-                className="ac-input min-h-[44px] w-full"
+                placeholder="+256 700 000 000"
+                className="gov-input w-full font-mono text-xs"
               />
             </div>
-          </div>
-          <div className="flex justify-end pt-4">
-            <button
-              type="button"
-              onClick={handleSaveBranding}
-              disabled={saving}
-              className={settingsPrimaryActionClass}
-            >
-              {saving ? (
-                <>
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                  Saving...
-                </>
-              ) : (
-                'Save Details'
-              )}
-            </button>
           </div>
         </div>
       </div>
 
-      <div className={`${settingsInsetSurface} p-5 sm:p-6`}>
-        <h3 className="mb-4 text-lg font-semibold ac-text-primary">Report Header Colors</h3>
-        <p className="mb-4 text-sm ac-text-secondary">
-          Control how your school name, details, line, report-title chip, and contact separator appear on every report
-          template. Defaults use black text for main header lines; adjust as you like.
-        </p>
+      {/* Report Header Colors Card */}
+      <div className="gov-card p-5">
+        <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3 mb-4">
+          <span className="text-xs font-mono uppercase font-bold text-[#111111] tracking-wider">
+            DOCUMENT & TRANSCRIPT COLOR PALETTE SPECIFICATION
+          </span>
+          <button
+            type="button"
+            onClick={handleSaveBranding}
+            disabled={saving}
+            className="gov-btn gov-btn-sm gov-btn-primary"
+          >
+            {saving ? 'SAVING...' : 'SAVE PALETTE'}
+          </button>
+        </div>
+
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {[
             { label: 'School Name Color', value: schoolNameColor, set: setSchoolNameColor },
@@ -382,35 +399,25 @@ export default function SettingsBranding({
             { label: 'Report Title Chip — Border', value: chipBorderColor, set: setChipBorderColor },
             { label: 'Subtitle Under Chip (exam / year line)', value: metaLineColor, set: setMetaLineColor },
           ].map(({ label, value, set }) => (
-            <div key={label}>
-              <label className="mb-2 block text-sm font-medium ac-text-secondary">{label}</label>
+            <div key={label} className="border border-[#E2E8F0] p-2.5 rounded bg-[#FAFAFA]">
+              <label className="mb-1.5 block text-xs font-mono uppercase font-semibold text-[#444444]">{label}</label>
               <div className="flex items-center gap-2">
                 <input
                   type="color"
                   value={value}
                   onChange={(e) => set(e.target.value)}
-                  className="h-10 w-16 cursor-pointer rounded-lg border border-[var(--pw-border)] bg-[var(--pw-s3)]"
+                  className="h-8 w-12 cursor-pointer rounded border border-[#CCCCCC] bg-white p-0.5"
                 />
                 <input
                   type="text"
                   value={value}
                   onChange={(e) => set(e.target.value)}
-                  className="ac-input min-h-[44px] flex-1"
+                  className="gov-input flex-1 font-mono text-xs uppercase"
                   placeholder={H.schoolName}
                 />
               </div>
             </div>
           ))}
-        </div>
-        <div className="mt-4 flex justify-end pt-4">
-          <button
-            type="button"
-            onClick={handleSaveBranding}
-            disabled={saving}
-            className={settingsPrimaryActionClass}
-          >
-            {saving ? 'Saving...' : 'Save Colors'}
-          </button>
         </div>
       </div>
     </div>

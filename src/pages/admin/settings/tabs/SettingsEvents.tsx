@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
+import { Plus, X, Calendar, AlertTriangle } from 'lucide-react';
+import '@/styles/government-system.css';
 
 type SchoolEvent = {
   event_id: string;
@@ -11,19 +12,19 @@ type SchoolEvent = {
 };
 
 const EVENT_TYPE_LABELS: Record<SchoolEvent['event_type'], string> = {
-  exam: 'Exam',
-  holiday: 'Holiday',
-  meeting: 'Meeting',
-  sports: 'Sports',
-  other: 'Other',
+  exam: 'EXAMINATION',
+  holiday: 'HOLIDAY',
+  meeting: 'MEETING / COMMITTEE',
+  sports: 'SPORTS / EXTRA',
+  other: 'GENERAL EVENT',
 };
 
-const EVENT_TYPE_COLORS: Record<SchoolEvent['event_type'], string> = {
-  exam: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300',
-  holiday: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
-  meeting: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
-  sports: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
-  other: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+const EVENT_TYPE_TAG_CLASS: Record<SchoolEvent['event_type'], string> = {
+  exam: 'gov-tag gov-tag-approved',
+  holiday: 'gov-tag gov-tag-warned',
+  meeting: 'gov-tag',
+  sports: 'gov-tag',
+  other: 'gov-tag',
 };
 
 function formatDate(iso: string) {
@@ -99,49 +100,71 @@ export default function SettingsEvents({
   const past = events.filter((ev) => ev.event_date < today);
 
   return (
-    <div className={embedded ? 'p-4 md:p-6 space-y-6' : 'space-y-6'}>
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div>
-          <h2 className="text-lg font-semibold ac-text-primary">Upcoming Events</h2>
-          <p className="text-sm ac-text-muted mt-0.5">
-            Add exams, holidays and other events that appear on the dashboard.
-          </p>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3 border-b border-[#CCCCCC] pb-3">
+        <div className="flex items-center gap-3">
+          <h2 className="text-[15px] font-bold tracking-tight text-[#111111] uppercase font-sans">
+            INSTITUTIONAL CALENDAR EVENTS
+          </h2>
+          <span className="inline-flex items-center px-2 py-0.5 text-[11px] font-mono font-bold bg-[#EAEAEA] text-[#222222] border border-[#CCCCCC]">
+            {events.length} LOGGED
+          </span>
         </div>
         <button
-          className={settingsPrimaryActionClass}
+          type="button"
+          className="gov-btn gov-btn-sm gov-btn-primary"
           onClick={() => { setShowForm((v) => !v); setError(null); }}
         >
-          {showForm ? 'Cancel' : '+ Add Event'}
+          {showForm ? (
+            <>
+              <X className="w-3.5 h-3.5 mr-1" />
+              CANCEL
+            </>
+          ) : (
+            <>
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              SCHEDULE EVENT
+            </>
+          )}
         </button>
       </div>
 
       {showForm && (
-        <form onSubmit={handleAdd} className={`${settingsInsetSurface} space-y-4`}>
+        <form onSubmit={handleAdd} className="gov-card rounded-lg border border-[#CCCCCC] bg-white p-4 space-y-4">
+          <div className="text-[12px] font-mono font-bold uppercase text-[#111111]">
+            NEW CALENDAR ENTRY
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium ac-text-muted mb-1">Event Title *</label>
+              <label className="block text-[11px] font-mono font-bold uppercase text-[#555555] mb-1">
+                EVENT TITLE *
+              </label>
               <input
-                className="ac-input w-full"
-                placeholder="e.g. End of Term Exams"
+                className="gov-input w-full text-xs"
+                placeholder="e.g. UNMEB State Final Examinations"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
               />
             </div>
             <div>
-              <label className="block text-xs font-medium ac-text-muted mb-1">Date *</label>
+              <label className="block text-[11px] font-mono font-bold uppercase text-[#555555] mb-1">
+                EVENT DATE *
+              </label>
               <input
                 type="date"
-                className="ac-input w-full"
+                className="gov-input w-full text-xs font-mono"
                 value={eventDate}
                 onChange={(e) => setEventDate(e.target.value)}
                 required
               />
             </div>
             <div>
-              <label className="block text-xs font-medium ac-text-muted mb-1">Type</label>
+              <label className="block text-[11px] font-mono font-bold uppercase text-[#555555] mb-1">
+                CLASSIFICATION
+              </label>
               <select
-                className="ac-input w-full"
+                className="gov-select w-full text-xs"
                 value={eventType}
                 onChange={(e) => setEventType(e.target.value as SchoolEvent['event_type'])}
               >
@@ -151,33 +174,47 @@ export default function SettingsEvents({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium ac-text-muted mb-1">Description (optional)</label>
+              <label className="block text-[11px] font-mono font-bold uppercase text-[#555555] mb-1">
+                BRIEF NOTE (OPTIONAL)
+              </label>
               <input
-                className="ac-input w-full"
-                placeholder="Brief note…"
+                className="gov-input w-full text-xs"
+                placeholder="Administrative directives or venue…"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
             </div>
           </div>
-          {error && <p className="text-sm text-rose-500">{error}</p>}
-          <button type="submit" disabled={saving} className={settingsPrimaryActionClass}>
-            {saving ? 'Saving…' : 'Save Event'}
-          </button>
+          {error && (
+            <div className="p-2.5 rounded border border-[#EF4444] bg-[#FEF2F2] text-xs font-mono font-bold text-[#B91C1C]">
+              {error}
+            </div>
+          )}
+          <div className="flex justify-end pt-2 border-t border-[#CCCCCC]">
+            <button type="submit" disabled={saving} className="gov-btn gov-btn-sm gov-btn-primary">
+              {saving ? 'COMMITTING…' : 'SAVE CALENDAR EVENT'}
+            </button>
+          </div>
         </form>
       )}
 
       {loading ? (
-        <p className="text-sm ac-text-muted">Loading…</p>
+        <div className="gov-card p-8 text-center text-xs font-mono text-[#666666] uppercase border border-[#CCCCCC]">
+          LOADING CALENDAR DIRECTIVES…
+        </div>
       ) : (
         <>
           {upcoming.length === 0 && past.length === 0 && (
-            <p className="text-sm ac-text-muted">No events yet. Click "+ Add Event" to create one.</p>
+            <div className="gov-card p-8 text-center text-xs font-mono text-[#666666] uppercase border border-[#CCCCCC]">
+              NO CALENDAR EVENTS LOGGED. CLICK &quot;SCHEDULE EVENT&quot; TO CREATE AN ENTRY.
+            </div>
           )}
 
           {upcoming.length > 0 && (
-            <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wide ac-text-muted mb-2">Upcoming</h3>
+            <div className="space-y-2">
+              <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#666666]">
+                UPCOMING SCHEDULED EVENTS
+              </div>
               <ul className="space-y-2">
                 {upcoming.map((ev) => (
                   <EventRow key={ev.event_id} ev={ev} onDelete={handleDelete} deletingId={deletingId} />
@@ -187,9 +224,11 @@ export default function SettingsEvents({
           )}
 
           {past.length > 0 && (
-            <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wide ac-text-muted mb-2">Past</h3>
-              <ul className="space-y-2 opacity-60">
+            <div className="space-y-2 pt-2">
+              <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#888888]">
+                PAST ARCHIVED EVENTS
+              </div>
+              <ul className="space-y-2 opacity-75">
                 {past.map((ev) => (
                   <EventRow key={ev.event_id} ev={ev} onDelete={handleDelete} deletingId={deletingId} />
                 ))}
@@ -212,32 +251,38 @@ function EventRow({
   deletingId: string | null;
 }) {
   return (
-    <li className="flex items-start gap-3 rounded-lg border border-[var(--ac-border)] bg-[var(--ac-surface)] px-4 py-3">
-      <div className="min-w-[48px] text-center">
-        <div className="text-lg font-bold leading-none ac-text-primary">
-          {new Date(ev.event_date + 'T00:00:00').getDate().toString().padStart(2, '0')}
+    <li className="gov-card flex items-center justify-between gap-3 rounded-lg border border-[#CCCCCC] bg-white px-4 py-3">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="w-12 text-center border-r border-[#CCCCCC] pr-3 shrink-0">
+          <div className="text-base font-bold font-mono text-[#111111]">
+            {new Date(ev.event_date + 'T00:00:00').getDate().toString().padStart(2, '0')}
+          </div>
+          <div className="text-[10px] font-mono font-bold uppercase text-[#666666]">
+            {new Date(ev.event_date + 'T00:00:00').toLocaleString('en', { month: 'short' })}
+          </div>
         </div>
-        <div className="text-[10px] font-semibold uppercase ac-text-muted">
-          {new Date(ev.event_date + 'T00:00:00').toLocaleString('en', { month: 'short' })}
+        <div className="min-w-0">
+          <p className="font-bold text-[#111111] text-xs uppercase font-sans truncate">
+            {ev.title}
+          </p>
+          {ev.description && (
+            <p className="text-[11px] text-[#555555] font-mono truncate">{ev.description}</p>
+          )}
         </div>
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-medium ac-text-primary text-sm leading-snug">{ev.title}</p>
-        {ev.description && (
-          <p className="text-xs ac-text-muted mt-0.5 truncate">{ev.description}</p>
-        )}
+      <div className="flex items-center gap-2 shrink-0">
+        <span className={EVENT_TYPE_TAG_CLASS[ev.event_type]}>
+          {EVENT_TYPE_LABELS[ev.event_type]}
+        </span>
+        <button
+          className="gov-btn gov-btn-sm text-[#B91C1C] hover:bg-[#FEF2F2]"
+          onClick={() => onDelete(ev.event_id)}
+          disabled={deletingId === ev.event_id}
+          title="Delete event"
+        >
+          {deletingId === ev.event_id ? '…' : 'DELETE'}
+        </button>
       </div>
-      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${EVENT_TYPE_COLORS[ev.event_type]}`}>
-        {EVENT_TYPE_LABELS[ev.event_type].toUpperCase()}
-      </span>
-      <button
-        className="text-rose-500 hover:text-rose-700 text-xs ml-1 shrink-0"
-        onClick={() => onDelete(ev.event_id)}
-        disabled={deletingId === ev.event_id}
-        title="Delete event"
-      >
-        {deletingId === ev.event_id ? '…' : '✕'}
-      </button>
     </li>
   );
 }

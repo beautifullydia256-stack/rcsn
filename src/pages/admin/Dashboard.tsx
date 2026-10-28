@@ -4,7 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { ADMIN_GC_TIME_MS } from '@/lib/adminQueryDefaults';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
-import DesignAdminDashboard from './components/DesignAdminDashboard';
+import { GovPageLoader } from '@/components/ui/GovLoadingIndicator';
+import GovernmentAdminDashboard from './components/GovernmentAdminDashboard';
 
 export async function fetchDashboardAuth(userId: string) {
   const { data: { user } } = await supabase.auth.getUser();
@@ -58,14 +59,7 @@ export default function AdminDashboard() {
   });
 
   if (!user?.id) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-2 border-[var(--ac-border)] border-t-emerald-500" />
-          <p className="ac-text-secondary">Loading dashboard...</p>
-        </div>
-      </div>
-    );
+    return <GovPageLoader message="INITIALIZING SESSION..." />;
   }
 
   if (isError && error) {
@@ -112,20 +106,13 @@ export default function AdminDashboard() {
   }
 
   if (isPending || !authData?.schoolId) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-2 border-[var(--ac-border)] border-t-emerald-500" />
-          <p className="ac-text-secondary">Loading dashboard...</p>
-        </div>
-      </div>
-    );
+    return <GovPageLoader message="LOADING DASHBOARD..." />;
   }
 
   // Greeting uses `users.name` from fetchDashboardAuth — no placeholder metadata.
   return (
     <div>
-      <DesignAdminDashboard schoolId={authData.schoolId} adminName={authData.adminName ?? ''} />
+      <GovernmentAdminDashboard schoolId={authData.schoolId} adminName={authData.adminName ?? ''} />
     </div>
   );
 }

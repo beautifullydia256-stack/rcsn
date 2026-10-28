@@ -1,11 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
-import { useUIStore } from '@/store/uiStore';
-import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
-import PosEmptyState from '@/components/finance/pos/PosEmptyState';
 import NativeModal from '@/components/NativeModal';
-import LiquidGlassSelect from '@/components/ui/LiquidGlassSelect';
 import {
   Cpu,
   Wifi,
@@ -20,16 +16,13 @@ import {
   Edit2,
   Trash2,
   Power,
-  ArrowRight,
-  ArrowLeft,
-  ArrowLeftRight,
-  HelpCircle,
-  Radio,
   Server,
-  Layers,
+  RefreshCw,
   X,
+  Radio,
 } from 'lucide-react';
-import { getTokens, cardGrad, SORA, INTER } from '@/styles/posThemeTokens';
+import { GovPageLoader, GovRollingBox, GovTableLoader } from '@/components/ui/GovLoadingIndicator';
+import '@/styles/government-system.css';
 
 type DeviceType = 'hikvision' | 'zkteco' | 'essl' | 'suprema' | 'rfid' | 'qr';
 type ScanType = 'arrival' | 'departure' | 'both';
@@ -53,19 +46,10 @@ type Device = {
 const DEVICE_LABELS: Record<DeviceType, string> = {
   hikvision: 'Hikvision DS-K1A802F',
   zkteco: 'ZKTeco F18 / F18-N',
-  essl: 'eSSL Standalone',
-  suprema: 'Suprema BioStation',
+  essl: 'eSSL Standalone Terminal',
+  suprema: 'Suprema BioStation 2',
   rfid: 'RFID Card Terminal',
-  qr: 'Dynamic QR Scanner',
-};
-
-const DEVICE_COLORS: Record<DeviceType, string> = {
-  hikvision: 'bg-red-500/15 text-red-300 border-red-500/30',
-  zkteco: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
-  essl: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
-  suprema: 'bg-purple-500/15 text-purple-300 border-purple-500/30',
-  rfid: 'bg-teal-500/15 text-teal-300 border-teal-500/30',
-  qr: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+  qr: 'Dynamic QR Scanner Terminal',
 };
 
 const DEFAULT_PORT: Record<DeviceType, number> = {
@@ -108,9 +92,6 @@ const emptyForm = (): FormState => ({
 
 export default function BiometricDevicesPage() {
   const user = useAuthStore((s) => s.user);
-  const theme = useUIStore((s) => s.theme);
-  const isDark = theme === 'dark';
-  const t = getTokens(isDark);
 
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const SYNC_HOST = 'biometric.stag.hgivers.online';
@@ -123,6 +104,7 @@ export default function BiometricDevicesPage() {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     if (!user?.id) return;
@@ -136,6 +118,11 @@ export default function BiometricDevicesPage() {
 
   useEffect(() => {
     if (!schoolId) return;
+    fetchDevices();
+  }, [schoolId]);
+
+  function fetchDevices() {
+    if (!schoolId) return;
     setLoading(true);
     supabase
       .from('biometric_devices')
@@ -146,7 +133,7 @@ export default function BiometricDevicesPage() {
         if (!e && data) setDevices(data as Device[]);
         setLoading(false);
       });
-  }, [schoolId]);
+  }
 
   function webhookUrl(device: Device) {
     if (device.device_type === 'hikvision') {
@@ -188,7 +175,7 @@ export default function BiometricDevicesPage() {
   async function save() {
     if (!schoolId) return;
     if (!form.device_name.trim()) {
-      setError('Device name is required.');
+      setError('Terminal device name is required.');
       return;
     }
     setSaving(true);
@@ -213,7 +200,7 @@ export default function BiometricDevicesPage() {
       err = e;
       if (!e && data) {
         setDevices((prev) => [...prev, data as Device]);
-        setSuccessMsg(`Terminal "${data.device_name}" added successfully.`);
+        setSuccessMsg(`Terminal "${data.device_name}" registered successfully.`);
       }
     } else if (editId) {
       const { error: e, data } = await supabase
@@ -250,12 +237,13 @@ export default function BiometricDevicesPage() {
   }
 
   async function deleteDevice(id: string) {
+    if (!confirm('Are you sure you want to decommission this hardware terminal?')) return;
     setDeletingId(id);
     const { error: e } = await supabase.from('biometric_devices').delete().eq('id', id);
     setDeletingId(null);
     if (!e) {
       setDevices((prev) => prev.filter((d) => d.id !== id));
-      setSuccessMsg('Device removed.');
+      setSuccessMsg('Terminal decommissioned successfully.');
       setTimeout(() => setSuccessMsg(null), 3000);
     }
   }
@@ -269,571 +257,382 @@ export default function BiometricDevicesPage() {
     return { total, active, pushCount, locations };
   }, [devices]);
 
+  const filteredDevices = useMemo(() => {
+    if (!search.trim()) return devices;
+    const q = search.toLowerCase();
+    return devices.filter(
+      (d) =>
+        d.device_name.toLowerCase().includes(q) ||
+        (d.location ?? '').toLowerCase().includes(q) ||
+        (d.ip_address ?? '').includes(q) ||
+        (d.serial_number ?? '').toLowerCase().includes(q)
+    );
+  }, [devices, search]);
+
   return (
-    <AdminPageWrapper
-      title="Biometric Hardware Terminals"
-      subtitle="Register, monitor, and configure fingerprint and RFID hardware terminals across school gates and facilities."
-    >
-      <div className="w-full space-y-6">
-        {/* Toast / Notifications */}
-        {error && (
-          <div className="flex items-center justify-between rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
-              <span>{error}</span>
-            </div>
-            <button type="button" onClick={() => setError(null)} className="text-red-400 hover:text-red-200">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-
-        {successMsg && (
-          <div className="flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-              <span>{successMsg}</span>
-            </div>
-            <button type="button" onClick={() => setSuccessMsg(null)} className="text-emerald-400 hover:text-emerald-200">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-
-        {/* 4-Card Summary Strip */}
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
-          <div
-            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
-            style={{
-              background: cardGrad(t, 'emerald'),
-              border: isDark ? `1px solid ${t.stroke}` : '1px solid #e2e8f0',
-              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <span className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
-                Active Devices
-              </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-                <Wifi className="h-4 w-4" />
-              </div>
-            </div>
-            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
-              {stats.active}
-            </p>
-            <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-              Actively polling &amp; logging
-            </p>
-          </div>
-
-          <div
-            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
-            style={{
-              background: cardGrad(t, 'blue'),
-              border: isDark ? `1px solid ${t.stroke}` : '1px solid #e2e8f0',
-              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <span className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
-                Total Terminals
-              </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-400">
-                <Cpu className="h-4 w-4" />
-              </div>
-            </div>
-            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
-              {stats.total}
-            </p>
-            <p className="mt-1 text-xs text-blue-600 dark:text-blue-400 font-medium">
-              Registered hardware units
-            </p>
-          </div>
-
-          <div
-            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
-            style={{
-              background: cardGrad(t, 'purple'),
-              border: isDark ? `1px solid ${t.stroke}` : '1px solid #e2e8f0',
-              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <span className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
-                HTTP Push / ADMS
-              </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400">
-                <Server className="h-4 w-4" />
-              </div>
-            </div>
-            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
-              {stats.pushCount}
-            </p>
-            <p className="mt-1 text-xs text-purple-600 dark:text-purple-400 font-medium">
-              Real-time webhook enabled
-            </p>
-          </div>
-
-          <div
-            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
-            style={{
-              background: cardGrad(t, 'amber'),
-              border: isDark ? `1px solid ${t.stroke}` : '1px solid #e2e8f0',
-              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <span className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
-                Campuses / Gates
-              </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
-                <MapPin className="h-4 w-4" />
-              </div>
-            </div>
-            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
-              {stats.locations}
-            </p>
-            <p className="mt-1 text-xs text-amber-600 dark:text-amber-400 font-medium">
-              Terminal locations
-            </p>
-          </div>
+    <div className="admin-terminal-page space-y-5">
+      {/* ── 1. TOP HEADER ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#CCCCCC] pb-4">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-[#111111] uppercase font-mono">
+            CAMPUS BIOMETRIC TERMINAL REGISTRY
+          </h1>
+          <p className="text-xs text-[#555555] font-mono tracking-wider uppercase mt-0.5">
+            HARDWARE ENDPOINTS, REALTIME WEBHOOKS &amp; CAMPUS ACCESS AUDIT
+          </p>
         </div>
-
-        {/* Action Toolbar */}
-        <div
-          className="flex flex-wrap items-center justify-between gap-4 rounded-2xl p-4 shadow-sm"
-          style={{
-            backgroundColor: t.panel,
-            border: isDark ? `1px solid ${t.stroke}` : '1px solid #e2e8f0',
-          }}
-        >
-          <div>
-            <h2 className={`text-base font-semibold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
-              Terminal Hardware Fleet
-            </h2>
-            <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              Supports Hikvision DS-K1A802F, ZKTeco F18, eSSL, Suprema, and RFID scanners.
-            </p>
-          </div>
-
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={fetchDevices}
+            disabled={loading}
+            className="gov-btn gov-btn-sm flex items-center gap-1.5"
+            title="Refresh Terminals"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span>SYNC</span>
+          </button>
           <button
             type="button"
             onClick={openNew}
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-emerald-900/20 transition hover:from-emerald-500 hover:to-teal-500"
+            className="gov-btn gov-btn-primary gov-btn-sm flex items-center gap-1.5"
           >
-            <Plus className="h-3.5 w-3.5" />
-            Add Biometric Terminal
+            <Plus className="w-3.5 h-3.5" />
+            <span>REGISTER TERMINAL</span>
           </button>
         </div>
+      </div>
 
-        {/* Devices List */}
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-teal-500 border-t-transparent" />
+      {/* Alerts */}
+      {error && (
+        <div className="border border-rose-300 bg-rose-50 p-3 text-xs font-mono text-rose-800 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-rose-700 shrink-0" />
+            <span>{error}</span>
           </div>
-        ) : devices.length === 0 ? (
-          <div
-            className="rounded-2xl p-8"
-            style={{
-              backgroundColor: t.panel,
-              border: `1px solid ${t.stroke}`,
-            }}
-          >
-            <PosEmptyState
-              icon={<Cpu className="w-8 h-8 text-teal-400" />}
-              title="No Biometric Terminals Registered"
-              description="Register your first fingerprint or RFID terminal to automate real-time attendance logs and SMS notifications."
-              accentColor="mint"
-            />
-          </div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2">
-            {devices.map((device) => {
-              const mode = PUSH_MODE[device.device_type];
-              const syncOk = device.sync_status === 'ok';
-              const syncTs = device.last_sync_at
-                ? new Date(device.last_sync_at).toLocaleString('en-UG', {
-                    timeZone: 'Africa/Kampala',
-                    hour12: false,
-                  })
-                : null;
+          <button type="button" onClick={() => setError(null)} className="text-rose-700 hover:text-rose-950 font-bold">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
-              return (
-                <div
-                  key={device.id}
-                  className={`flex flex-col justify-between rounded-2xl p-5 transition-all hover:scale-[1.005] ${
-                    device.is_active ? '' : 'opacity-60'
-                  }`}
-                  style={{
-                    backgroundColor: t.panel,
-                    border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
-                    boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
-                  }}
-                >
-                  <div>
-                    {/* Header */}
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${isDark ? 'bg-teal-500/15 text-teal-400' : 'bg-teal-50 text-teal-600'}`}>
-                          <Cpu className="h-5 w-5" />
+      {successMsg && (
+        <div className="border border-emerald-300 bg-emerald-50 p-3 text-xs font-mono text-emerald-800 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
+            <span>{successMsg}</span>
+          </div>
+          <button type="button" onClick={() => setSuccessMsg(null)} className="text-emerald-700 hover:text-emerald-950 font-bold">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* ── 2. MONOCHROME KPI SUMMARY METRIC CARDS ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            ACTIVE TERMINALS
+          </div>
+          <div className="text-2xl font-bold font-mono text-emerald-700 mt-1">
+            {stats.active.toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            ONLINE &amp; POLLING
+          </div>
+        </div>
+
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            TOTAL REGISTERED
+          </div>
+          <div className="text-2xl font-bold font-mono text-[#111111] mt-1">
+            {stats.total.toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            HARDWARE ASSETS
+          </div>
+        </div>
+
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            HTTP PUSH / ADMS
+          </div>
+          <div className="text-2xl font-bold font-mono text-[#111111] mt-1">
+            {stats.pushCount.toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            REALTIME WEBHOOK ENDPOINTS
+          </div>
+        </div>
+
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            CAMPUS POSTS &amp; GATES
+          </div>
+          <div className="text-2xl font-bold font-mono text-[#111111] mt-1">
+            {stats.locations.toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            MONITORED ENTRYPOINTS
+          </div>
+        </div>
+      </div>
+
+      {/* ── 3. CONTROL BAR ── */}
+      <div className="gov-control-bar flex flex-wrap items-center justify-between gap-3 p-3 bg-white border border-[#CCCCCC]">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-mono uppercase tracking-wider text-[#555555]">
+            REGISTERED FLEET:
+          </span>
+          <span className="text-xs font-mono font-bold text-[#111111]">
+            {filteredDevices.length} UNITS
+          </span>
+        </div>
+
+        <div className="relative min-w-[240px]">
+          <input
+            type="text"
+            placeholder="Search terminal name, IP, serial…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="gov-input text-xs font-mono w-full"
+          />
+        </div>
+      </div>
+
+      {/* ── 4. DATA TABLE ── */}
+      <div className="gov-card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="gov-table w-full text-left">
+            <thead>
+              <tr>
+                <th>TERMINAL DESIGNATION</th>
+                <th>MODEL / ARCHITECTURE</th>
+                <th>NETWORK ENDPOINT</th>
+                <th>GATE / FACILITY</th>
+                <th>SCAN DIRECTION</th>
+                <th>WEBHOOK SYNCHRONIZATION</th>
+                <th>STATUS</th>
+                <th className="text-right">ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <GovTableLoader colSpan={8} />
+              ) : filteredDevices.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="text-center py-12 text-xs font-mono text-[#777777]">
+                    NO HARDWARE TERMINALS CURRENTLY REGISTERED
+                  </td>
+                </tr>
+              ) : (
+                filteredDevices.map((d) => {
+                  const isCopied = copiedId === d.id;
+                  const mode = PUSH_MODE[d.device_type];
+
+                  return (
+                    <tr key={d.id} className="hover:bg-[#F9FAFB] transition-colors">
+                      <td className="font-bold text-xs text-[#111111]">
+                        <div className="flex items-center gap-2">
+                          <Cpu className="w-4 h-4 text-[#555555] shrink-0" />
+                          <span>{d.device_name}</span>
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className={`font-semibold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
-                              {device.device_name}
-                            </h3>
-                            <span
-                              className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
-                                DEVICE_COLORS[device.device_type]
-                              }`}
+                      </td>
+                      <td className="font-mono text-xs text-[#555555]">
+                        {DEVICE_LABELS[d.device_type]}
+                      </td>
+                      <td className="font-mono text-xs text-[#333333]">
+                        {d.ip_address ? `${d.ip_address}:${d.port ?? DEFAULT_PORT[d.device_type]}` : '—'}
+                      </td>
+                      <td className="font-mono text-xs text-[#555555]">
+                        {d.location || 'Main Gate'}
+                      </td>
+                      <td className="font-mono text-[11px] uppercase text-[#333333]">
+                        {d.scan_type === 'both' ? 'Bi-directional' : d.scan_type}
+                      </td>
+                      <td className="font-mono text-xs">
+                        {mode === 'push' ? (
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => copyUrl(d)}
+                              className="gov-btn gov-btn-sm py-0.5 px-2 flex items-center gap-1 text-[10px]"
+                              title="Copy Webhook URL"
                             >
-                              {DEVICE_LABELS[device.device_type]}
-                            </span>
+                              {isCopied ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3 text-[#555555]" />}
+                              <span>{isCopied ? 'COPIED' : 'COPY WEBHOOK'}</span>
+                            </button>
                           </div>
-                          {device.location && (
-                            <p className={`mt-0.5 flex items-center gap-1 text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                              <MapPin className="h-3 w-3 text-slate-500" />
-                              {device.location}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`h-2 w-2 rounded-full ${
-                            device.is_active ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'
-                          }`}
-                        />
-                        <span className={`text-[11px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                          {device.is_active ? 'Online' : 'Disabled'}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Meta Specifications */}
-                    <div className={`mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                      {device.ip_address && (
-                        <span className={`flex items-center gap-1 font-mono ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                          <Server className="h-3 w-3 text-slate-500" />
-                          {device.ip_address}:{device.port}
-                        </span>
-                      )}
-                      {device.serial_number && (
-                        <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>
-                          S/N: <span className={`font-mono ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{device.serial_number}</span>
-                        </span>
-                      )}
-                      <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>
-                        Mode:{' '}
-                        <strong className={isDark ? 'text-teal-300' : 'text-teal-700'}>
-                          {mode === 'push'
-                            ? 'HTTP Push'
-                            : mode === 'poll'
-                            ? 'TCP Poll (cron)'
-                            : 'Dynamic QR'}
-                        </strong>
-                      </span>
-                      <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>
-                        Scan:{' '}
-                        <span
-                          className={`inline-flex items-center gap-1 font-semibold ${
-                            device.scan_type === 'arrival'
-                              ? isDark ? 'text-emerald-400' : 'text-emerald-600'
-                              : device.scan_type === 'departure'
-                              ? isDark ? 'text-amber-400' : 'text-amber-600'
-                              : isDark ? 'text-blue-400' : 'text-blue-600'
-                          }`}
-                        >
-                          {device.scan_type === 'arrival' ? (
-                            <>
-                              <ArrowRight className="h-3 w-3" /> Arrival
-                            </>
-                          ) : device.scan_type === 'departure' ? (
-                            <>
-                              <ArrowLeft className="h-3 w-3" /> Departure
-                            </>
-                          ) : (
-                            <>
-                              <ArrowLeftRight className="h-3 w-3" /> Both
-                            </>
-                          )}
-                        </span>
-                      </span>
-                    </div>
-
-                    {syncTs && (
-                      <div className="mt-2 text-xs">
-                        <span
-                          className={`inline-flex items-center gap-1 ${
-                            syncOk
-                              ? isDark ? 'text-emerald-400' : 'text-emerald-600'
-                              : isDark ? 'text-red-400' : 'text-red-600'
-                          }`}
-                        >
-                          {syncOk ? (
-                            <CheckCircle2 className="h-3 w-3" />
-                          ) : (
-                            <AlertCircle className="h-3 w-3" />
-                          )}
-                          Last sync: {syncTs}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Webhook URL for push devices */}
-                    {mode === 'push' && (
-                      <div className="mt-3 flex items-center gap-2">
-                        <code
-                          className={`flex-1 overflow-x-auto rounded-xl border p-2 font-mono text-[11px] ${
-                            isDark ? 'text-teal-300' : 'text-teal-800'
-                          }`}
-                          style={{
-                            backgroundColor: isDark ? t.fieldBg : '#f1f5f9',
-                            borderColor: isDark ? t.stroke : '#cbd5e1',
-                          }}
-                        >
-                          {webhookUrl(device)}
-                        </code>
+                        ) : (
+                          <span className="text-[#888888] text-[10px]">POLL-BASED</span>
+                        )}
+                      </td>
+                      <td>
                         <button
                           type="button"
-                          onClick={() => copyUrl(device)}
-                          className={`inline-flex shrink-0 items-center gap-1 rounded-xl border px-2.5 py-1.5 text-xs font-medium ${
-                            isDark
-                              ? 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white'
-                              : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900'
+                          onClick={() => toggleActive(d)}
+                          className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-mono font-bold tracking-wider uppercase border ${
+                            d.is_active
+                              ? 'border-emerald-400 bg-emerald-50 text-emerald-800'
+                              : 'border-zinc-300 bg-zinc-100 text-zinc-600'
                           }`}
                         >
-                          {copiedId === device.id ? (
-                            <>
-                              <Check className="h-3.5 w-3.5 text-emerald-500" />
-                              <span className="text-emerald-500">Copied</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="h-3.5 w-3.5 text-teal-500" />
-                              <span>Copy URL</span>
-                            </>
-                          )}
+                          <span className={`w-1.5 h-1.5 rounded-full ${d.is_active ? 'bg-emerald-600' : 'bg-zinc-400'}`} />
+                          {d.is_active ? 'ONLINE' : 'OFFLINE'}
                         </button>
-                      </div>
-                    )}
-                  </div>
+                      </td>
+                      <td className="text-right whitespace-nowrap">
+                        <div className="inline-flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => openEdit(d)}
+                            className="gov-btn gov-btn-sm"
+                          >
+                            CONFIGURE
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => deleteDevice(d.id)}
+                            disabled={deletingId === d.id}
+                            className="gov-btn gov-btn-sm text-rose-700 hover:text-rose-900"
+                            title="Decommission Terminal"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-                  {/* Actions Footer */}
-                  <div className={`mt-5 flex items-center justify-between border-t pt-3 ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => openEdit(device)}
-                        className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium ${
-                          isDark
-                            ? 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white'
-                            : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900'
-                        }`}
-                      >
-                        <Edit2 className="h-3 w-3 text-teal-500" />
-                        <span>Edit</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => toggleActive(device)}
-                        className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium ${
-                          device.is_active
-                            ? isDark
-                              ? 'border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
-                              : 'border-amber-400 bg-amber-50 text-amber-800 hover:bg-amber-100'
-                            : isDark
-                              ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
-                              : 'border-emerald-400 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
-                        }`}
-                      >
-                        <Power className="h-3 w-3" />
-                        <span>{device.is_active ? 'Disable' : 'Enable'}</span>
-                      </button>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (confirm(`Delete "${device.device_name}"?`)) {
-                          deleteDevice(device.id);
-                        }
-                      }}
-                      disabled={deletingId === device.id}
-                      className="rounded-lg p-1.5 text-slate-400 hover:bg-red-500/10 hover:text-red-500 transition-colors"
-                      title="Delete Terminal"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Modal: Add or Edit Terminal */}
+      {/* ── 5. TERMINAL CONFIGURATION MODAL ── */}
+      {editId && (
         <NativeModal
-          isOpen={Boolean(editId)}
-          onClose={() => {
-            setEditId(null);
-            setError(null);
-          }}
-          title={editId === 'new' ? 'Register Biometric Terminal' : 'Edit Terminal Settings'}
-          subtitle="Configure network endpoints, scanner types, and clock-in hardware rules."
+          isOpen={true}
+          onClose={() => setEditId(null)}
+          title={editId === 'new' ? 'REGISTER HARDWARE TERMINAL' : `CONFIGURE TERMINAL: ${form.device_name}`}
+          subtitle="Configure biometric hardware endpoint communication and webhook integration."
           icon={Cpu}
           size="lg"
         >
           <div className="space-y-4">
-            <div>
-              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
-                Terminal Name *
-              </label>
-              <input
-                type="text"
-                required
-                value={form.device_name}
-                onChange={(e) => setForm((f) => ({ ...f, device_name: e.target.value }))}
-                placeholder="e.g. Main Campus Gate Terminal 1"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner"
-              />
-            </div>
-
-            <div className="relative z-[35] focus-within:z-[50]">
-              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
-                Device Brand / Model *
-              </label>
-              <div className="grid grid-cols-2 gap-2 mb-2">
-                {(['hikvision', 'zkteco'] as DeviceType[]).map((devT) => (
-                  <button
-                    key={devT}
-                    type="button"
-                    onClick={() => setType(devT)}
-                    className={`rounded-xl border p-2.5 text-left transition-all ${
-                      form.device_type === devT
-                        ? 'border-emerald-500/50 bg-emerald-500/20 text-emerald-300 font-semibold shadow-inner'
-                        : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'
-                    }`}
-                  >
-                    <div className="text-xs font-bold">{devT === 'hikvision' ? 'Hikvision' : 'ZKTeco'}</div>
-                    <div className="mt-0.5 text-[10px] text-white/50">
-                      {devT === 'hikvision' ? 'DS-K1A802F' : 'F18 / F18-N'}
-                    </div>
-                  </button>
-                ))}
-              </div>
-
-              <div className="relative">
-                <LiquidGlassSelect
-                  value={
-                    (['hikvision', 'zkteco'] as DeviceType[]).includes(form.device_type)
-                      ? ''
-                      : form.device_type
-                  }
-                  onChange={(val) => {
-                    if (val) setType(val as DeviceType);
-                  }}
-                  options={[
-                    { value: '', label: 'Other device brand...' },
-                    ...(['essl', 'suprema', 'rfid', 'qr'] as DeviceType[]).map((k) => ({
-                      value: k,
-                      label: DEVICE_LABELS[k],
-                    })),
-                  ]}
-                  placeholder="Other device brand..."
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 relative z-[20] focus-within:z-[30]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
-                  IP Address
+                <label className="block text-xs font-mono uppercase tracking-wider text-[#333333] mb-1 font-semibold">
+                  Device Name / Label *
                 </label>
                 <input
                   type="text"
+                  placeholder="e.g. Campus Entrance Gate 1"
+                  value={form.device_name}
+                  onChange={(e) => setForm((f) => ({ ...f, device_name: e.target.value }))}
+                  className="gov-input w-full font-mono text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono uppercase tracking-wider text-[#333333] mb-1 font-semibold">
+                  Terminal Hardware Model *
+                </label>
+                <select
+                  value={form.device_type}
+                  onChange={(e) => setType(e.target.value as DeviceType)}
+                  className="gov-select w-full font-mono text-xs"
+                >
+                  {Object.entries(DEVICE_LABELS).map(([k, v]) => (
+                    <option key={k} value={k}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono uppercase tracking-wider text-[#333333] mb-1 font-semibold">
+                  Static IP Address (LAN)
+                </label>
+                <input
+                  type="text"
+                  placeholder="192.168.1.201"
                   value={form.ip_address}
                   onChange={(e) => setForm((f) => ({ ...f, ip_address: e.target.value }))}
-                  placeholder="192.168.1.100"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 font-mono text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner"
+                  className="gov-input w-full font-mono text-xs"
                 />
               </div>
+
               <div>
-                <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
-                  Port
+                <label className="block text-xs font-mono uppercase tracking-wider text-[#333333] mb-1 font-semibold">
+                  Network Port
                 </label>
                 <input
-                  type="number"
+                  type="text"
+                  placeholder={String(DEFAULT_PORT[form.device_type])}
                   value={form.port}
                   onChange={(e) => setForm((f) => ({ ...f, port: e.target.value }))}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 font-mono text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner"
+                  className="gov-input w-full font-mono text-xs"
                 />
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 relative z-[15] focus-within:z-[25]">
               <div>
-                <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
-                  Campus Location
+                <label className="block text-xs font-mono uppercase tracking-wider text-[#333333] mb-1 font-semibold">
+                  Serial Number (Hardware Barcode)
                 </label>
                 <input
                   type="text"
-                  value={form.location}
-                  onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
-                  placeholder="e.g. Main Gate, Library"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
-                  Serial Number
-                </label>
-                <input
-                  type="text"
+                  placeholder="DS-K1A802F-20240901"
                   value={form.serial_number}
                   onChange={(e) => setForm((f) => ({ ...f, serial_number: e.target.value }))}
-                  placeholder="Hardware serial"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 font-mono text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner"
+                  className="gov-input w-full font-mono text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono uppercase tracking-wider text-[#333333] mb-1 font-semibold">
+                  Location / Physical Gate
+                </label>
+                <input
+                  type="text"
+                  placeholder="Clinical Skills Lab / Hostel Gate"
+                  value={form.location}
+                  onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
+                  className="gov-input w-full font-mono text-xs"
                 />
               </div>
             </div>
 
-            <div className="relative z-[10] focus-within:z-[20]">
-              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
-                Attendance Scan Mode
+            <div>
+              <label className="block text-xs font-mono uppercase tracking-wider text-[#333333] mb-1 font-semibold">
+                Scan Direction Classification
               </label>
               <div className="grid grid-cols-3 gap-2">
-                {(['arrival', 'departure', 'both'] as ScanType[]).map((mode) => (
+                {(['arrival', 'departure', 'both'] as const).map((dir) => (
                   <button
-                    key={mode}
+                    key={dir}
                     type="button"
-                    onClick={() => setForm((f) => ({ ...f, scan_type: mode }))}
-                    className={`rounded-xl border py-2.5 text-center text-xs font-semibold capitalize transition-all ${
-                      form.scan_type === mode
-                        ? 'border-emerald-500/50 bg-emerald-500/20 text-emerald-300 shadow-inner'
-                        : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'
+                    onClick={() => setForm((f) => ({ ...f, scan_type: dir }))}
+                    className={`py-2 px-3 text-xs font-mono uppercase tracking-wider border transition-colors ${
+                      form.scan_type === dir
+                        ? 'border-[#111111] bg-[#111111] text-white font-bold'
+                        : 'border-[#CCCCCC] bg-white text-[#555555] hover:bg-[#F3F4F6]'
                     }`}
                   >
-                    {mode === 'arrival'
-                      ? 'Arrival'
-                      : mode === 'departure'
-                      ? 'Departure'
-                      : 'Both (In/Out)'}
+                    {dir === 'arrival' ? 'Clock In Only' : dir === 'departure' ? 'Clock Out Only' : 'Both (In & Out)'}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
+            <div className="pt-3 flex justify-end gap-2 border-t border-[#E5E7EB]">
               <button
                 type="button"
-                onClick={() => {
-                  setEditId(null);
-                  setError(null);
-                }}
-                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-white/75 hover:text-white bg-white/5 hover:bg-white/10 border border-white/15 transition-all"
+                onClick={() => setEditId(null)}
+                className="gov-btn gov-btn-sm"
               >
                 Cancel
               </button>
@@ -841,14 +640,15 @@ export default function BiometricDevicesPage() {
                 type="button"
                 onClick={save}
                 disabled={saving}
-                className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-lg shadow-emerald-500/25 border border-emerald-400/30 transition-all disabled:opacity-50"
+                className="gov-btn gov-btn-primary gov-btn-sm flex items-center gap-1.5"
               >
-                {saving ? 'Saving...' : editId === 'new' ? 'Register Terminal' : 'Save Changes'}
+                {saving ? <GovRollingBox size="sm" /> : <Check className="w-3.5 h-3.5" />}
+                <span>{editId === 'new' ? 'Register Endpoint' : 'Save Changes'}</span>
               </button>
             </div>
           </div>
         </NativeModal>
-      </div>
-    </AdminPageWrapper>
+      )}
+    </div>
   );
 }

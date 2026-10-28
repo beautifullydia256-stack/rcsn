@@ -41,6 +41,7 @@ import {
   AccountantReceiptsPage,
   AccountantReportsPage,
   AccountsPage,
+  AddParentPage,
   AddStudentPage,
   AdminDashboard,
   AdminJobsPage,
@@ -400,7 +401,8 @@ function AppRouteTree() {
           <Route path="admissions" element={<AdmissionsManagementPage />} />
           <Route path="students">
             <Route index element={<DesignStudentsPage />} />
-            <Route path="add" element={<Navigate to="/dashboard/admin/students?add=1" replace />} />
+            <Route path="add" element={<AddStudentPage />} />
+            <Route path="new" element={<AddStudentPage />} />
             <Route path="cards" element={<StudentCardsPage />} />
             <Route path="fee-sync" element={<StudentFeeSyncPage />} />
             <Route path="stream-allocation" element={<StreamAllocationPage />} />
@@ -414,7 +416,8 @@ function AppRouteTree() {
           <Route path="teachers/:teacher_id/create-login" element={<CreateTeacherLoginPage />} />
           <Route path="parents">
             <Route index element={<DesignParentsPage />} />
-            <Route path="add" element={<Navigate to="/dashboard/admin/parents?add=1" replace />} />
+            <Route path="add" element={<AddParentPage />} />
+            <Route path="new" element={<AddParentPage />} />
             <Route path=":parent_id/create-login" element={<CreateParentLoginPage />} />
             <Route path=":parent_id" element={<DesignParentProfile />} />
           </Route>
@@ -506,7 +509,8 @@ function AppRouteTree() {
           <Route path="teachers/:teacher_id/create-login" element={<CreateTeacherLoginPage />} />
           <Route path="parents">
             <Route index element={<DesignParentsPage />} />
-            <Route path="add" element={<Navigate to="/dashboard/academic-registrar/parents?add=1" replace />} />
+            <Route path="add" element={<AddParentPage />} />
+            <Route path="new" element={<AddParentPage />} />
             <Route path=":parent_id/create-login" element={<CreateParentLoginPage />} />
             <Route path=":parent_id" element={<DesignParentProfile />} />
           </Route>

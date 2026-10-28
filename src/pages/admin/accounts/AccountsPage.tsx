@@ -1,21 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, GraduationCap, Users, Search, User } from 'lucide-react';
+import { Check, GraduationCap, Users, Search, User, KeyRound, Shield, Trash2, Plus, ArrowRight, RefreshCw, X } from 'lucide-react';
 import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '../../../lib/adminQueryDefaults';
 import { supabase } from '../../../lib/supabase';
 import { registerApiUrl } from '../../../lib/registerApiOrigin';
 import { useAuthStore } from '../../../store/authStore';
 import { useSchoolType } from '@/hooks/useSchoolType';
 import { getRoleTitle, getAllAssignableRoles } from '@/lib/roleTerminology';
-import PwParentsDirectoryShell from '@/components/admin/PwParentsDirectoryShell';
-import PwDirectoryUserCard from '@/components/admin/PwDirectoryUserCard';
-import { pwDirGrad, pwDirInitials, pwRoleToChipTone } from '@/components/admin/pwDirectoryUtils';
 import { AddSchoolStaffForm } from '@/pages/admin/staff/AddSchoolStaffForm';
 import NativeModal from '@/components/NativeModal';
-import LiquidGlassSelect from '@/components/ui/LiquidGlassSelect';
+import { GovPageLoader, GovRollingBox, GovTableLoader } from '@/components/ui/GovLoadingIndicator';
+import '@/styles/government-system.css';
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 15;
 
 interface UserAccount {
   user_id: string;
@@ -73,7 +71,7 @@ export default function AccountsPage() {
   const [editExtraRoles, setEditExtraRoles] = useState<string[]>([]);
   const [savingRoles, setSavingRoles] = useState(false);
 
-  const { data: accounts = [], isLoading } = useQuery({
+  const { data: accounts = [], isLoading, refetch } = useQuery({
     queryKey: ['admin', 'accounts', authUser?.id ?? ''],
     queryFn: () => fetchAccounts(authUser!.id),
     enabled: !!authUser?.id,
@@ -94,74 +92,64 @@ export default function AccountsPage() {
   }, [accounts]);
 
   const roleOptions = useMemo(() => [
-    { value: '', label: `All roles (${accounts.length})` },
-    { value: 'admin', label: `${getRoleTitle('admin', schoolType)}${roleCounts.admin ? ` (${roleCounts.admin})` : ''}` },
-    { value: 'head_teacher', label: `${getRoleTitle('head_teacher', schoolType)}${roleCounts.head_teacher ? ` (${roleCounts.head_teacher})` : ''}` },
-    { value: 'deputy_head_teacher', label: `${getRoleTitle('deputy_head_teacher', schoolType)}${roleCounts.deputy_head_teacher ? ` (${roleCounts.deputy_head_teacher})` : ''}` },
-    { value: 'dos', label: `${getRoleTitle('dos', schoolType)}${roleCounts.dos ? ` (${roleCounts.dos})` : ''}` },
-    { value: 'deputy_dos', label: `${getRoleTitle('deputy_dos', schoolType)}${roleCounts.deputy_dos ? ` (${roleCounts.deputy_dos})` : ''}` },
-    { value: 'accountant', label: `${getRoleTitle('accountant', schoolType)}${roleCounts.accountant ? ` (${roleCounts.accountant})` : ''}` },
-    { value: 'teacher', label: `${getRoleTitle('teacher', schoolType)}${roleCounts.teacher ? ` (${roleCounts.teacher})` : ''}` },
-    { value: 'secretary', label: `${getRoleTitle('secretary', schoolType)}${roleCounts.secretary ? ` (${roleCounts.secretary})` : ''}` },
-    { value: 'librarian', label: `Librarian${roleCounts.librarian ? ` (${roleCounts.librarian})` : ''}` },
-    { value: 'lab_technician', label: `${getRoleTitle('lab_technician', schoolType)}${roleCounts.lab_technician ? ` (${roleCounts.lab_technician})` : ''}` },
-    { value: 'clinician', label: `${getRoleTitle('clinician', schoolType)}${roleCounts.clinician ? ` (${roleCounts.clinician})` : ''}` },
-    { value: 'student', label: `${getRoleTitle('student', schoolType)}${roleCounts.student ? ` (${roleCounts.student})` : ''}` },
-    { value: 'parent', label: `${getRoleTitle('parent', schoolType)}${roleCounts.parent ? ` (${roleCounts.parent})` : ''}` },
-  ], [schoolType, accounts.length, roleCounts]);
+    { value: '', label: `ALL ROLES (${accounts.length})` },
+    { value: 'admin', label: `${getRoleTitle('admin', schoolType).toUpperCase()}${roleCounts.admin ? ` (${roleCounts.admin})` : ''}` },
+    { value: 'head_teacher', label: `${getRoleTitle('head_teacher', schoolType).toUpperCase()}${roleCounts.head_teacher ? ` (${roleCounts.head_teacher})` : ''}` },
+    { value: 'deputy_head_teacher', label: `${getRoleTitle('deputy_head_teacher', schoolType).toUpperCase()}${roleCounts.deputy_head_teacher ? ` (${roleCounts.deputy_head_teacher})` : ''}` },
+    { value: 'teacher', label: `${getRoleTitle('teacher', schoolType).toUpperCase()}${roleCounts.teacher ? ` (${roleCounts.teacher})` : ''}` },
+    { value: 'bursar', label: `${getRoleTitle('bursar', schoolType).toUpperCase()}${roleCounts.bursar ? ` (${roleCounts.bursar})` : ''}` },
+    { value: 'dos', label: `${getRoleTitle('dos', schoolType).toUpperCase()}${roleCounts.dos ? ` (${roleCounts.dos})` : ''}` },
+    { value: 'parent', label: `${getRoleTitle('parent', schoolType).toUpperCase()}${roleCounts.parent ? ` (${roleCounts.parent})` : ''}` },
+    { value: 'student', label: `STUDENT / TRAINEE${roleCounts.student ? ` (${roleCounts.student})` : ''}` },
+  ], [accounts.length, roleCounts, schoolType]);
 
-  const statusOptions = useMemo(() => [
-    { value: 'all', label: 'All statuses' },
-    { value: 'active', label: `Active (${kpiActive})` },
-    { value: 'inactive', label: `Inactive (${accounts.length - kpiActive})` },
-  ], [kpiActive, accounts.length]);
-
-  const assignableRoles = useMemo(() => getAllAssignableRoles(schoolType), [schoolType]);
+  const assignableRoles = useMemo(() => {
+    return getAllAssignableRoles(schoolType);
+  }, [schoolType]);
 
   const filteredAccounts = useMemo(() => {
-    let result = accounts;
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(
-        (a) =>
-          a.name?.toLowerCase().includes(q) ||
-          a.email?.toLowerCase().includes(q) ||
-          a.department?.toLowerCase().includes(q)
-      );
-    }
-    if (roleFilter) result = result.filter((a) => a.role === roleFilter);
-    if (statusFilter === 'active') result = result.filter((a) => a.is_active !== false);
-    if (statusFilter === 'inactive') result = result.filter((a) => a.is_active === false);
-    return result;
-  }, [accounts, searchQuery, roleFilter, statusFilter]);
+    return accounts.filter((a) => {
+      if (statusFilter === 'active' && a.is_active === false) return false;
+      if (statusFilter === 'inactive' && a.is_active !== false) return false;
+      if (roleFilter && a.role !== roleFilter && !a.extra_roles?.includes(roleFilter)) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const mName = (a.name || '').toLowerCase().includes(q);
+        const mEmail = (a.email || '').toLowerCase().includes(q);
+        const mPhone = (a.phone || '').toLowerCase().includes(q);
+        const mDept = (a.department || '').toLowerCase().includes(q);
+        const mRole = (a.role || '').toLowerCase().includes(q);
+        if (!mName && !mEmail && !mPhone && !mDept && !mRole) return false;
+      }
+      return true;
+    });
+  }, [accounts, statusFilter, roleFilter, searchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredAccounts.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const startIdx = (safePage - 1) * PAGE_SIZE;
+  const endIdx = Math.min(startIdx + PAGE_SIZE, filteredAccounts.length);
+  const pageSlice = filteredAccounts.slice(startIdx, endIdx);
 
   useEffect(() => {
     setPage(1);
   }, [searchQuery, roleFilter, statusFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredAccounts.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  useEffect(() => {
-    setPage((p) => Math.min(p, totalPages));
-  }, [totalPages]);
-
-  const pageSlice = useMemo(() => {
-    const start = (safePage - 1) * PAGE_SIZE;
-    return filteredAccounts.slice(start, start + PAGE_SIZE);
-  }, [filteredAccounts, safePage]);
-
-  const startIdx = filteredAccounts.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const endIdx = Math.min(safePage * PAGE_SIZE, filteredAccounts.length);
-
   const handleDelete = async (userId: string, email: string) => {
-    if (!confirm(`Are you sure you want to delete the account for ${email}? This action cannot be undone. Prefer deactivating instead.`)) return;
+    if (!window.confirm(`Are you sure you want to delete user account "${email}"? This action cannot be undone.`)) return;
     setDeleting(userId);
     try {
-      const { error } = await supabase.from('users').delete().eq('user_id', userId);
-      if (error) throw error;
+      const res = await fetch(registerApiUrl('/api/admin/delete-user'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ user_id: userId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Delete failed');
       await queryClient.invalidateQueries({ queryKey: ['admin', 'accounts', authUser?.id] });
     } catch (err: unknown) {
-      alert(`Error: ${err instanceof Error ? err.message : 'Delete failed'}. You may need to remove this user via Supabase dashboard or API.`);
+      alert(err instanceof Error ? err.message : 'Failed to delete user');
     } finally {
       setDeleting(null);
     }
@@ -170,31 +158,30 @@ export default function AccountsPage() {
   const handleToggleActive = async (userId: string, currentActive: boolean) => {
     setToggling(userId);
     try {
-      const res = await fetch(registerApiUrl('/api/admin/update-user'), {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ user_id: userId, is_active: !currentActive }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Update failed');
+      const nextActive = !currentActive;
+      const { error } = await supabase
+        .from('users')
+        .update({ is_active: nextActive })
+        .eq('user_id', userId);
+      if (error) throw error;
       await queryClient.invalidateQueries({ queryKey: ['admin', 'accounts', authUser?.id] });
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to update status');
+      alert(err instanceof Error ? err.message : 'Failed to toggle status');
     } finally {
       setToggling(null);
     }
   };
 
   const handleResetPassword = async (userId: string, email: string) => {
-    const newPassword = window.prompt(`Set new password for ${email} (min 6 characters):`);
-    if (newPassword == null || newPassword.length < 6) {
-      if (newPassword != null) alert('Password must be at least 6 characters.');
+    const newPassword = window.prompt(`Enter a new temporary password for ${email}:`);
+    if (!newPassword || !newPassword.trim()) return;
+    if (newPassword.length < 6) {
+      alert('Password must be at least 6 characters long.');
       return;
     }
     setResetting(userId);
     try {
-      const res = await fetch(registerApiUrl('/api/admin/reset-user-password'), {
+      const res = await fetch(registerApiUrl('/api/admin/reset-password'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -237,7 +224,7 @@ export default function AccountsPage() {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'accounts', authUser?.id] });
       setEditingRolesUser(null);
 
-      // Send email notification (fire and forget — do not block UI)
+      // Send email notification (fire and forget)
       const addedRoles = newAllRoles.filter(r => !oldAllRoles.includes(r));
       const removedRoles = oldAllRoles.filter(r => !newAllRoles.includes(r));
       if ((addedRoles.length > 0 || removedRoles.length > 0) && editingRolesUser.email) {
@@ -251,7 +238,7 @@ export default function AccountsPage() {
             addedRoles,
             removedRoles,
           }),
-        }).catch(() => { /* best-effort */ });
+        }).catch(() => {});
       }
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Failed to update roles');
@@ -264,429 +251,418 @@ export default function AccountsPage() {
     return getRoleTitle(role, schoolType);
   };
 
-  const cardFooter = (a: UserAccount) => (
-    <>
-      <button
-        type="button"
-        className="par-crd-btn par-crd-primary"
-        disabled={resetting === a.user_id}
-        onClick={() => void handleResetPassword(a.user_id, a.email)}
-      >
-        {resetting === a.user_id ? '…' : 'Reset password'}
-      </button>
-      {a.role !== 'student' && (
-        <button
-          type="button"
-          className="par-crd-btn par-crd-ghost"
-          onClick={() => openEditRoles(a)}
-        >
-          Manage roles
-        </button>
-      )}
-      <button
-        type="button"
-        className="par-crd-btn par-crd-ghost"
-        disabled={toggling === a.user_id}
-        onClick={() => void handleToggleActive(a.user_id, a.is_active !== false)}
-      >
-        {toggling === a.user_id ? '…' : a.is_active === false ? 'Activate' : 'Deactivate'}
-      </button>
-      <button
-        type="button"
-        className="par-crd-btn par-crd-ghost"
-        style={{ color: 'var(--rose)' }}
-        disabled={deleting === a.user_id}
-        onClick={() => void handleDelete(a.user_id, a.email)}
-      >
-        {deleting === a.user_id ? '…' : 'Delete'}
-      </button>
-    </>
-  );
-
-  if (isLoading) {
+  if (isLoading && accounts.length === 0) {
     return (
-      <PwParentsDirectoryShell>
-        <div className="par-empty">
-          <div className="par-empty-title">Loading users…</div>
-          <div className="par-empty-sub">Please wait</div>
-        </div>
-      </PwParentsDirectoryShell>
+      <div className="admin-terminal-page space-y-5 p-4">
+        <GovPageLoader message="LOADING SYSTEM USER ACCOUNTS & CREDENTIALS..." minHeight="min-h-[40vh]" />
+      </div>
     );
   }
 
   return (
-    <>
-    <PwParentsDirectoryShell>
-      <style>{`
-        .pw-parents .par-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 18px;
-          margin-bottom: 24px;
-        }
-        .pw-parents .par-pcard-foot {
-          display: grid !important;
-          grid-template-columns: repeat(2, 1fr) !important;
-          gap: 6px !important;
-          padding: 10px 14px !important;
-        }
-        .pw-parents .par-crd-btn {
-          width: 100% !important;
-          padding: 8px 6px !important;
-          font-size: 11.5px !important;
-          text-align: center !important;
-          border-radius: 8px !important;
-        }
-        @media (max-width: 768px) {
-          .pw-parents .par-header {
-            flex-direction: column !important;
-            align-items: stretch !important;
-            gap: 16px !important;
-          }
-          .pw-parents .par-actions {
-            flex-wrap: wrap !important;
-            width: 100% !important;
-          }
-          .pw-parents .par-actions .par-btn {
-            flex: 1 1 calc(50% - 6px) !important;
-            justify-content: center !important;
-          }
-        }
-        @media (max-width: 640px) {
-          .pw-parents .par-kpi-strip {
-            grid-template-columns: repeat(2, 1fr) !important;
-            gap: 8px !important;
-          }
-          .pw-parents .par-kpi {
-            padding: 12px 14px !important;
-            gap: 10px !important;
-          }
-          .pw-parents .par-kpi-ic {
-            width: 36px !important;
-            height: 36px !important;
-          }
-          .pw-parents .par-kpi-val {
-            font-size: 24px !important;
-          }
-          .pw-parents .par-card-grid {
-            grid-template-columns: 1fr !important;
-            gap: 12px !important;
-          }
-        }
-      `}</style>
-      <div className="par-header par-fu">
+    <div className="admin-terminal-page space-y-5 p-4">
+      {/* ── 1. OFFICIAL INSTITUTIONAL MASTHEAD ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#CCCCCC] pb-4">
         <div>
-          <div className="par-eyebrow">User Management</div>
-          <h1 className="par-title">All users</h1>
-          <p className="par-sub">
-            Directory and access control for staff, tutors, trainees, and sponsors.
+          <h1 className="text-xl font-bold tracking-tight text-[#111111] uppercase font-mono">
+            SYSTEM USER ACCOUNTS &amp; CREDENTIALS REGISTRY
+          </h1>
+          <p className="text-xs text-[#555555] font-mono tracking-wider uppercase mt-0.5">
+            AUTHENTICATION ROSTER, ROLE DELEGATION &amp; ACCESS PRIVILEGES • REPUBLIC OF UGANDA
           </p>
         </div>
-        <div className="par-actions">
-          <button type="button" className="par-btn par-btn-violet" onClick={() => setShowAddStaff(true)}>
-            ＋ Add School Staff
+        <div className="flex flex-wrap items-center gap-2">
+          {schoolId && (
+            <button
+              type="button"
+              onClick={() => setShowAddStaff(true)}
+              className="gov-btn gov-btn-primary gov-btn-sm flex items-center gap-1.5"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>ADD STAFF ACCOUNT</span>
+            </button>
+          )}
+          <Link
+            to="/dashboard/admin/accounts/invite"
+            className="gov-btn gov-btn-secondary gov-btn-sm flex items-center gap-1.5"
+          >
+            <span>SEND INVITATIONS</span>
+          </Link>
+          <Link
+            to="/dashboard/admin/permissions"
+            className="gov-btn gov-btn-secondary gov-btn-sm flex items-center gap-1.5"
+          >
+            <span>PERMISSIONS MATRIX</span>
+          </Link>
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            className="gov-btn gov-btn-secondary gov-btn-sm flex items-center gap-1.5"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
           </button>
-          <Link to="/dashboard/admin/accounts/invite" className="par-btn par-btn-ghost">
-            Send invitations
-          </Link>
-          <Link to="/dashboard/admin/permissions" className="par-btn par-btn-ghost">
-            Access &amp; permissions
-          </Link>
         </div>
       </div>
 
-      <div className="par-kpi-strip par-fu par-d1">
-        <div className="par-kpi cv">
-          <div className="par-kpi-ic cv"><Users className="w-4 h-4 inline-block" /></div>
-          <div>
-            <div className="par-kpi-label">Total users</div>
-            <div className="par-kpi-val cv">{accounts.length}</div>
-            <div className="par-kpi-sub">All roles</div>
+      {/* ── 2. MONOCHROME KPI SUMMARY METRIC CARDS ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            TOTAL REGISTERED USERS
+          </div>
+          <div className="text-2xl font-bold font-mono text-[#111111] mt-1">
+            {accounts.length.toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            ALL ROLES &amp; TIERS
           </div>
         </div>
-        <div className="par-kpi cg">
-          <div className="par-kpi-ic cg"><Check className="w-4 h-4 inline-block" /></div>
-          <div>
-            <div className="par-kpi-label">Active</div>
-            <div className="par-kpi-val cg">{kpiActive}</div>
-            <div className="par-kpi-sub">Can sign in</div>
+
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            ACTIVE CREDENTIALS
+          </div>
+          <div className="text-2xl font-bold font-mono text-emerald-700 mt-1">
+            {kpiActive.toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            SIGN-IN AUTHORIZED
           </div>
         </div>
-        <div className="par-kpi ct">
-          <div className="par-kpi-ic ct"><GraduationCap className="w-4 h-4 inline-block" /></div>
-          <div>
-            <div className="par-kpi-label">{isTertiary ? 'Tutors' : 'Teachers'}</div>
-            <div className="par-kpi-val ct">{kpiTeachers}</div>
-            <div className="par-kpi-sub">{isTertiary ? 'Tutor role' : 'Teacher role'}</div>
+
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            {isTertiary ? 'TEACHING TUTORS' : 'TEACHERS'}
+          </div>
+          <div className="text-2xl font-bold font-mono text-[#111111] mt-1">
+            {kpiTeachers.toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            ACADEMIC FACULTY
           </div>
         </div>
-        <div className="par-kpi ca">
-          <div className="par-kpi-ic ca"><Users className="w-4 h-4 inline-block" /></div>
-          <div>
-            <div className="par-kpi-label">{isTertiary ? 'Parents & Sponsors' : 'Parents'}</div>
-            <div className="par-kpi-val ca">{kpiParents}</div>
-            <div className="par-kpi-sub">{isTertiary ? 'Sponsor role' : 'Parent role'}</div>
+
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            {isTertiary ? 'PARENTS & SPONSORS' : 'PARENTS'}
+          </div>
+          <div className="text-2xl font-bold font-mono text-[#111111] mt-1">
+            {kpiParents.toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            SPONSOR PORTALS
           </div>
         </div>
       </div>
 
-      <div className="par-toolbar-wrap par-fu par-d2" style={{ marginBottom: 20 }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', width: '100%' }}>
-          <div className="par-search" style={{ flex: '2 1 240px', minWidth: '220px', maxWidth: '100%' }}>
-            <span style={{ opacity: 0.75, display: 'inline-flex', alignItems: 'center' }} aria-hidden>
-              <Search className="w-3.5 h-3.5" />
-            </span>
-            <input
-              type="search"
-              placeholder="Search name, email, department…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              autoComplete="off"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                style={{ background: 'transparent', border: 'none', color: 'var(--t3)', cursor: 'pointer', padding: '0 6px', fontSize: 13 }}
-                aria-label="Clear search"
-              >
-                ✕
-              </button>
-            )}
-          </div>
+      {/* ── 3. HIGH-DENSITY CONTROL BAR ── */}
+      <div className="gov-control-bar flex flex-wrap items-center justify-between gap-3 p-3 bg-white border border-[#CCCCCC]">
+        <div className="flex items-center gap-2 flex-1 min-w-[240px]">
+          <Search className="w-4 h-4 text-[#777777]" />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search candidate name, email, phone, department…"
+            className="gov-input text-xs font-mono w-full"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="p-1 hover:bg-[#F3F4F6] text-[#555555]"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
 
-          <div style={{ flex: '1.5 1 200px', minWidth: '180px', maxWidth: '100%' }}>
-            <LiquidGlassSelect
-              value={roleFilter}
-              onChange={(val) => setRoleFilter(val)}
-              options={roleOptions}
-              placeholder="Filter by role"
-            />
-          </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="gov-input text-xs font-mono"
+          >
+            {roleOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
 
-          <div style={{ flex: '1 1 140px', minWidth: '130px', maxWidth: '100%' }}>
-            <LiquidGlassSelect
-              value={statusFilter}
-              onChange={(val) => setStatusFilter(val as 'all' | 'active' | 'inactive')}
-              options={statusOptions}
-              placeholder="Status"
-            />
-          </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as any)}
+            className="gov-input text-xs font-mono"
+          >
+            <option value="all">STATUS: ALL</option>
+            <option value="active">STATUS: ACTIVE</option>
+            <option value="inactive">STATUS: INACTIVE</option>
+          </select>
 
           {(roleFilter || statusFilter !== 'all' || searchQuery) && (
             <button
               type="button"
-              className="par-btn par-btn-ghost par-btn-sm"
               onClick={() => {
                 setRoleFilter('');
                 setStatusFilter('all');
                 setSearchQuery('');
               }}
-              style={{ fontSize: 12, padding: '7px 12px' }}
+              className="gov-btn gov-btn-secondary gov-btn-xs font-mono"
             >
-              Reset filters
+              RESET
             </button>
           )}
         </div>
       </div>
 
-      {filteredAccounts.length === 0 ? (
-        <div className="par-empty par-fu par-d3">
-          <div className="par-empty-icon"><User className="w-6 h-6 inline-block" /></div>
-          <div className="par-empty-title">No users match</div>
-          <div className="par-empty-sub">
-            {searchQuery || roleFilter ? 'Try clearing search or choose All roles.' : 'No accounts returned for this school yet.'}
-          </div>
-        </div>
-      ) : (
-        <>
-          <div className="par-card-grid par-fu par-d3">
-            {pageSlice.map((a, i) => {
-              const globalIdx = (safePage - 1) * PAGE_SIZE + i;
-              const emailVal = a.email ? (
-                <a href={`mailto:${a.email}`} className="par-contact-link email" onClick={(e) => e.stopPropagation()}>
-                  {a.email}
-                </a>
-              ) : (
-                <span style={{ color: 'var(--t3)', fontStyle: 'italic' }}>—</span>
-              );
-              const phone = String(a.phone ?? '').trim();
+      {/* ── 4. HIGH DENSITY DATA GRID ── */}
+      <div className="gov-table-container border border-[#CCCCCC] bg-white">
+        <table className="gov-table w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-[#EAEAEA] border-b border-[#CCCCCC]">
+              <th className="py-2.5 px-3 text-[11px] font-mono uppercase font-bold text-[#111111]">#</th>
+              <th className="py-2.5 px-3 text-[11px] font-mono uppercase font-bold text-[#111111]">NAME / IDENTITY</th>
+              <th className="py-2.5 px-3 text-[11px] font-mono uppercase font-bold text-[#111111]">EMAIL / USERNAME</th>
+              <th className="py-2.5 px-3 text-[11px] font-mono uppercase font-bold text-[#111111]">CONTACT</th>
+              <th className="py-2.5 px-3 text-[11px] font-mono uppercase font-bold text-[#111111]">ASSIGNED ROLES</th>
+              <th className="py-2.5 px-3 text-[11px] font-mono uppercase font-bold text-[#111111]">DEPARTMENT</th>
+              <th className="py-2.5 px-3 text-[11px] font-mono uppercase font-bold text-[#111111] text-center">STATUS</th>
+              <th className="py-2.5 px-3 text-[11px] font-mono uppercase font-bold text-[#111111]">LAST SIGN-IN</th>
+              <th className="py-2.5 px-3 text-[11px] font-mono uppercase font-bold text-[#111111] text-right">CREDENTIAL ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pageSlice.map((a, idx) => {
+              const globalIdx = startIdx + idx + 1;
               const extraRoles = Array.isArray(a.extra_roles) ? a.extra_roles.filter(r => r && r !== a.role) : [];
-              const rows = [
-                { label: 'Email', value: emailVal },
-                ...(phone
-                  ? [{ label: 'Phone', value: <a href={`tel:${phone}`} className="par-contact-link phone" onClick={(e) => e.stopPropagation()}>{phone}</a> }]
-                  : []),
-                ...(extraRoles.length > 0
-                  ? [{ label: 'Also', value: <span style={{ fontSize: 11 }}>{extraRoles.map(r => getRoleLabel(r)).join(', ')}</span> }]
-                  : []),
-                { label: 'Department', value: a.department || <span style={{ color: 'var(--t3)', fontStyle: 'italic' }}>—</span> },
-                {
-                  label: 'Status',
-                  value:
-                    a.is_active === false ? (
-                      <span className="par-chip rose" style={{ fontSize: 11 }}>
-                        Inactive
-                      </span>
-                    ) : (
-                      <span className="par-chip green" style={{ fontSize: 11 }}>
-                        Active
-                      </span>
-                    ),
-                },
-                {
-                  label: 'Last sign-in',
-                  value: a.last_sign_in_at ? new Date(a.last_sign_in_at).toLocaleString() : '—',
-                },
-              ];
+              const isActive = a.is_active !== false;
+
               return (
-                <PwDirectoryUserCard
+                <tr
                   key={a.user_id}
-                  name={a.name?.trim() || a.email || 'Unnamed'}
-                  subtitle={getRoleLabel(a.role)}
-                  cornerTone={pwRoleToChipTone(a.role)}
-                  cornerLabel={getRoleLabel(a.role)}
-                  initials={pwDirInitials(a.name || a.email || '?')}
-                  avatarBackground={pwDirGrad(globalIdx)}
-                  statusDotActive={a.is_active !== false}
-                  rows={rows}
-                  footer={cardFooter(a)}
-                />
+                  className="border-b border-[#E5E7EB] hover:bg-[#F9F9FB] transition-colors"
+                >
+                  <td className="py-2.5 px-3 text-xs font-mono text-[#777777]">{globalIdx}</td>
+                  <td className="py-2.5 px-3 text-xs font-mono font-bold text-[#111111]">
+                    {a.name?.trim() || '—'}
+                  </td>
+                  <td className="py-2.5 px-3 text-xs font-mono text-[#111111]">
+                    {a.email}
+                  </td>
+                  <td className="py-2.5 px-3 text-xs font-mono text-[#555555]">
+                    {a.phone || '—'}
+                  </td>
+                  <td className="py-2.5 px-3 text-xs font-mono">
+                    <span className="font-bold text-[#111111] bg-[#F1F3F5] px-1.5 py-0.5 border border-[#CCCCCC] text-[10px] uppercase">
+                      {getRoleLabel(a.role)}
+                    </span>
+                    {extraRoles.length > 0 && (
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {extraRoles.map((r) => (
+                          <span
+                            key={r}
+                            className="text-[9px] font-mono text-[#555555] bg-white px-1 py-0.2 border border-[#E5E7EB] uppercase"
+                          >
+                            +{getRoleLabel(r)}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </td>
+                  <td className="py-2.5 px-3 text-xs font-mono text-[#555555]">
+                    {a.department || '—'}
+                  </td>
+                  <td className="py-2.5 px-3 text-center">
+                    <span className={`text-[10px] font-mono font-bold px-2 py-0.5 border ${
+                      isActive
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                        : 'bg-rose-50 text-rose-800 border-rose-300'
+                    }`}>
+                      {isActive ? 'ACTIVE' : 'INACTIVE'}
+                    </span>
+                  </td>
+                  <td className="py-2.5 px-3 text-[11px] font-mono text-[#555555]">
+                    {a.last_sign_in_at ? new Date(a.last_sign_in_at).toLocaleDateString() : 'NEVER'}
+                  </td>
+                  <td className="py-2.5 px-3 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        type="button"
+                        onClick={() => void handleResetPassword(a.user_id, a.email)}
+                        disabled={resetting === a.user_id}
+                        className="gov-btn gov-btn-secondary gov-btn-xs font-mono"
+                        title="Reset temporary password"
+                      >
+                        {resetting === a.user_id ? '…' : 'RESET PW'}
+                      </button>
+
+                      {a.role !== 'student' && (
+                        <button
+                          type="button"
+                          onClick={() => openEditRoles(a)}
+                          className="gov-btn gov-btn-secondary gov-btn-xs font-mono"
+                          title="Modify system roles"
+                        >
+                          ROLES
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => void handleToggleActive(a.user_id, isActive)}
+                        disabled={toggling === a.user_id}
+                        className="gov-btn gov-btn-secondary gov-btn-xs font-mono"
+                        title={isActive ? 'Deactivate user' : 'Reactivate user'}
+                      >
+                        {toggling === a.user_id ? '…' : isActive ? 'DEACTIVATE' : 'ACTIVATE'}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => void handleDelete(a.user_id, a.email)}
+                        disabled={deleting === a.user_id}
+                        className="gov-btn gov-btn-secondary gov-btn-xs text-rose-700 font-mono hover:bg-rose-50 hover:border-rose-300"
+                        title="Permanently remove user account"
+                      >
+                        {deleting === a.user_id ? '…' : <Trash2 className="w-3 h-3" />}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
               );
             })}
-          </div>
+          </tbody>
+        </table>
 
-          <div className="par-pagination par-fu par-d4">
-            <div className="par-page-info">
-              {filteredAccounts.length === 0 ? (
-                <>Showing <strong>0</strong></>
-              ) : (
-                <>
-                  Showing <strong>{startIdx}</strong>–<strong>{endIdx}</strong> of <strong>{filteredAccounts.length}</strong> users
-                </>
-              )}
+        {filteredAccounts.length === 0 && (
+          <div className="p-8 text-center text-xs font-mono text-[#777777]">
+            NO USER ACCOUNTS MATCH THE APPLIED CRITERIA.
+          </div>
+        )}
+
+        {/* Pagination bar */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between p-3 border-t border-[#CCCCCC] bg-[#F9F9FB] font-mono text-xs">
+            <span className="text-[#555555]">
+              SHOWING CANDIDATES {startIdx + 1}–{endIdx} OF {filteredAccounts.length}
+            </span>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={safePage <= 1}
+                className="gov-btn gov-btn-secondary gov-btn-xs disabled:opacity-50"
+              >
+                PREVIOUS
+              </button>
+              <span className="px-2 py-0.5 border border-[#CCCCCC] bg-white font-bold">
+                {safePage} / {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={safePage >= totalPages}
+                className="gov-btn gov-btn-secondary gov-btn-xs disabled:opacity-50"
+              >
+                NEXT
+              </button>
             </div>
-            {totalPages > 1 ? (
-              <div className="par-page-btns">
-                <button
-                  type="button"
-                  className="par-pbtn"
-                  disabled={safePage <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  ‹
-                </button>
-                <span
-                  className="par-pbtn"
-                  style={{ pointerEvents: 'none', border: 'none', background: 'transparent', minWidth: 'auto', padding: '0 8px' }}
-                >
-                  <strong>{safePage}</strong> / {totalPages}
-                </span>
-                <button
-                  type="button"
-                  className="par-pbtn"
-                  disabled={safePage >= totalPages}
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                >
-                  ›
-                </button>
-              </div>
-            ) : null}
           </div>
-        </>
+        )}
+      </div>
+
+      {/* ── 5. MODALS ── */}
+      {schoolId && (
+        <NativeModal isOpen={showAddStaff} onClose={() => setShowAddStaff(false)} title="REGISTER INSTITUTIONAL STAFF ACCOUNT" size="lg">
+          <AddSchoolStaffForm
+            schoolId={schoolId}
+            onCompleted={() => {
+              setShowAddStaff(false);
+              void queryClient.invalidateQueries({ queryKey: ['admin', 'accounts', authUser?.id] });
+            }}
+            onCancel={() => setShowAddStaff(false)}
+          />
+        </NativeModal>
       )}
-    </PwParentsDirectoryShell>
 
-    {schoolId && (
-      <NativeModal isOpen={showAddStaff} onClose={() => setShowAddStaff(false)} title="Add School Staff" size="lg">
-        <AddSchoolStaffForm
-          schoolId={schoolId}
-          onCompleted={() => {
-            setShowAddStaff(false);
-            void queryClient.invalidateQueries({ queryKey: ['admin', 'accounts', authUser?.id] });
-          }}
-          onCancel={() => setShowAddStaff(false)}
-        />
-      </NativeModal>
-    )}
-
-    <NativeModal
-      isOpen={!!editingRolesUser}
-      onClose={() => setEditingRolesUser(null)}
-      title={`Manage roles — ${editingRolesUser?.name || editingRolesUser?.email || ''}`}
-      size="md"
-    >
       {editingRolesUser && (
-        <div className="space-y-4">
-          <p className="text-xs text-white/70 leading-relaxed">
-            Set a primary role and optionally assign up to 3 additional roles. The user will see a role picker on login when they have more than one role.
-          </p>
+        <NativeModal
+          isOpen={!!editingRolesUser}
+          onClose={() => setEditingRolesUser(null)}
+          title={`ROLE DELEGATION: ${editingRolesUser.name || editingRolesUser.email}`}
+          size="md"
+        >
+          <div className="space-y-4 font-mono text-xs text-[#111111]">
+            <p className="text-[#555555] leading-relaxed">
+              Designate the primary administrative identity and up to 3 subordinate secondary roles. Upon sign-in, multi-role users can toggle between authorized workstations.
+            </p>
 
-          <div className="relative z-30">
-            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
-              Primary role
-            </label>
-            <LiquidGlassSelect
-              value={editPrimaryRole}
-              onChange={(val) => {
-                setEditPrimaryRole(val);
-                setEditExtraRoles((prev) => prev.filter((r) => r !== val));
-              }}
-              options={assignableRoles.map((r) => ({ value: r.value, label: r.label }))}
-              placeholder="Select primary role"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-2">
-              Additional roles (optional — select up to 3)
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {assignableRoles.filter((r) => r.value !== editPrimaryRole).map((r) => (
-                <label
-                  key={r.value}
-                  className="flex items-center gap-2 cursor-pointer text-xs text-white/90 p-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors"
-                >
-                  <input
-                    type="checkbox"
-                    checked={editExtraRoles.includes(r.value)}
-                    disabled={!editExtraRoles.includes(r.value) && editExtraRoles.length >= 3}
-                    onChange={() => toggleExtraRole(r.value)}
-                    className="accent-emerald-500 w-4 h-4 rounded"
-                  />
-                  <span>{r.label}</span>
-                </label>
-              ))}
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-[#111111] mb-1.5">
+                PRIMARY INSTITUTIONAL ROLE
+              </label>
+              <select
+                value={editPrimaryRole}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setEditPrimaryRole(val);
+                  setEditExtraRoles((prev) => prev.filter((r) => r !== val));
+                }}
+                className="gov-input w-full text-xs font-mono"
+              >
+                {assignableRoles.map((r) => (
+                  <option key={r.value} value={r.value}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            {editExtraRoles.length >= 3 && (
-              <p className="mt-2 text-xs text-amber-300">
-                Maximum of 3 additional roles reached.
-              </p>
-            )}
-          </div>
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-[#111111] mb-1.5">
+                ADDITIONAL PRIVILEGES (MAX 3)
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 border border-[#CCCCCC] p-2 bg-[#F9F9FB] max-h-48 overflow-y-auto">
+                {assignableRoles.filter((r) => r.value !== editPrimaryRole).map((r) => (
+                  <label
+                    key={r.value}
+                    className="flex items-center gap-2 cursor-pointer p-1.5 border border-[#E5E7EB] bg-white hover:bg-[#F0F0F2]"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={editExtraRoles.includes(r.value)}
+                      disabled={!editExtraRoles.includes(r.value) && editExtraRoles.length >= 3}
+                      onChange={() => toggleExtraRole(r.value)}
+                      className="rounded-none border-[#000000] text-[#111111] focus:ring-0"
+                    />
+                    <span className="text-[11px]">{r.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
 
-          <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-white/15">
-            <button
-              type="button"
-              onClick={() => setEditingRolesUser(null)}
-              className="px-5 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 text-white/90 text-sm font-medium backdrop-blur-sm transition-all"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              disabled={!editPrimaryRole || savingRoles}
-              onClick={() => void handleSaveRoles()}
-              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-semibold shadow-lg shadow-emerald-950/40 border border-emerald-400/30 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
-            >
-              {savingRoles ? 'Saving...' : 'Save roles'}
-            </button>
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#CCCCCC]">
+              <button
+                type="button"
+                onClick={() => setEditingRolesUser(null)}
+                className="gov-btn gov-btn-secondary gov-btn-sm"
+              >
+                CANCEL
+              </button>
+              <button
+                type="button"
+                disabled={!editPrimaryRole || savingRoles}
+                onClick={() => void handleSaveRoles()}
+                className="gov-btn gov-btn-primary gov-btn-sm flex items-center gap-1.5"
+              >
+                {savingRoles ? <GovRollingBox size="xs" /> : null}
+                <span>SAVE ROLE ASSIGNMENT</span>
+              </button>
+            </div>
           </div>
-        </div>
+        </NativeModal>
       )}
-    </NativeModal>
-    </>
+    </div>
   );
 }

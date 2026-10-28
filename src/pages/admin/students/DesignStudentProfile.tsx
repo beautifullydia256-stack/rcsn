@@ -1,97 +1,63 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { registerApiUrl } from '@/lib/registerApiOrigin';
-import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { useAuthStore } from '@/store/authStore';
 import { usePwezaStore } from '@/store/pwezaStore';
-import { escapeAttr } from '@/lib/profileInlineEdit';
-import { compressStudentPhoto, validateImageFile } from '@/lib/imageCompression';
-import { displayParentsForStudent, type ParentLite } from '@/lib/studentDisplayParents';
-import { loadStudentBalanceAggAllTerms } from '@/lib/adminFinanceTerm';
-import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
-import { useToast } from '@/components/Toast';
-
-import templateRaw from '@/assets/pwezacore-student-profile.html?raw';
-import { downloadStudentProfilePdf, type StudentProfilePdfData } from '@/lib/adminPdfDownload';
-import { isALevelClass, isOLevelClass } from '@/components/reports/templates/helpers';
 import { useSchoolType } from '@/hooks/useSchoolType';
-import { computeTertiaryProgress } from '@/features/tertiary/services/tertiaryProgress';
-import StudentProfileAcademicStanding, {
-  type StudentProfileAcademicStandingProps,
-} from './StudentProfileAcademicStanding';
+import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
+import { compressStudentPhoto, validateImageFile } from '@/lib/imageCompression';
+import { loadStudentBalanceAggAllTerms } from '@/lib/adminFinanceTerm';
+import { downloadStudentProfilePdf } from '@/lib/adminPdfDownload';
+import { generateRcsnFeeSlipPdf } from '@/lib/rcsnFeeSlipPdf';
+import { useToast } from '@/components/Toast';
+import StudentProfileAcademicStanding from './StudentProfileAcademicStanding';
 import StudentDisciplineSection, {
   resolveDisciplineDisplayStatus,
   type DisciplineDisplayStatus,
 } from '@/components/admin/students/StudentDisciplineSection';
 import StudentLiabilitiesAndFacilitySection from '@/components/admin/students/StudentLiabilitiesAndFacilitySection';
-import { generateRcsnFeeSlipPdf } from '@/lib/rcsnFeeSlipPdf';
-import { RCSN_DEFAULT_FUNCTIONAL_ITEMS } from '@/lib/rcsnBankDetails';
+import {
+  ArrowLeft,
+  Camera,
+  Phone,
+  Mail,
+  GraduationCap,
+  CreditCard,
+  Printer,
+  RefreshCw,
+  Edit2,
+  Check,
+  X,
+  User,
+  Heart,
+  MapPin,
+  Calendar,
+  FileText,
+  ShieldCheck,
+  Clock,
+  Layers,
+  BookOpen,
+  DollarSign,
+  UserCircle2,
+  AlertTriangle,
+  Download,
+} from 'lucide-react';
+import '@/styles/government-system.css';
 
-const STUDENT_PROFILE_FONT_HREF =
-  'https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap';
-
-/** Full template fragment: <head> CSS + <body> markup (scripts stripped). Body-only loses all styles. */
-let cachedInjectedHtml: string | null = null;
-
-const GUARDIAN_GRADIENTS = [
-  'linear-gradient(135deg,#f59e0b,#ef4444)',
-  'linear-gradient(135deg,#4f8ef7,#7c3aed)',
-  'linear-gradient(135deg,#36d399,#4f8ef7)',
-  'linear-gradient(135deg,#a78bfa,#4f8ef7)',
-];
-
-const gradG = (i: number) => GUARDIAN_GRADIENTS[i % GUARDIAN_GRADIENTS.length];
-
-// Professional SVG Icons (Zero Emojis)
-const PENCIL_SVG = `<svg class="w-4 h-4 mr-1.5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>`;
-const SAVE_SVG = `<svg class="w-4 h-4 mr-1.5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>`;
-const CANCEL_SVG = `<svg class="w-4 h-4 mr-1.5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`;
-const SPINNER_SVG = `<svg class="animate-spin w-4 h-4 mr-1.5 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
-const CHECK_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`;
-const X_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`;
-const SCHOOL_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>`;
-const CALENDAR_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" stroke-width="2"/><path stroke-width="2" d="M16 2v4M8 2v4M3 10h18"/></svg>`;
-const SCALE_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>`;
-const EMPTY_DOC_SVG = `<svg class="w-10 h-10 text-slate-400 dark:text-slate-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>`;
-const EMPTY_FOLDER_SVG = `<svg class="w-10 h-10 text-slate-400 dark:text-slate-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>`;
-const CALL_BTN_SVG = `<svg class="w-4 h-4 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>`;
-const EMAIL_BTN_SVG = `<svg class="w-4 h-4 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>`;
-const WA_BTN_SVG = `<svg class="w-4 h-4 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>`;
-
-function initials(name: string) {
-  return (name || '?')
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
+function fmtUGX(n: number | null | undefined): string {
+  if (n === null || n === undefined || Number.isNaN(Number(n))) return '—';
+  return `UGX ${Math.round(Number(n)).toLocaleString()}`;
 }
 
-function escapeHtml(s: string) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-function displayFullName(s: Record<string, unknown>): string {
-  const fn = String(s.first_name ?? '').trim();
-  const mn = String(s.middle_name ?? '').trim();
-  const ln = String(s.last_name ?? '').trim();
-  const parts = [fn, mn, ln].filter(Boolean);
-  if (parts.length) return parts.join(' ');
-  return String(s.name ?? '').trim() || '—';
-}
-
-function pickStr(v: unknown): string | null {
-  if (v == null) return null;
-  const t = String(v).trim();
-  return t || null;
+function fmtDate(d: string | null | undefined): string {
+  if (!d) return '—';
+  try {
+    const x = new Date(d);
+    return Number.isNaN(x.getTime()) ? d : x.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  } catch {
+    return d;
+  }
 }
 
 function calcAge(dob: string | null | undefined): string {
@@ -99,627 +65,111 @@ function calcAge(dob: string | null | undefined): string {
   const t = new Date(dob).getTime();
   if (Number.isNaN(t)) return '—';
   const age = Math.floor((Date.now() - t) / (365.25 * 24 * 60 * 60 * 1000));
-  return `${age} year${age !== 1 ? 's' : ''}`;
+  return `${age} yrs`;
 }
 
-/** Prefer DB `age_years` (maintained by Postgres); fall back to rough calc from DOB. */
-function displayStudentAgeYears(s: Record<string, unknown>): string {
-  const raw = s.age_years;
-  if (raw != null && raw !== '') {
-    const n = typeof raw === 'number' ? raw : Number(raw);
-    if (!Number.isNaN(n) && n >= 0 && n <= 120) return `${n} year${n !== 1 ? 's' : ''}`;
-  }
-  return calcAge(s.date_of_birth as string);
-}
-
-function fmtDate(d: string | null | undefined): string {
-  if (!d) return '—';
-  const x = new Date(d);
-  return Number.isNaN(x.getTime()) ? '—' : x.toLocaleDateString('en-UG', { day: 'numeric', month: 'long', year: 'numeric' });
-}
-
-function fmtShortDate(d: string | null | undefined): string {
-  if (!d) return '—';
-  const x = new Date(d);
-  return Number.isNaN(x.getTime()) ? '—' : x.toLocaleDateString('en-UG', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
-function fmtUGX(n: number | null | undefined): string {
-  if (n === null || n === undefined || Number.isNaN(Number(n))) return '—';
-  return `UGX ${Number(n).toLocaleString()}`;
-}
-
-function disciplineChipClass(status: DisciplineDisplayStatus): string {
-  switch (status) {
-    case 'Active':
-      return 'sp-chip-green';
-    case 'Warned':
-      return 'sp-chip-amber';
-    case 'Suspended':
-      return 'sp-chip-rose';
-    case 'Deactivated':
-      return 'sp-chip-muted';
-    case 'Deleted':
-      return 'sp-chip-rose';
-    default:
-      return 'sp-chip-muted';
-  }
-}
-
-type InvoicePayBadge = { text: string; badgeClass: 'green' | 'amber' | 'rose' | 'muted' };
-
-function invoicePaymentBadge(status: string, amountPaid: number, balance: number): InvoicePayBadge {
-  const st = String(status || '').toLowerCase();
-  const bal = Number(balance);
-  const ap = Number(amountPaid);
-  if (st === 'cancelled') return { text: 'Cancelled', badgeClass: 'muted' };
-  if (st === 'written_off') return { text: 'Written off', badgeClass: 'muted' };
-  if (st === 'draft') return { text: 'Draft', badgeClass: 'muted' };
-  if (st === 'paid' || bal <= 0.005) return { text: 'Paid', badgeClass: 'green' };
-  if (ap > 0.005 && bal > 0.005) return { text: 'Partially paid', badgeClass: 'amber' };
-  return { text: 'Unpaid', badgeClass: 'rose' };
-}
-
-type SchoolTermLabel = { year: number; term: number; end_date: string };
-
-/** PostgREST may type/embed FK as T | T[]; normalize to one row. */
-function normalizeSchoolTermEmbed(v: unknown): SchoolTermLabel | null {
-  if (v == null) return null;
-  if (Array.isArray(v)) {
-    const first = v[0];
-    return first && typeof first === 'object' ? (first as SchoolTermLabel) : null;
-  }
-  return typeof v === 'object' ? (v as SchoolTermLabel) : null;
-}
-
-type ProfileInvoiceRow = {
-  invoice_number: string | null;
-  invoice_label: string | null;
-  is_supplementary: boolean | null;
-  total_amount: number | string;
-  amount_paid: number | string;
-  balance: number | string;
-  status: string;
-  created_at: string | null;
-  school_terms: SchoolTermLabel | null;
-};
-
-function attColor(pct: number): string {
-  if (pct >= 80) return 'var(--green)';
-  if (pct >= 60) return 'var(--amber)';
-  return 'var(--rose)';
-}
-
-function parseInjectedHtml(raw: string): string {
-  const styleMatch = raw.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
-  const bodyMatch = raw.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-  let inner = bodyMatch ? bodyMatch[1].trim() : raw;
-  inner = inner.replace(/<script[\s\S]*?<\/script>/gi, '');
-  const styleBlock = styleMatch ? `<style>${styleMatch[1]}</style>` : '';
-  return `${styleBlock}${inner}`;
-}
-
-function spQuickSelect(
-  root: Element,
-  id: string,
-  field: string,
-  value: string,
-  options: { value: string; label: string }[],
-  placeholder: string = 'Select option'
-) {
-  const el = root.querySelector(id);
-  if (!el) return;
-  
-  const displayValue = value.trim() || placeholder;
-  const isEmpty = !value.trim();
-  
-  const optionsHtml = options.map(opt => 
-    `<option value="${escapeAttr(opt.value)}" ${opt.value === value ? 'selected' : ''}>${escapeHtml(opt.label)}</option>`
-  ).join('');
-  
-  (el as HTMLElement).innerHTML = `
-    <div class="sp-quick-edit-wrapper" data-sp-field="${field}">
-      <span class="sp-quick-edit-display ${isEmpty ? 'sp-quick-edit-empty' : ''}" style="cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background-color 0.15s;">
-        ${escapeHtml(displayValue)}
-      </span>
-      <select class="sp-quick-edit-select pw-inline-input" style="display: none; width: 100%; margin-top: 4px;">
-        ${optionsHtml}
-      </select>
-      <div class="sp-quick-edit-actions" style="display: none; margin-top: 4px; gap: 6px;">
-        <button type="button" class="sp-quick-edit-save sp-btn sp-btn-primary sp-btn-sm">Save</button>
-        <button type="button" class="sp-quick-edit-cancel sp-btn sp-btn-ghost sp-btn-sm">Cancel</button>
-      </div>
-    </div>
-  `;
-}
-
-function spInline(
-  root: Element,
-  id: string,
-  field: string,
-  value: string,
-  type: 'text' | 'date' | 'tel' | 'email' = 'text'
-) {
-  const el = root.querySelector(id);
-  if (!el) return;
-  const t = type === 'date' ? 'date' : type === 'tel' ? 'tel' : type === 'email' ? 'email' : 'text';
-  (el as HTMLElement).innerHTML = `<input type="${t}" class="pw-inline-input" data-sp-field="${field}" value="${escapeAttr(value)}" style="width:100%"/>`;
-}
-
-function spQuickEdit(
-  root: Element,
-  id: string,
-  field: string,
-  value: string,
-  placeholder: string = 'Click to edit',
-  type: 'text' | 'date' | 'tel' | 'email' = 'text'
-) {
-  const el = root.querySelector(id);
-  if (!el) return;
-  
-  const displayValue = value.trim() || placeholder;
-  const isEmpty = !value.trim();
-  
-  (el as HTMLElement).innerHTML = `
-    <div class="sp-quick-edit-wrapper" data-sp-field="${field}">
-      <span class="sp-quick-edit-display ${isEmpty ? 'sp-quick-edit-empty' : ''}" style="cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background-color 0.15s;">
-        ${escapeHtml(displayValue)}
-      </span>
-      <input type="${type}" class="sp-quick-edit-input pw-inline-input" value="${escapeAttr(value)}" style="display: none; width: 100%; margin-top: 4px;" placeholder="${escapeAttr(placeholder)}"/>
-      <div class="sp-quick-edit-actions" style="display: none; margin-top: 4px; gap: 6px;">
-        <button type="button" class="sp-quick-edit-save sp-btn sp-btn-primary sp-btn-sm">Save</button>
-        <button type="button" class="sp-quick-edit-cancel sp-btn sp-btn-ghost sp-btn-sm">Cancel</button>
-      </div>
-    </div>
-  `;
-}
-
-function applyStudentEditMode(root: Element, s: Record<string, unknown>) {
-  const fullName = displayFullName(s);
-  const nameEl = root.querySelector('#sp-student-name');
-  if (nameEl) {
-    nameEl.innerHTML = `<input type="text" class="pw-inline-input" data-sp-field="name" value="${escapeAttr(fullName)}" style="font:inherit;width:100%;max-width:420px"/>`;
-  }
-  spInline(root, '#sp-first-name', 'first_name', String(s.first_name ?? '').trim());
-  spInline(root, '#sp-middle-name', 'middle_name', String(s.middle_name ?? '').trim());
-  spInline(root, '#sp-last-name', 'last_name', String(s.last_name ?? '').trim());
-  const gEl = root.querySelector('#sp-gender');
-  if (gEl) {
-    const curG = String(s.gender ?? '').trim().toLowerCase();
-    (gEl as HTMLElement).innerHTML = `
-      <select class="pw-inline-input" data-sp-field="gender" style="width:100%">
-        <option value="">— Select Gender —</option>
-        <option value="Male" ${curG === 'male' ? 'selected' : ''}>Male</option>
-        <option value="Female" ${curG === 'female' ? 'selected' : ''}>Female</option>
-        <option value="Other" ${curG === 'other' ? 'selected' : ''}>Other</option>
-      </select>
-    `;
-  }
-  spInline(root, '#sp-dob', 'date_of_birth', String(s.date_of_birth || '').slice(0, 10), 'date');
-  spInline(root, '#sp-nationality', 'nationality', String(s.nationality ?? '').trim());
-  spInline(root, '#sp-religion', 'religion', String(s.religion ?? '').trim());
-  spInline(root, '#sp-blood-group', 'blood_group', String(s.blood_group ?? '').trim());
-  spInline(root, '#sp-medical-notes', 'medical_condition', String(s.medical_condition ?? '').trim());
-  spInline(root, '#sp-adm-number', 'admission_number', String(s.admission_number ?? '').trim());
-  spInline(root, '#sp-current-class', 'current_class', String(s.current_class ?? '').trim());
-  const rawBoardingVal = String(s.boarding_type ?? '').trim().toLowerCase();
-  const initBoardingType = rawBoardingVal.includes('board') || rawBoardingVal === 'resident' ? 'Resident' : 'Non-Resident';
-  spInline(root, '#sp-boarding-type', 'boarding_type', initBoardingType);
-  spInline(root, '#sp-stream', 'stream', String(s.stream ?? '').trim());
-  spInline(
-    root,
-    '#sp-enrollment-date',
-    'admission_date',
-    String(s.admission_date || s.enrollment_date || '').slice(0, 10),
-    'date'
-  );
-  const status = String(s.status ?? 'active');
-  const stEl = root.querySelector('#sp-student-status');
-  if (stEl) {
-    stEl.innerHTML = `<select class="pw-inline-input" data-sp-field="status" style="width:100%;max-width:220px">
-      <option value="active" ${status === 'active' ? 'selected' : ''}>Active</option>
-      <option value="inactive" ${status === 'inactive' ? 'selected' : ''}>Inactive</option>
-      <option value="graduated" ${status === 'graduated' ? 'selected' : ''}>Graduated</option>
-    </select>`;
-  }
-  spInline(root, '#sp-previous-school', 'previous_school', String(s.previous_school ?? '').trim());
-  spInline(root, '#sp-special-needs', 'allergies', String(s.allergies ?? '').trim());
-  spInline(root, '#sp-home-address', 'address', String(s.address ?? '').trim());
-  spInline(root, '#sp-guardian-address', 'guardian_address', String(s.guardian_address ?? '').trim());
-  spInline(root, '#sp-district', 'district', String(s.district ?? s.city ?? '').trim());
-  spInline(root, '#sp-guardian-phone', 'guardian_phone', String(s.guardian_phone ?? '').trim(), 'tel');
-  spInline(root, '#sp-guardian-email', 'guardian_email', String(s.guardian_email ?? '').trim(), 'email');
-  spInline(
-    root,
-    '#sp-schoolpay-payment-code',
-    'schoolpay_payment_code',
-    String((s as { schoolpay_payment_code?: string | null }).schoolpay_payment_code ?? '').trim()
-  );
-}
-
-function getSpField(root: Element, field: string): string {
-  const el = root.querySelector(`[data-sp-field="${field}"]`) as HTMLInputElement | HTMLSelectElement | null;
-  return el?.value?.trim() ?? '';
-}
-
-type ParentRow = Record<string, unknown> & {
-  parent_id?: string;
-  name?: string | null;
-  phone?: string | null;
-  email?: string | null;
-};
-
-type ParentSiblingRow = {
-  student_id: string;
-  displayName: string;
-  current_class: string;
-  admission_number: string;
-};
-
-type ParentCardDisplay = {
-  name: string;
-  phone: string | null;
-  email: string | null;
-  parent_id: string | null;
-  relationship: string;
-  occupation: string | null;
-  address: string | null;
-  nin: string | null;
-  is_primary_contact: boolean | null;
-  portal_access: boolean | null;
-  siblings: ParentSiblingRow[];
-};
-
-type DisciplinePortalProps = {
-  schoolId: string;
-  studentId: string;
-  studentSnapshot: {
-    deleted_at?: string | null;
-    discipline_deactivated_at?: string | null;
-    suspension_open?: boolean | null;
-    suspension_period_start?: string | null;
-    suspension_period_end?: string | null;
-  };
-  initialHasWarning: boolean;
-  canManageDiscipline: boolean;
-  isOwner: boolean;
-};
+const govLabel = 'block text-[11px] font-mono font-bold text-[#555555] uppercase tracking-wider mb-1';
 
 export default function DesignStudentProfile() {
-  const { isTertiary } = useSchoolType();
+  const { student_id: studentId } = useParams<{ student_id: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
   const queryClient = useQueryClient();
   const toast = useToast();
+  const { isTertiary } = useSchoolType();
+
   const authUserId = useAuthStore((s) => s.user?.id);
-  /** Always set on login in ProtectedRoute; pwezaStore.schoolId is only set for admins (prefetch). */
   const authSchoolId = useAuthStore((s) => s.schoolId);
-  const { student_id: studentIdParam } = useParams<{ student_id: string }>();
-  const studentId = Array.isArray(studentIdParam) ? studentIdParam[0] : studentIdParam || '';
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [htmlContent, setHtmlContent] = useState('');
+  // Loading & Edit state
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [photoUploading, setPhotoUploading] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const isEditingRef = useRef(false);
-  const isSavingRef = useRef(false);
   const [reloadToken, setReloadToken] = useState(0);
-  const academicMountRef = useRef<HTMLDivElement | null>(null);
-  const disciplineMountRef = useRef<HTMLDivElement | null>(null);
-  const facilityMountRef = useRef<HTMLDivElement | null>(null);
-  const [academicPortalData, setAcademicPortalData] = useState<
-    Omit<StudentProfileAcademicStandingProps, 'onChanged'> | null
-  >(null);
-  const [disciplinePortalData, setDisciplinePortalData] = useState<DisciplinePortalProps | null>(null);
-  const [facilityPortalData, setFacilityPortalData] = useState<{
-    studentId: string;
-    schoolId: string;
-    studentName: string;
-    admissionNumber?: string;
-    currentClass?: string;
-    boardingType?: string;
-  } | null>(null);
-  const studentCtxRef = useRef<{ schoolId: string } | null>(null);
-  const saveStudentRef = useRef<() => Promise<void>>(async () => {});
-  const pdfDataRef = useRef<StudentProfilePdfData | null>(null);
 
-  const saveStudent = useCallback(async () => {
-    if (isSavingRef.current) return;
-    const ctx = studentCtxRef.current;
-    if (!ctx) return;
-    const root = containerRef.current?.querySelector('.pw-profile') || containerRef.current;
-    if (!root) return;
+  // Student DB Record
+  const [student, setStudent] = useState<Record<string, unknown> | null>(null);
+  const [schoolId, setSchoolId] = useState<string | null>(null);
 
-    const spEdit = root.querySelector('#sp-btn-edit') as HTMLButtonElement | null;
-    const spCancel = root.querySelector('#sp-btn-cancel-edit') as HTMLButtonElement | null;
+  // Editable Form fields
+  const [formData, setFormData] = useState({
+    name: '',
+    first_name: '',
+    middle_name: '',
+    last_name: '',
+    gender: '',
+    date_of_birth: '',
+    nationality: 'Ugandan',
+    religion: '',
+    blood_group: '',
+    medical_condition: '',
+    allergies: '',
+    admission_number: '',
+    current_class: '',
+    boarding_type: 'Non-Resident',
+    stream: '',
+    admission_date: '',
+    status: 'active',
+    previous_school: '',
+    address: '',
+    district: '',
+    schoolpay_payment_code: '',
+    guardian_name: '',
+    guardian_relationship: 'Mother',
+    guardian_phone: '',
+    guardian_email: '',
+    guardian_address: '',
+    guardian_occupation: '',
+  });
 
-    const fn = getSpField(root, 'first_name');
-    const mn = getSpField(root, 'middle_name');
-    const ln = getSpField(root, 'last_name');
-    const nameHero = getSpField(root, 'name');
-    const combined = [fn, mn, ln].filter(Boolean).join(' ').trim();
-    const name = combined || nameHero;
-    if (!name) {
-      toast.error('Please enter at least a first name or full name.');
-      return;
-    }
+  // Ancillary records
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [attendanceToday, setAttendanceToday] = useState<{ present?: boolean; status?: string } | null>(null);
+  const [attendanceAll, setAttendanceAll] = useState<{ present?: boolean; status?: string; attendance_date: string }[]>([]);
+  const [feeBalance, setFeeBalance] = useState<{ total_fees: number; total_paid: number; balance: number }>({
+    total_fees: 0,
+    total_paid: 0,
+    balance: 0,
+  });
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [payments, setPayments] = useState<any[]>([]);
+  const [examResults, setExamResults] = useState<any[]>([]);
+  const [classSubjects, setClassSubjects] = useState<any[]>([]);
+  const [olevelSubjects, setOlevelSubjects] = useState<string[]>([]);
+  const [alevelSubjects, setAlevelSubjects] = useState<any[]>([]);
+  const [classTeacherName, setClassTeacherName] = useState<string | null>(null);
+  const [parentRecords, setParentRecords] = useState<any[]>([]);
 
-    isSavingRef.current = true;
-    if (spEdit) {
-      spEdit.disabled = true;
-      spEdit.innerHTML = `${SPINNER_SVG} Saving...`;
-    }
-    if (spCancel) {
-      spCancel.disabled = true;
-    }
+  // Discipline metadata
+  const [canManageDiscipline, setCanManageDiscipline] = useState(false);
+  const [viewerIsOwner, setViewerIsOwner] = useState(false);
+  const [hasWarningDiscipline, setHasWarningDiscipline] = useState(false);
 
-    const payload: Record<string, unknown> = {
-      name,
-      first_name: fn || null,
-      middle_name: mn || null,
-      last_name: ln || null,
-      gender: getSpField(root, 'gender') || null,
-      date_of_birth: getSpField(root, 'date_of_birth') || null,
-      nationality: getSpField(root, 'nationality') || null,
-      religion: getSpField(root, 'religion') || null,
-      blood_group: getSpField(root, 'blood_group') || null,
-      medical_condition: getSpField(root, 'medical_condition') || null,
-      admission_number: getSpField(root, 'admission_number') || null,
-      current_class: getSpField(root, 'current_class') || null,
-      boarding_type: getSpField(root, 'boarding_type') || 'Non-Resident',
-      stream: getSpField(root, 'stream') || null,
-      admission_date: getSpField(root, 'admission_date') || null,
-      status: getSpField(root, 'status') || 'active',
-      previous_school: getSpField(root, 'previous_school') || null,
-      allergies: getSpField(root, 'allergies') || null,
-      address: getSpField(root, 'address') || null,
-      district: getSpField(root, 'district') || null,
-      city: getSpField(root, 'district') || null,
-      schoolpay_payment_code: (() => {
-        const v = getSpField(root, 'schoolpay_payment_code');
-        return v ? v : null;
-      })(),
-      guardian_phone: getSpField(root, 'guardian_phone') || null,
-      guardian_email: getSpField(root, 'guardian_email') || null,
-      guardian_address: getSpField(root, 'guardian_address') || null,
-      updated_at: new Date().toISOString(),
-    };
-    const { error } = await supabase
-      .from('students')
-      .update(payload)
-      .eq('school_id', ctx.schoolId)
-      .eq('student_id', studentId);
-    if (error) {
-      toast.error(`Failed to save changes: ${error.message}`);
-      if (spEdit) {
-        spEdit.disabled = false;
-        spEdit.innerHTML = `${SAVE_SVG} Save`;
-      }
-      if (spCancel) {
-        spCancel.disabled = false;
-      }
-      isSavingRef.current = false;
-      return;
-    }
-    const photoInp = root.querySelector('#sp-photo-file') as HTMLInputElement | null;
-    const file = photoInp?.files?.[0];
-    if (file) {
-      try {
-        const validation = validateImageFile(file);
-        if (!validation.isValid) {
-          toast.error(validation.error || 'Invalid image file.');
-          if (spEdit) {
-            spEdit.disabled = false;
-            spEdit.innerHTML = `${SAVE_SVG} Save`;
-          }
-          if (spCancel) spCancel.disabled = false;
-          isSavingRef.current = false;
-          return;
-        }
-        const { compressedFile } = await compressStudentPhoto(file);
-        const url = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = () => reject(reader.error ?? new Error('FileReader failed'));
-          reader.readAsDataURL(compressedFile);
-        });
-        await supabase
-          .from('student_photos')
-          .delete()
-          .eq('school_id', ctx.schoolId)
-          .eq('student_id', studentId)
-          .eq('is_primary', true);
-        const { error: phErr } = await supabase.from('student_photos').insert({
-          school_id: ctx.schoolId,
-          student_id: studentId,
-          photo_url: url,
-          photo_filename: compressedFile.name,
-          photo_size: compressedFile.size,
-          photo_type: compressedFile.type,
-          is_primary: true,
-        });
-        if (phErr && import.meta.env.DEV) console.warn('[DesignStudentProfile] photo:', phErr.message);
-      } catch {
-        toast.error('Could not save the photo.');
-        if (spEdit) {
-          spEdit.disabled = false;
-          spEdit.innerHTML = `${SAVE_SVG} Save`;
-        }
-        if (spCancel) spCancel.disabled = false;
-        isSavingRef.current = false;
-        return;
-      }
-      if (photoInp) photoInp.value = '';
-    }
-    if (authUserId) {
-      void queryClient.invalidateQueries({ queryKey: adminQueryKeys.studentsDesign(authUserId) });
-      void queryClient.invalidateQueries({ queryKey: ['admin', 'students'] });
-    }
-    toast.success('Student profile updated successfully');
-    isEditingRef.current = false;
-    setEditMode(false);
-    isSavingRef.current = false;
-    if (spEdit) {
-      spEdit.disabled = false;
-      spEdit.innerHTML = `${PENCIL_SVG} Edit Profile`;
-    }
-    if (spCancel) {
-      spCancel.disabled = false;
-      spCancel.style.display = 'none';
-    }
-    setReloadToken((x) => x + 1);
-  }, [studentId, authUserId, queryClient, toast]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const saveQuickEdit = useCallback(async (field: string, value: string) => {
-    const ctx = studentCtxRef.current;
-    if (!ctx) return false;
-    
+  // Main data fetch
+  const fetchStudentDossier = useCallback(async () => {
+    if (!studentId) return;
+    setLoading(true);
+
     try {
-      const payload: Record<string, unknown> = {
-        [field]: value.trim() || null,
-        updated_at: new Date().toISOString(),
-      };
-      
-      const { error } = await supabase
-        .from('students')
-        .update(payload)
-        .eq('school_id', ctx.schoolId)
-        .eq('student_id', studentId);
-        
-      if (error) {
-        window.alert(error.message);
-        return false;
-      }
-      
-      // If boarding type changed, sync student balances to update fees
-      if (field === 'boarding_type') {
-        try {
-          await fetch(registerApiUrl('/api/admin/sync-student-balances'), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ schoolId: ctx.schoolId }),
-          });
-        } catch (syncError) {
-          console.warn('Failed to sync student balances after boarding type change:', syncError);
-        }
-      }
-      
-      if (authUserId) {
-        void queryClient.invalidateQueries({ queryKey: adminQueryKeys.studentsDesign(authUserId) });
-      }
-      setReloadToken((x) => x + 1);
-      return true;
-    } catch (err) {
-      window.alert('Failed to save changes');
-      return false;
-    }
-  }, [studentId, authUserId, queryClient]);
-
-  const saveQuickPhoto = useCallback(async (file: File) => {
-    const ctx = studentCtxRef.current;
-    if (!ctx) return false;
-    
-    try {
-      const validation = validateImageFile(file);
-      if (!validation.isValid) {
-        window.alert(validation.error || 'Invalid image file.');
-        return false;
-      }
-      
-      const { compressedFile } = await compressStudentPhoto(file);
-      const url = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = () => reject(reader.error ?? new Error('FileReader failed'));
-        reader.readAsDataURL(compressedFile);
-      });
-      
-      await supabase
-        .from('student_photos')
-        .delete()
-        .eq('school_id', ctx.schoolId)
-        .eq('student_id', studentId)
-        .eq('is_primary', true);
-        
-      const { error: phErr } = await supabase.from('student_photos').insert({
-        school_id: ctx.schoolId,
-        student_id: studentId,
-        photo_url: url,
-        photo_filename: compressedFile.name,
-        photo_size: compressedFile.size,
-        photo_type: compressedFile.type,
-        is_primary: true,
-      });
-      
-      if (phErr) {
-        window.alert('Failed to save photo');
-        return false;
-      }
-      
-      if (authUserId) {
-        void queryClient.invalidateQueries({ queryKey: adminQueryKeys.studentsDesign(authUserId) });
-      }
-      setReloadToken((x) => x + 1);
-      return true;
-    } catch (err) {
-      window.alert('Could not save the photo.');
-      return false;
-    }
-  }, [studentId, authUserId, queryClient]);
-
-  saveStudentRef.current = saveStudent;
-
-  useEffect(() => {
-    const id = 'pweza-student-profile-fonts';
-    if (!document.getElementById(id)) {
-      const link = document.createElement('link');
-      link.id = id;
-      link.rel = 'stylesheet';
-      link.href = STUDENT_PROFILE_FONT_HREF;
-      document.head.appendChild(link);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (cachedInjectedHtml) {
-      setHtmlContent(cachedInjectedHtml);
-      return;
-    }
-    cachedInjectedHtml = parseInjectedHtml(templateRaw);
-    setHtmlContent(cachedInjectedHtml);
-  }, []);
-
-  // Only inject the static shell when the template string changes — never on unrelated re-renders.
-  // Using dangerouslySetInnerHTML in render re-applies the template every time and wipes imperative DOM updates from load().
-  useLayoutEffect(() => {
-    const el = containerRef.current;
-    if (!el || !htmlContent) return;
-    el.innerHTML = htmlContent;
-  }, [htmlContent]);
-
-  useEffect(() => {
-    if (!htmlContent || !studentId) return;
-
-    let cancelled = false;
-
-    async function load() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         navigate('/login');
         return;
       }
 
-      const schoolId = (authSchoolId || usePwezaStore.getState().schoolId || '').trim() || null;
-      if (!schoolId) return;
+      const activeSchoolId = (authSchoolId || usePwezaStore.getState().schoolId || '').trim();
+      if (!activeSchoolId) return;
+      setSchoolId(activeSchoolId);
 
       const [
-        { data: student, error: stErr },
+        { data: st, error: stErr },
         { data: canManageRpc },
         { data: viewerRow },
         { count: warnDisciplineCount },
       ] = await Promise.all([
-        supabase.from('students').select('*').eq('school_id', schoolId).eq('student_id', studentId).maybeSingle(),
+        supabase.from('students').select('*').eq('school_id', activeSchoolId).eq('student_id', studentId).maybeSingle(),
         supabase.rpc('current_user_can_manage_discipline'),
         supabase.from('users').select('role').eq('user_id', user.id).maybeSingle(),
         supabase
@@ -729,34 +179,56 @@ export default function DesignStudentProfile() {
           .eq('action_type', 'warning'),
       ]);
 
-      if (stErr || !student) {
-        studentCtxRef.current = null;
-        setAcademicPortalData(null);
-        setDisciplinePortalData(null);
-        requestAnimationFrame(() => {
-          const el = containerRef.current;
-          if (!el) return;
-          const n = el.querySelector('#sp-breadcrumb-name');
-          if (n) n.textContent = 'Student not found';
-        });
+      if (stErr || !st) {
+        toast.error('Student profile not found');
+        navigate('/dashboard/admin/students');
         return;
       }
 
-      const canManageDiscipline = !!canManageRpc;
-      const viewerIsOwner =
+      setStudent(st);
+      setCanManageDiscipline(!!canManageRpc);
+      setViewerIsOwner(
         String((viewerRow as { role?: string } | null)?.role ?? '')
           .toLowerCase()
-          .replace(/\s+/g, '_') === 'owner';
-      const hasWarningDiscipline = (warnDisciplineCount ?? 0) > 0;
+          .replace(/\s+/g, '_') === 'owner'
+      );
+      setHasWarningDiscipline((warnDisciplineCount ?? 0) > 0);
 
-      const s = student as Record<string, unknown>;
-      studentCtxRef.current = { schoolId };
+      // Populate form state
+      setFormData({
+        name: String(st.name ?? ''),
+        first_name: String(st.first_name ?? ''),
+        middle_name: String(st.middle_name ?? ''),
+        last_name: String(st.last_name ?? ''),
+        gender: String(st.gender ?? ''),
+        date_of_birth: String(st.date_of_birth ?? ''),
+        nationality: String(st.nationality ?? 'Ugandan'),
+        religion: String(st.religion ?? ''),
+        blood_group: String(st.blood_group ?? ''),
+        medical_condition: String(st.medical_condition ?? ''),
+        allergies: String(st.allergies ?? ''),
+        admission_number: String(st.admission_number ?? ''),
+        current_class: String(st.current_class ?? ''),
+        boarding_type: String(st.boarding_type ?? 'Non-Resident'),
+        stream: String(st.stream ?? ''),
+        admission_date: String(st.admission_date ?? ''),
+        status: String(st.status ?? 'active'),
+        previous_school: String(st.previous_school ?? ''),
+        address: String(st.address ?? ''),
+        district: String(st.district ?? st.city ?? ''),
+        schoolpay_payment_code: String(st.schoolpay_payment_code ?? ''),
+        guardian_name: String(st.guardian_name ?? ''),
+        guardian_relationship: String(st.guardian_relationship ?? 'Mother'),
+        guardian_phone: String(st.guardian_phone ?? ''),
+        guardian_email: String(st.guardian_email ?? ''),
+        guardian_address: String(st.guardian_address ?? ''),
+        guardian_occupation: String(st.guardian_occupation ?? ''),
+      });
+
       const today = new Date().toISOString().slice(0, 10);
-      const currentClass = (s.current_class as string) || '';
+      const currentClass = String(st.current_class ?? '');
 
-      // Fire all independent queries in one parallel batch.
-      // Fetching olevel + alevel unconditionally avoids a third waterfall layer;
-      // only the relevant one is used based on currentClass.
+      // Load all ancillary modules in parallel
       const [
         parentsRes,
         photoRes,
@@ -768,1105 +240,1222 @@ export default function DesignStudentProfile() {
         alevelRes,
         classTeacherRes,
         feeBal,
-        paymentQ,
-        invoicesQ,
+        paymentRes,
+        invoicesRes,
       ] = await Promise.all([
-        supabase.from('parents').select('*').eq('school_id', schoolId).eq('student_id', studentId),
-        supabase.from('student_photos').select('photo_url').eq('school_id', schoolId).eq('student_id', studentId).eq('is_primary', true).maybeSingle(),
+        supabase.from('parents').select('*').eq('school_id', activeSchoolId).eq('student_id', studentId),
+        supabase.from('student_photos').select('photo_url').eq('school_id', activeSchoolId).eq('student_id', studentId).eq('is_primary', true).maybeSingle(),
         supabase
           .from('student_attendance')
           .select('present, status')
-          .eq('school_id', schoolId)
+          .eq('school_id', activeSchoolId)
           .eq('student_id', studentId)
           .eq('attendance_date', today)
           .maybeSingle(),
         supabase
           .from('student_attendance')
           .select('present, status, attendance_date')
-          .eq('school_id', schoolId)
+          .eq('school_id', activeSchoolId)
           .eq('student_id', studentId)
-          .order('attendance_date'),
-        supabase.from('exam_results').select('subject, marks_obtained, total_marks, grade').eq('school_id', schoolId).eq('student_id', studentId).limit(50),
+          .order('attendance_date', { ascending: false }),
+        supabase.from('exam_results').select('subject, marks_obtained, total_marks, grade').eq('school_id', activeSchoolId).eq('student_id', studentId).limit(50),
         currentClass
-          ? supabase.from('class_subjects').select('subject, uce_offering_type').eq('school_id', schoolId).eq('class_name', currentClass).order('subject')
+          ? supabase.from('class_subjects').select('subject, uce_offering_type').eq('school_id', activeSchoolId).eq('class_name', currentClass).order('subject')
           : Promise.resolve({ data: [], error: null }),
-        // Always fetch both subject type tables — only one will have rows; avoids a serial round trip
-        supabase.from('student_olevel_subjects').select('subject_name').eq('school_id', schoolId).eq('student_id', studentId),
-        supabase.from('student_alevel_subjects').select('id, subject_name, subject_role').eq('school_id', schoolId).eq('student_id', studentId),
-        // Join class_teachers → teachers in one query instead of two serial lookups
+        supabase.from('student_olevel_subjects').select('subject_name').eq('school_id', activeSchoolId).eq('student_id', studentId),
+        supabase.from('student_alevel_subjects').select('id, subject_name, subject_role').eq('school_id', activeSchoolId).eq('student_id', studentId),
         currentClass
-          ? supabase.from('class_teachers').select('teacher_id, teachers!inner(name)').eq('school_id', schoolId).eq('class_name', currentClass).limit(1).maybeSingle()
+          ? supabase.from('class_teachers').select('teacher_id, teachers!inner(name)').eq('school_id', activeSchoolId).eq('class_name', currentClass).limit(1).maybeSingle()
           : Promise.resolve({ data: null, error: null }),
-        loadStudentBalanceAggAllTerms(supabase, schoolId, studentId),
-        supabase
-          .from('student_payments')
-          .select('amount_paid, payment_method, payment_date')
-          .eq('school_id', schoolId)
-          .eq('student_id', studentId)
-          .order('payment_date', { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-        supabase
-          .from('student_invoices')
-          .select('invoice_number, invoice_label, is_supplementary, total_amount, amount_paid, balance, status, created_at, school_terms(year, term, end_date)')
-          .eq('school_id', schoolId)
-          .eq('student_id', studentId),
+        loadStudentBalanceAggAllTerms(supabase, activeSchoolId, studentId),
+        supabase.from('payments').select('*').eq('school_id', activeSchoolId).eq('student_id', studentId).order('payment_date', { ascending: false }).limit(20),
+        supabase.from('invoices').select('*, school_terms(year, term, end_date)').eq('school_id', activeSchoolId).eq('student_id', studentId).order('created_at', { ascending: false }).limit(20),
       ]);
 
-      // Resolve olevel / alevel subjects from the unconditional fetch above
-      let olevelSavedNames: string[] | null = null;
-      let alevelSubjectRows: { id: string; subject_name: string; subject_role: string }[] | null = null;
-      if (currentClass && isOLevelClass(currentClass)) {
-        olevelSavedNames = (olevelRes.data || []).map((r) => String((r as { subject_name?: string }).subject_name || '').trim()).filter(Boolean);
-      } else if (currentClass && isALevelClass(currentClass)) {
-        alevelSubjectRows = (alevelRes.data || []) as { id: string; subject_name: string; subject_role: string }[];
-      }
-      const paymentRes = { data: paymentQ.error ? null : paymentQ.data };
-      if (invoicesQ.error && import.meta.env.DEV) {
-        console.warn('[DesignStudentProfile] student_invoices:', invoicesQ.error.message);
-      }
-      const invoiceRows: ProfileInvoiceRow[] = (invoicesQ.error ? [] : invoicesQ.data || []).map(
-        (row) => {
-          const r = row as Record<string, unknown>;
-          return {
-            invoice_number: (r.invoice_number as string | null) ?? null,
-            invoice_label: (r.invoice_label as string | null) ?? null,
-            is_supplementary: (r.is_supplementary as boolean | null) ?? null,
-            total_amount: r.total_amount as number | string,
-            amount_paid: r.amount_paid as number | string,
-            balance: r.balance as number | string,
-            status: String(r.status ?? ''),
-            created_at: (r.created_at as string | null) ?? null,
-            school_terms: normalizeSchoolTermEmbed(r.school_terms),
-          };
-        }
-      );
-      invoiceRows.sort((a, b) => {
-        const ta = a.school_terms;
-        const tb = b.school_terms;
-        const yA = ta?.year ?? 0;
-        const yB = tb?.year ?? 0;
-        if (yB !== yA) return yB - yA;
-        const termA = ta?.term ?? 0;
-        const termB = tb?.term ?? 0;
-        if (termB !== termA) return termB - termA;
-        const supA = a.is_supplementary ? 1 : 0;
-        const supB = b.is_supplementary ? 1 : 0;
-        if (supA !== supB) return supA - supB;
-        const ca = a.created_at ? new Date(a.created_at).getTime() : 0;
-        const cb = b.created_at ? new Date(b.created_at).getTime() : 0;
-        return cb - ca;
-      });
+      setParentRecords(parentsRes.data || []);
+      setPhotoUrl(photoRes.data?.photo_url || null);
+      setAttendanceToday(attendanceTodayRes.data || null);
+      setAttendanceAll(attendanceAllRes.data || []);
+      setExamResults(examRes.data || []);
+      setClassSubjects(subjectsRes.data || []);
+      setOlevelSubjects((olevelRes.data || []).map((x: any) => x.subject_name).filter(Boolean));
+      setAlevelSubjects(alevelRes.data || []);
+      setClassTeacherName((classTeacherRes.data as any)?.teachers?.name || null);
+      setFeeBalance(feeBal || { total_fees: 0, total_paid: 0, balance: 0 });
+      setPayments(paymentRes.data || []);
+      setInvoices(invoicesRes.data || []);
+    } catch (err) {
+      console.error('Failed to load student dossier:', err);
+      toast.error('Failed to load student information.');
+    } finally {
+      setLoading(false);
+    }
+  }, [studentId, authSchoolId, navigate, toast]);
 
-      /** Same resolution as students list: portal `parents` rows + guardian_* on `students` when unlinked. */
-      if (parentsRes.error && import.meta.env.DEV) {
-        console.warn('[DesignStudentProfile] parents query:', parentsRes.error.message);
-      }
-      const fromDb = (parentsRes.error ? [] : parentsRes.data || []) as ParentRow[];
-      const linkedLite: ParentLite[] = fromDb.map((p) => ({
-        name: p.name || '',
-        email: p.email ?? undefined,
-        phone: p.phone ?? undefined,
-        parent_id: p.parent_id ?? null,
-      }));
-      const parentsByStudent: Record<string, ParentLite[]> = { [studentId]: linkedLite };
-      const mergedLite = displayParentsForStudent(
-        studentId,
-        {
-          guardian_name: s.guardian_name as string | null,
-          guardian_email: s.guardian_email as string | null,
-          guardian_phone: s.guardian_phone as string | null,
-        },
-        parentsByStudent
-      );
-      const parentCards: ParentCardDisplay[] = mergedLite.map((pl, i) => {
-        const dbRow = fromDb[i] as Record<string, unknown> | undefined;
-        const nm = String(pl.name ?? '').trim();
-        const name = nm || (pl.phone || pl.email ? 'Guardian' : '—');
-        const occupation =
-          pickStr(dbRow?.occupation) ?? (i === 0 ? pickStr(s.guardian_occupation) : null);
-        const address = pickStr(dbRow?.address) ?? (i === 0 ? pickStr(s.guardian_address) : null);
-        const nin =
-          pickStr(dbRow?.nin) ??
-          pickStr(dbRow?.national_id) ??
-          pickStr(dbRow?.national_identification_number);
-        let isPrimary: boolean | null = null;
-        if (dbRow && typeof dbRow.is_primary_contact === 'boolean') isPrimary = dbRow.is_primary_contact;
-        return {
-          name,
-          phone: pl.phone ?? null,
-          email: pl.email ?? null,
-          parent_id: pl.parent_id ?? null,
-          relationship:
-            pickStr(dbRow?.relationship) ?? (i === 0 ? pickStr(s.guardian_relationship) : null) ?? 'Guardian',
-          occupation,
-          address,
-          nin,
-          is_primary_contact: isPrimary,
-          portal_access: null,
-          siblings: [],
-        };
-      });
+  useEffect(() => {
+    void fetchStudentDossier();
+  }, [fetchStudentDossier, reloadToken]);
 
-      const parentIdsForSiblings = [...new Set(parentCards.map((c) => c.parent_id).filter(Boolean))] as string[];
-      if (parentIdsForSiblings.length > 0) {
-        const [linksRes, usersRes] = await Promise.all([
-          supabase
-            .from('parents')
-            .select('parent_id, student_id')
-            .eq('school_id', schoolId)
-            .in('parent_id', parentIdsForSiblings)
-            .neq('student_id', studentId),
-          supabase.from('users').select('user_id, is_active').in('user_id', parentIdsForSiblings).eq('role', 'parent'),
-        ]);
-        if (linksRes.error && import.meta.env.DEV) {
-          console.warn('[DesignStudentProfile] parents sibling links:', linksRes.error.message);
-        }
-        const portalById: Record<string, boolean> = {};
-        for (const u of usersRes.data || []) {
-          const uid = (u as { user_id: string }).user_id;
-          portalById[uid] = (u as { is_active?: boolean }).is_active !== false;
-        }
-        const siblingsByParentId: Record<string, ParentSiblingRow[]> = {};
-        const linkRows = (linksRes.data || []) as { parent_id: string; student_id: string }[];
-        const otherIds = [...new Set(linkRows.map((r) => r.student_id))];
-        if (otherIds.length > 0) {
-          const { data: studRows, error: stErr } = await supabase
-            .from('students')
-            .select('student_id, name, first_name, middle_name, last_name, current_class, admission_number')
-            .eq('school_id', schoolId)
-            .in('student_id', otherIds);
-          if (stErr && import.meta.env.DEV) console.warn('[DesignStudentProfile] sibling students:', stErr.message);
-          const bySid = new Map<string, Record<string, unknown>>();
-          for (const st of studRows || []) {
-            bySid.set(String((st as { student_id: string }).student_id), st as Record<string, unknown>);
-          }
-          for (const link of linkRows) {
-            const rowSt = bySid.get(link.student_id);
-            if (!rowSt) continue;
-            const row: ParentSiblingRow = {
-              student_id: link.student_id,
-              displayName: displayFullName(rowSt),
-              current_class: String(rowSt.current_class ?? '—'),
-              admission_number: String(rowSt.admission_number ?? '—'),
-            };
-            if (!siblingsByParentId[link.parent_id]) siblingsByParentId[link.parent_id] = [];
-            if (!siblingsByParentId[link.parent_id].some((x) => x.student_id === row.student_id)) {
-              siblingsByParentId[link.parent_id].push(row);
-            }
-          }
-        }
-        for (const c of parentCards) {
-          c.portal_access =
-            c.parent_id && Object.prototype.hasOwnProperty.call(portalById, c.parent_id)
-              ? portalById[c.parent_id]
-              : null;
-          const list = c.parent_id ? siblingsByParentId[c.parent_id] : undefined;
-          c.siblings = list
-            ? [...list].sort((a, b) => a.displayName.localeCompare(b.displayName))
-            : [];
-        }
-      }
-      const photoUrl = (photoRes.data as { photo_url?: string } | null)?.photo_url?.trim() || '';
-      const attToday = attendanceTodayRes.data as {
-        present?: boolean | null;
-        status?: string | null;
-      } | null;
-      const attAll = (attendanceAllRes.data || []) as {
-        present?: boolean | null;
-        status?: string | null;
-        attendance_date?: string;
-        date?: string;
-      }[];
-      const examResults = (examRes.data || []) as {
-        subject?: string;
-        marks_obtained?: number;
-        total_marks?: number;
-        grade?: string;
-      }[];
-      const subjectRows = (subjectsRes.data || []) as { subject?: string; uce_offering_type?: string | null }[];
-      const lastPayment = paymentRes.data as {
-        amount_paid?: number;
-        payment_method?: string;
-        payment_date?: string;
-      } | null;
+  // Derived Full Name
+  const fullName = useMemo(() => {
+    if (!student) return 'Trainee';
+    const parts = [formData.first_name, formData.middle_name, formData.last_name].filter(Boolean);
+    if (parts.length) return parts.join(' ');
+    return formData.name || String(student.name ?? 'Unnamed Student');
+  }, [student, formData]);
 
-      const ctData = classTeacherRes.data as { teacher_id?: string; teachers?: { name?: string } | { name?: string }[] } | null;
-      const ctTeachersRaw = ctData?.teachers;
-      const ctTeachers = Array.isArray(ctTeachersRaw) ? ctTeachersRaw[0] : ctTeachersRaw;
-      const classTeacher = (ctTeachers?.name as string | undefined) || '—';
+  // Calculated Attendance Rate
+  const attendanceRate = useMemo(() => {
+    if (!attendanceAll.length) return 100;
+    const presentCount = attendanceAll.filter((a) => a.present === true || a.status === 'present').length;
+    return Math.round((presentCount / attendanceAll.length) * 100);
+  }, [attendanceAll]);
 
-      const presentDays = attAll.filter((a) => studentAttendanceRowIsPresent(a)).length;
-      const absentDays = attAll.filter((a) => !studentAttendanceRowIsPresent(a)).length;
-      const totalMarked = presentDays + absentDays;
-      const overallRate = totalMarked > 0 ? Math.round((presentDays / totalMarked) * 100) : 0;
+  // Status Badge
+  const registrationStatus = useMemo(() => {
+    const raw = String(formData.status || student?.status || 'active').toLowerCase();
+    const dStat = resolveDisciplineDisplayStatus(
+      {
+        deleted_at: student?.deleted_at as string | null | undefined,
+        discipline_deactivated_at: student?.discipline_deactivated_at as string | null | undefined,
+        suspension_open: student?.suspension_open as boolean | null | undefined,
+      },
+      hasWarningDiscipline
+    );
+    return dStat || (raw === 'active' ? 'Active' : raw.toUpperCase());
+  }, [formData.status, student, hasWarningDiscipline]);
 
-      const monthMap: Record<string, { present: number; total: number }> = {};
-      attAll.forEach((a) => {
-        const d = a.attendance_date || a.date;
-        if (!d) return;
-        const month = new Date(d).toLocaleString('en', { month: 'short' });
-        if (!monthMap[month]) monthMap[month] = { present: 0, total: 0 };
-        monthMap[month].total++;
-        if (studentAttendanceRowIsPresent(a)) monthMap[month].present++;
-      });
-
-      const fullName = displayFullName(s);
-      const expectedFee = Number(s.expected_fee_amount ?? 0);
-      const paymentStatus = String(s.payment_status ?? '').toLowerCase();
-      const disc = s.fee_discount_percent != null ? `${s.fee_discount_percent}%` : '—';
-
-      pdfDataRef.current = {
+  // Save Biodata Handler
+  const handleSaveBiodata = async () => {
+    if (!schoolId || !studentId) return;
+    setSaving(true);
+    try {
+      const payload = {
         name: fullName,
-        admission_number: s.admission_number as string | null,
-        current_class: s.current_class as string | null,
-        gender: s.gender as string | null,
-        date_of_birth: s.date_of_birth as string | null,
-        age_years: s.age_years as number | null,
-        nationality: s.nationality as string | null,
-        religion: s.religion as string | null,
-        address: s.address as string | null,
-        student_phone: s.student_phone as string | null,
-        student_email: s.student_email as string | null,
-        guardian_name: s.guardian_name as string | null,
-        guardian_relationship: s.guardian_relationship as string | null,
-        guardian_phone: s.guardian_phone as string | null,
-        guardian_email: s.guardian_email as string | null,
-        medical_condition: s.medical_condition as string | null,
-        previous_school: s.previous_school as string | null,
-        admission_date: s.admission_date as string | null,
-        boarding_type: s.boarding_type as string | null,
-        photoUrl: photoUrl || null,
+        first_name: formData.first_name || null,
+        middle_name: formData.middle_name || null,
+        last_name: formData.last_name || null,
+        gender: formData.gender || null,
+        date_of_birth: formData.date_of_birth || null,
+        nationality: formData.nationality || null,
+        religion: formData.religion || null,
+        blood_group: formData.blood_group || null,
+        medical_condition: formData.medical_condition || null,
+        allergies: formData.allergies || null,
+        admission_number: formData.admission_number || null,
+        current_class: formData.current_class || null,
+        boarding_type: formData.boarding_type || 'Non-Resident',
+        stream: formData.stream || null,
+        admission_date: formData.admission_date || null,
+        status: formData.status || 'active',
+        previous_school: formData.previous_school || null,
+        address: formData.address || null,
+        district: formData.district || null,
+        city: formData.district || null,
+        schoolpay_payment_code: formData.schoolpay_payment_code || null,
+        guardian_name: formData.guardian_name || null,
+        guardian_relationship: formData.guardian_relationship || null,
+        guardian_phone: formData.guardian_phone || null,
+        guardian_email: formData.guardian_email || null,
+        guardian_address: formData.guardian_address || null,
+        guardian_occupation: formData.guardian_occupation || null,
+        updated_at: new Date().toISOString(),
       };
 
-      if (cancelled) return;
+      const { error } = await supabase.from('students').update(payload).eq('school_id', schoolId).eq('student_id', studentId);
+      if (error) throw error;
 
-      requestAnimationFrame(() => {
-        if (cancelled) return;
-        const root = containerRef.current;
-        if (!root) return;
-        const el = root.querySelector('.pw-profile') || root;
+      if (authUserId) {
+        void queryClient.invalidateQueries({ queryKey: adminQueryKeys.studentsDesign(authUserId) });
+        void queryClient.invalidateQueries({ queryKey: adminQueryKeys.parentsDesign(authUserId) });
+      }
 
-        const set = (id: string, val: string) => {
-          const n = el.querySelector(id);
-          if (n) n.textContent = val;
-        };
-        const setHTML = (id: string, html: string) => {
-          const n = el.querySelector(id);
-          if (n) n.innerHTML = html;
-        };
-
-        set('#sp-breadcrumb-name', fullName);
-
-        if (photoUrl) {
-          const img = el.querySelector('#sp-photo-img') as HTMLImageElement | null;
-          const ini = el.querySelector('#sp-photo-initials') as HTMLElement | null;
-          if (img) {
-            img.src = photoUrl;
-            img.alt = fullName;
-            img.style.display = 'block';
-          }
-          if (ini) ini.style.display = 'none';
-        } else {
-          const img = el.querySelector('#sp-photo-img') as HTMLImageElement | null;
-          const ini = el.querySelector('#sp-photo-initials') as HTMLElement | null;
-          if (img) img.style.display = 'none';
-          if (ini) {
-            ini.style.display = 'flex';
-            ini.textContent = initials(fullName);
-          }
-        }
-
-        set('#sp-student-name', fullName);
-        if (isTertiary) {
-          const prog = computeTertiaryProgress(currentClass);
-          setHTML('#sp-chip-class', `${SCHOOL_SVG} ${escapeHtml(currentClass || '—')} · ${escapeHtml(prog.shortPill)}`);
-        } else {
-          setHTML('#sp-chip-class', `${SCHOOL_SVG} ${escapeHtml(currentClass || '—')}`);
-        }
-        set('#sp-chip-adm', `# ${String(s.admission_number ?? '—')}`);
-        const admDate = (s.admission_date as string) || '';
-        setHTML('#sp-chip-enrolled', admDate ? `${CALENDAR_SVG} Enrolled ${fmtShortDate(admDate)}` : `${CALENDAR_SVG} —`);
-
-        const statusChip = el.querySelector('#sp-chip-status') as HTMLElement | null;
-        if (statusChip) {
-          const rawSt = String(s.status ?? '').toLowerCase();
-          const isGrad = rawSt === 'graduated';
-          const active = rawSt === 'active';
-          if (isGrad) {
-            statusChip.innerHTML = `${CHECK_SVG} Graduated`;
-            statusChip.className = 'sp-chip sp-chip-blue';
-          } else {
-            statusChip.innerHTML = active ? `${CHECK_SVG} Active` : `${X_SVG} Inactive`;
-            statusChip.className = `sp-chip ${active ? 'sp-chip-green' : 'sp-chip-rose'}`;
-          }
-        }
-
-        const dStatus = resolveDisciplineDisplayStatus(
-          {
-            deleted_at: s.deleted_at as string | null | undefined,
-            discipline_deactivated_at: s.discipline_deactivated_at as string | null | undefined,
-            suspension_open: s.suspension_open as boolean | null | undefined,
-          },
-          hasWarningDiscipline
-        );
-        const discChip = el.querySelector('#sp-chip-discipline') as HTMLElement | null;
-        if (discChip) {
-          discChip.style.display = 'inline-flex';
-          discChip.innerHTML = `${SCALE_SVG} ${escapeHtml(dStatus)}`;
-          discChip.className = `sp-chip ${disciplineChipClass(dStatus)}`;
-        }
-
-        const attMeta = el.querySelector('#sp-meta-attendance') as HTMLElement | null;
-        if (attMeta) {
-          if (!attToday) {
-            attMeta.textContent = 'Not Marked';
-            attMeta.className = 'sp-hero-meta-value';
-          } else if (studentAttendanceRowIsPresent(attToday)) {
-            attMeta.innerHTML = `${CHECK_SVG} Present`;
-            attMeta.className = 'sp-hero-meta-value green';
-          } else {
-            attMeta.innerHTML = `${X_SVG} Absent`;
-            attMeta.className = 'sp-hero-meta-value rose';
-          }
-        }
-
-        const feeMeta = el.querySelector('#sp-meta-fee-balance') as HTMLElement | null;
-        if (feeMeta) {
-          const bal = feeBal.balance;
-          if (Number(bal) > 0) {
-            feeMeta.textContent = fmtUGX(Number(bal));
-            feeMeta.className = 'sp-hero-meta-value amber';
-          } else if (/overdue|unpaid|owing/.test(paymentStatus) && expectedFee > 0) {
-            feeMeta.textContent = fmtUGX(expectedFee);
-            feeMeta.className = 'sp-hero-meta-value amber';
-          } else {
-            feeMeta.innerHTML = `${CHECK_SVG} Paid`;
-            feeMeta.className = 'sp-hero-meta-value green';
-          }
-        }
-
-        set('#sp-meta-class-teacher', classTeacher);
-        set('#sp-meta-gender', String(s.gender ?? '—'));
-        set('#sp-meta-dob', fmtDate(s.date_of_birth as string));
-        set('#sp-meta-nationality', String(s.nationality ?? '—'));
-
-        set('#sp-first-name', String(s.first_name || (fullName.split(' ')[0] ?? '—')));
-        const mn = String(s.middle_name ?? '').trim();
-        set('#sp-middle-name', mn || '—');
-        const mnEl = el.querySelector('#sp-middle-name') as HTMLElement | null;
-        if (mnEl) {
-          mnEl.className = `sp-field-value${mn ? '' : ' muted'}`;
-        }
-        set('#sp-last-name', String(s.last_name || fullName.split(' ').slice(-1)[0] || '—'));
-        set('#sp-gender', String(s.gender ?? '—'));
-        set('#sp-dob', fmtDate(s.date_of_birth as string));
-        set('#sp-age', displayStudentAgeYears(s));
-        set('#sp-nationality', String(s.nationality ?? '—'));
-        set('#sp-religion', String(s.religion ?? '—'));
-        set('#sp-blood-group', String(s.blood_group ?? '—'));
-        const med = String(s.medical_condition ?? s.medical_notes ?? '').trim();
-        set('#sp-medical-notes', med || 'None recorded');
-        const medEl = el.querySelector('#sp-medical-notes') as HTMLElement | null;
-        if (medEl) medEl.className = `sp-field-value${med ? '' : ' muted'}`;
-
-        set('#sp-adm-number', String(s.admission_number ?? '—'));
-        if (isTertiary) {
-          const prog = computeTertiaryProgress(currentClass);
-          setHTML(
-            '#sp-current-class',
-            `<span>${escapeHtml(currentClass || '—')}</span><div style="margin-top:6px;display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:6px;font-size:12px;font-weight:600;border:1px solid rgba(20,184,166,0.3);background:rgba(20,184,166,0.1);color:#0f766e;">${escapeHtml(prog.formattedBadge)}</div>`
-          );
-        } else {
-          set('#sp-current-class', currentClass || '—');
-        }
-        const rawBoarding = String(s.boarding_type ?? '').trim().toLowerCase();
-        const boardingType = rawBoarding.includes('board') || rawBoarding === 'resident' ? 'Resident' : 'Non-Resident';
-        if (editMode) {
-          spInline(el, '#sp-boarding-type', 'boarding_type', boardingType);
-        } else {
-          spQuickSelect(el, '#sp-boarding-type', 'boarding_type', boardingType, [
-            { value: 'Non-Resident', label: 'Non-Resident' },
-            { value: 'Resident', label: 'Resident' }
-          ], 'Non-Resident');
-        }
-        set('#sp-class-teacher-ov', classTeacher === '—' ? 'Not assigned' : classTeacher);
-        set('#sp-stream', String(s.stream ?? '—'));
-        set('#sp-enrollment-date', fmtDate((s.admission_date as string) || (s.enrollment_date as string)));
-        const statusField = el.querySelector('#sp-student-status') as HTMLElement | null;
-        if (statusField) {
-          const activeSt = String(s.status ?? '') === 'active';
-          statusField.textContent = activeSt ? 'Active' : 'Inactive';
-          statusField.className = `sp-field-value ${activeSt ? 'green' : 'rose'}`;
-        }
-        set('#sp-previous-school', String(s.previous_school ?? 'Not recorded'));
-        set('#sp-special-needs', String(s.special_needs ?? 'None'));
-
-        set('#sp-home-address', String(s.address ?? 'Not recorded'));
-        set('#sp-guardian-address', String(s.guardian_address ?? 'Not recorded'));
-        set('#sp-district', String(s.district ?? s.city ?? '—'));
-        const gp = String(s.guardian_phone ?? '').trim();
-        const ge = String(s.guardian_email ?? '').trim();
-        const gphoneEl = el.querySelector('#sp-guardian-phone') as HTMLElement | null;
-        if (gphoneEl) {
-          gphoneEl.innerHTML = gp ? `<a href="tel:${gp.replace(/\s/g, '')}">${escapeHtml(gp)}</a>` : 'Not recorded';
-          gphoneEl.className = `sp-field-value${gp ? '' : ' muted'}`;
-        }
-        const gemailEl = el.querySelector('#sp-guardian-email') as HTMLElement | null;
-        if (gemailEl) {
-          gemailEl.innerHTML = ge ? `<a href="mailto:${escapeHtml(ge)}">${escapeHtml(ge)}</a>` : 'Not recorded';
-          gemailEl.className = `sp-field-value${ge ? '' : ' muted'}`;
-        }
-
-        const noParentNotice = el.querySelector('#sp-no-parent-notice') as HTMLElement | null;
-        const parentsBody = el.querySelector('#sp-parents-body') as HTMLElement | null;
-        if (noParentNotice) noParentNotice.style.display = parentCards.length === 0 ? 'flex' : 'none';
-        if (parentsBody) {
-          if (parentCards.length === 0) {
-            parentsBody.innerHTML = '';
-          } else {
-            parentsBody.innerHTML = parentCards
-              .map((p, i) => {
-                const pname = escapeHtml(String(p.name ?? '—'));
-                const rel = escapeHtml(String(p.relationship ?? 'Guardian'));
-                const phone = String(p.phone ?? '').trim();
-                const email = String(p.email ?? '').trim();
-                const pid = String(p.parent_id ?? '');
-                const wa = phone.replace(/\D/g, '');
-                const occ = String(p.occupation ?? '').trim();
-                const addr = String(p.address ?? '').trim();
-                const nin = String(p.nin ?? '').trim();
-                const primaryLabel =
-                  p.is_primary_contact === true ? 'Yes' : p.is_primary_contact === false ? 'No' : '—';
-                const portalHtml =
-                  p.portal_access === true
-                    ? `<span style="color:var(--green)">${CHECK_SVG} Active</span>`
-                    : p.portal_access === false
-                      ? `<span style="color:var(--rose)">${X_SVG} Inactive</span>`
-                      : '—';
-                const siblingsHtml =
-                  p.siblings.length === 0
-                    ? ''
-                    : `<div class="sp-guardian-siblings">
-              <div class="sp-guardian-siblings-title">Other children (same guardian)</div>
-              <div class="sp-guardian-sibling-list">
-                ${p.siblings
-                  .map(
-                    (ch) =>
-                      `<button type="button" class="sp-guardian-sibling-link" data-nav="/dashboard/admin/students/${escapeHtml(ch.student_id)}">
-                  <span class="sp-guardian-sibling-name">${escapeHtml(ch.displayName)}</span>
-                  <span class="sp-guardian-sibling-meta">${escapeHtml(ch.current_class)} · #${escapeHtml(ch.admission_number)}</span>
-                </button>`
-                  )
-                  .join('')}
-              </div>
-            </div>`;
-                return `
-            <div class="sp-guardian-card">
-              <div class="sp-guardian-top">
-                <div class="sp-guardian-av" style="background:${gradG(i)}">${initials(String(p.name ?? ''))}</div>
-                <div class="sp-guardian-name-block">
-                  <div class="sp-guardian-name">${pname}</div>
-                  <div class="sp-guardian-relation">${rel}</div>
-                </div>
-                <div class="sp-guardian-actions">
-                  ${phone ? `<button type="button" class="sp-icon-btn" data-tel="${escapeHtml(phone)}" title="Call">${CALL_BTN_SVG}</button>` : ''}
-                  ${email ? `<button type="button" class="sp-icon-btn" data-email="${escapeHtml(email)}" title="Email">${EMAIL_BTN_SVG}</button>` : ''}
-                  ${phone && wa ? `<button type="button" class="sp-icon-btn sp-green" data-whatsapp="${wa}" title="WhatsApp">${WA_BTN_SVG}</button>` : ''}
-                  <button type="button" class="sp-icon-btn" data-nav="/dashboard/admin/parents" title="Parents directory">›</button>
-                </div>
-              </div>
-              <div class="sp-guardian-fields">
-                <div><div class="sp-guardian-field-label">Phone</div><div class="sp-guardian-field-value">${phone ? `<a href="tel:${phone.replace(/\s/g, '')}">${escapeHtml(phone)}</a>` : '—'}</div></div>
-                <div><div class="sp-guardian-field-label">Email</div><div class="sp-guardian-field-value">${email ? `<a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a>` : '—'}</div></div>
-                <div><div class="sp-guardian-field-label">Parent ID</div><div class="sp-guardian-field-value" style="font-size:11px;word-break:break-all">${pid ? escapeHtml(pid) : '—'}</div></div>
-                <div><div class="sp-guardian-field-label">Occupation</div><div class="sp-guardian-field-value">${occ ? escapeHtml(occ) : '—'}</div></div>
-                <div><div class="sp-guardian-field-label">NIN / ID</div><div class="sp-guardian-field-value">${nin ? escapeHtml(nin) : '—'}</div></div>
-                <div><div class="sp-guardian-field-label">Address</div><div class="sp-guardian-field-value">${addr ? escapeHtml(addr) : '—'}</div></div>
-                <div><div class="sp-guardian-field-label">Primary contact</div><div class="sp-guardian-field-value">${primaryLabel}</div></div>
-                <div><div class="sp-guardian-field-label">Portal access</div><div class="sp-guardian-field-value">${portalHtml}</div></div>
-              </div>
-              ${siblingsHtml}
-            </div>`;
-              })
-              .join('');
-          }
-        }
-
-        set('#sp-current-term', isTertiary ? 'Current semester' : 'Current term');
-        const mountAcademic = el.querySelector('#sp-subjects-enrolled-react-root') as HTMLDivElement | null;
-        academicMountRef.current = mountAcademic;
-        setAcademicPortalData({
-          schoolId,
-          studentId,
-          currentClass,
-          classSubjectRows: subjectRows,
-          initialOlevelNames: olevelSavedNames ?? [],
-          initialAlevelRows: alevelSubjectRows ?? [],
-        });
-
-        const mountDisc = el.querySelector('#sp-discipline-react-root') as HTMLDivElement | null;
-        disciplineMountRef.current = mountDisc;
-        if (mountDisc) {
-          setDisciplinePortalData({
-            schoolId,
-            studentId,
-            studentSnapshot: {
-              deleted_at: s.deleted_at as string | null | undefined,
-              discipline_deactivated_at: s.discipline_deactivated_at as string | null | undefined,
-              suspension_open: s.suspension_open as boolean | null | undefined,
-              suspension_period_start: s.suspension_period_start as string | null | undefined,
-              suspension_period_end: s.suspension_period_end as string | null | undefined,
-            },
-            initialHasWarning: hasWarningDiscipline,
-            canManageDiscipline,
-            isOwner: viewerIsOwner,
-          });
-        } else {
-          setDisciplinePortalData(null);
-        }
-
-        const mountFacility = el.querySelector('#sp-facility-liabilities-react-root') as HTMLDivElement | null;
-        facilityMountRef.current = mountFacility;
-        if (mountFacility) {
-          setFacilityPortalData({
-            schoolId,
-            studentId,
-            studentName: fullName,
-            admissionNumber: String((s as Record<string, unknown>).admission_number || ''),
-            currentClass,
-            boardingType: String((s as Record<string, unknown>).boarding_type || ''),
-          });
-        } else {
-          setFacilityPortalData(null);
-        }
-
-        set('#sp-report-card-status', isTertiary ? 'Result slip not yet generated' : 'Not yet generated');
-
-        if (examResults.length > 0) {
-          setHTML(
-            '#sp-exam-results-body',
-            examResults
-              .map((r) => {
-                const mo = Number(r.marks_obtained ?? 0);
-                const tm = Number(r.total_marks ?? 100) || 100;
-                const ratio = tm > 0 ? mo / tm : 0;
-                const col = ratio >= 0.8 ? 'var(--green)' : ratio >= 0.5 ? 'var(--amber)' : 'var(--rose)';
-                return `<div style="display:flex;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid var(--border)">
-              <div style="flex:1">
-                <div style="font-size:13.5px;font-weight:600;color:var(--text-primary)">${escapeHtml(String(r.subject ?? ''))}</div>
-              </div>
-              <div style="font-size:15px;font-weight:700;color:${col}">${mo}/${tm}</div>
-            </div>`;
-              })
-              .join('')
-          );
-        }
-
-        const billed = feeBal.total_fees;
-        const paid = feeBal.total_paid;
-        const balance = feeBal.balance;
-        set('#sp-fee-term-label', isTertiary ? 'Fee summary (all intakes)' : 'Fee summary (all terms)');
-        set('#sp-fee-total-billed', fmtUGX(Number(billed)));
-        set('#sp-fee-total-paid', fmtUGX(Number(paid)));
-        const feeBalEl = el.querySelector('#sp-fee-balance') as HTMLElement | null;
-        if (feeBalEl) {
-          feeBalEl.textContent = balance > 0 ? `${fmtUGX(balance)}` : '—';
-          feeBalEl.className = `sp-fee-value ${balance <= 0 ? 'green' : 'amber'}`;
-        }
-        set(
-          '#sp-last-payment-date',
-          lastPayment?.payment_date ? fmtDate(lastPayment.payment_date) : '—'
-        );
-        set('#sp-payment-method', lastPayment?.payment_method ? String(lastPayment.payment_method) : '—');
-        set('#sp-scholarship', disc);
-        {
-          const spc = String((s as { schoolpay_payment_code?: string | null }).schoolpay_payment_code ?? '').trim();
-          if (editMode) {
-            spInline(el, '#sp-schoolpay-payment-code', 'schoolpay_payment_code', spc);
-          } else {
-            spQuickEdit(el, '#sp-schoolpay-payment-code', 'schoolpay_payment_code', spc, 'Click to add payment code');
-          }
-        }
-
-        if (invoiceRows.length === 0) {
-          setHTML(
-            '#sp-invoices-body',
-            `<div class="sp-empty">
-              <div class="sp-empty-icon">${EMPTY_DOC_SVG}</div>
-              <div>No invoices yet for this student.</div>
-              <div style="font-size:12px;color:var(--text-muted)">Invoices appear when fees are generated for ${isTertiary ? 'an intake' : 'a term'}.</div>
-            </div>`
-          );
-        } else {
-          const invCells = invoiceRows
-            .map((row) => {
-              const term = row.school_terms;
-              const termLabel = term
-                ? isTertiary
-                  ? `Semester ${term.term}, ${term.year}`
-                  : `Term ${term.term}, ${term.year}`
-                : '—';
-              const invNo = String(row.invoice_number ?? '').trim() || '—';
-              const desc =
-                String(row.invoice_label ?? '').trim() ||
-                (row.is_supplementary ? 'Supplementary' : isTertiary ? 'Intake invoice' : 'Term invoice');
-              const total = Number(row.total_amount);
-              const paid = Number(row.amount_paid);
-              const bal = Number(row.balance);
-              const { text: payLabel, badgeClass } = invoicePaymentBadge(row.status, paid, bal);
-              const supHtml = row.is_supplementary
-                ? `<div class="sp-inv-sublabel">Supplementary</div>`
-                : '';
-              return `<tr>
-                <td><strong>${escapeHtml(invNo)}</strong>${supHtml}</td>
-                <td>${escapeHtml(termLabel)}</td>
-                <td>${escapeHtml(desc)}</td>
-                <td class="num">${fmtUGX(total)}</td>
-                <td class="num">${fmtUGX(paid)}</td>
-                <td class="num">${bal > 0.005 ? fmtUGX(bal) : '—'}</td>
-                <td><span class="sp-inv-badge ${badgeClass}">${escapeHtml(payLabel)}</span></td>
-              </tr>`;
-            })
-            .join('');
-          setHTML(
-            '#sp-invoices-body',
-            `<table class="sp-invoices-table">
-              <thead><tr>
-                <th>Invoice</th>
-                <th>Term</th>
-                <th>Details</th>
-                <th class="num">Total</th>
-                <th class="num">Paid</th>
-                <th class="num">Balance</th>
-                <th>Payment status</th>
-              </tr></thead>
-              <tbody>${invCells}</tbody>
-            </table>`
-          );
-        }
-
-        const monthBars = Object.entries(monthMap).map(([mon, data]) => {
-          const pct = data.total > 0 ? Math.round((data.present / data.total) * 100) : 0;
-          const color = data.total === 0 ? 'var(--text-muted)' : attColor(pct);
-          return `
-            <div class="sp-att-month">
-              <div class="sp-att-month-name">${mon.toUpperCase()}</div>
-              <div class="sp-att-bar-wrap">
-                <div class="sp-att-bar" style="width:${data.total ? pct : 0}%;background:${color}"></div>
-              </div>
-              <div class="sp-att-pct" style="color:${color}">${data.total > 0 ? `${pct}%` : '—'}</div>
-            </div>`;
-        });
-        if (monthBars.length > 0) setHTML('#sp-attendance-months', monthBars.join(''));
-        set('#sp-days-present', `${presentDays} day${presentDays !== 1 ? 's' : ''}`);
-        set('#sp-days-absent', `${absentDays} day${absentDays !== 1 ? 's' : ''}`);
-        const rateEl = el.querySelector('#sp-attendance-rate') as HTMLElement | null;
-        if (rateEl) {
-          rateEl.textContent = totalMarked ? `${overallRate}%` : '—';
-          rateEl.className = `sp-field-value ${overallRate >= 80 ? 'green' : overallRate >= 60 ? 'amber' : 'rose'}`;
-        }
-
-        setHTML(
-          '#sp-documents-body',
-          `<div class="sp-empty">
-              <div class="sp-empty-icon">${EMPTY_FOLDER_SVG}</div>
-              <div>No documents uploaded yet.</div>
-              <div style="font-size:12px;color:var(--text-muted)">Document storage can be connected later.</div>
-            </div>`
-        );
-
-        if (editMode) {
-          applyStudentEditMode(el, s);
-        }
-
-        const wire = (sel: string, fn: () => void) => {
-          const b = el.querySelector(sel);
-          if (b) (b as HTMLElement).onclick = () => fn();
-        };
-
-        wire('#sp-btn-print', () => {
-          const pdf = pdfDataRef.current;
-          if (pdf) void downloadStudentProfilePdf(pdf);
-        });
-        const spEdit = el.querySelector('#sp-btn-edit') as HTMLElement | null;
-        const spCancel = el.querySelector('#sp-btn-cancel-edit') as HTMLElement | null;
-
-        const updateButtons = (editing: boolean) => {
-          if (spEdit) {
-            (spEdit as HTMLButtonElement).disabled = false;
-            spEdit.innerHTML = editing ? `${SAVE_SVG} Save` : `${PENCIL_SVG} Edit Profile`;
-          }
-          if (spCancel) {
-            (spCancel as HTMLButtonElement).disabled = false;
-            spCancel.style.display = editing ? 'inline-flex' : 'none';
-            spCancel.innerHTML = `${CANCEL_SVG} Cancel`;
-          }
-        };
-
-        if (spEdit) {
-          updateButtons(isEditingRef.current);
-          spEdit.onclick = (e) => {
-            e.preventDefault();
-            if (isEditingRef.current) {
-              void saveStudentRef.current();
-            } else {
-              isEditingRef.current = true;
-              setEditMode(true);
-              updateButtons(true);
-              applyStudentEditMode(el, s);
-            }
-          };
-        }
-
-        if (spCancel) {
-          spCancel.onclick = (e) => {
-            e.preventDefault();
-            isEditingRef.current = false;
-            setEditMode(false);
-            updateButtons(false);
-            setReloadToken((x) => x + 1);
-          };
-        }
-        wire('#sp-btn-delete', async () => {
-          if (!window.confirm(`Delete ${fullName}? This cannot be undone.`)) return;
-          const { error } = await supabase.from('students').delete().eq('school_id', schoolId).eq('student_id', studentId);
-          if (error) {
-            toast.error(`Failed to delete student: ${error.message}`);
-            return;
-          }
-          toast.success('Student deleted successfully');
-          navigate('/dashboard/admin/students');
-        });
-        wire('#sp-btn-link-parent', () => navigate('/dashboard/admin/parents'));
-        wire('#sp-btn-record-payment', () => navigate('/dashboard/admin/outstanding'));
-        wire('#sp-btn-fee-slip', async () => {
-          try {
-            const sName = fullName || 'Student';
-            const adm = String((s as Record<string, unknown>).admission_number || '');
-            const currentCls = String((s as Record<string, unknown>).current_class || '');
-            const intakeVal = String((s as Record<string, unknown>).intake || '');
-            const rawRes = String(
-              (s as Record<string, unknown>).residence_status ||
-              (s as Record<string, unknown>).boarding_status ||
-              (s as Record<string, unknown>).boarding_type ||
-              ''
-            ).toLowerCase();
-            const boardingVal = rawRes.includes('board') || rawRes === 'resident'
-              ? 'Resident'
-              : 'Non-Resident';
-
-            // Fetch school_fee_structure rows to get configured base tuition & functional items
-            const { data: feeRows } = await supabase
-              .from('school_fee_structure')
-              .select('class_name, tuition_amount, boarding_tuition_amount')
-              .eq('school_id', schoolId);
-
-            let baseTuition = 0;
-            const items: { name: string; amount: number }[] = [];
-
-            const matchingItemRows = (feeRows || []).filter((r) => {
-              const cn = String(r.class_name || '');
-              return cn.startsWith('ITEM:');
-            });
-
-            if (matchingItemRows.length > 0) {
-              const codeMatch = matchingItemRows.filter((r) => {
-                const parts = r.class_name.split(':');
-                const code = parts[1] || '';
-                return currentCls.toUpperCase().includes(code);
-              });
-              const relevantRows = codeMatch.length > 0 ? codeMatch : matchingItemRows;
-
-              for (const r of relevantRows) {
-                const parts = r.class_name.split(':');
-                const itemName = parts.slice(3).join(':') || parts[2] || '';
-                const amt = Number(r.tuition_amount) || 0;
-                if (itemName.toLowerCase().includes('base tuition')) {
-                  baseTuition = amt;
-                } else if (itemName.toLowerCase().includes('hostel')) {
-                  if (boardingVal === 'Resident') {
-                    items.push({ name: 'Hostel Accommodation', amount: amt });
-                  }
-                } else if (itemName) {
-                  if (!items.some((it) => it.name === itemName)) {
-                    items.push({ name: itemName, amount: amt });
-                  }
-                }
-              }
-            }
-
-            if (items.length === 0) {
-              RCSN_DEFAULT_FUNCTIONAL_ITEMS.forEach((defName) => {
-                items.push({ name: defName, amount: 0 });
-              });
-            }
-
-            const doc = generateRcsnFeeSlipPdf({
-              studentName: sName,
-              admissionNumber: adm,
-              className: currentCls,
-              intake: intakeVal,
-              boardingType: boardingVal,
-              tuitionAmount: baseTuition,
-              functionalItems: items,
-              amountPaid: Number(feeBal.total_paid || 0),
-              balanceDue: Number(feeBal.balance || 0),
-            });
-
-            const safeFile = `RCSN_Fee_Slip_${(adm || sName).replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
-            doc.save(safeFile);
-            toast.success('Official Fee Slip downloaded successfully');
-          } catch (err: unknown) {
-            console.error('Error generating fee slip:', err);
-            const msg = err instanceof Error ? err.message : 'Unknown error';
-            toast.error('Failed to generate fee slip: ' + msg);
-          }
-        });
-        wire('#sp-btn-upload-doc', () => navigate('/dashboard/admin/students'));
-        const spPhotoFile = el.querySelector('#sp-photo-file') as HTMLInputElement | null;
-        const spChangePhoto = el.querySelector('#sp-btn-change-photo') as HTMLElement | null;
-        if (spChangePhoto) {
-          spChangePhoto.onclick = () => {
-            if (editMode) {
-              spPhotoFile?.click();
-            } else {
-              // Quick photo upload without edit mode
-              const input = document.createElement('input');
-              input.type = 'file';
-              input.accept = 'image/*';
-              input.onchange = async (e) => {
-                const file = (e.target as HTMLInputElement).files?.[0];
-                if (!file) return;
-
-                // Show uploading overlay on the photo wrap
-                const wrap = el.querySelector('.sp-photo-wrap') as HTMLElement | null;
-                const btn = el.querySelector('#sp-btn-change-photo') as HTMLElement | null;
-                let overlay: HTMLDivElement | null = null;
-                if (wrap) {
-                  overlay = document.createElement('div');
-                  overlay.style.cssText = [
-                    'position:absolute;inset:0;border-radius:20px;',
-                    'background:rgba(0,0,0,0.6);',
-                    'display:flex;flex-direction:column;align-items:center;justify-content:center;',
-                    'z-index:20;color:#fff;font-size:11px;font-weight:600;letter-spacing:.4px;',
-                    'pointer-events:none;gap:6px;',
-                  ].join('');
-                  overlay.innerHTML = '<svg style="width:28px;height:28px;animation:spin 1s linear infinite;display:inline-block;color:#fff" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="3" stroke-dasharray="32" stroke-linecap="round"/></svg><span>Uploading…</span>';
-                  wrap.appendChild(overlay);
-                }
-                if (btn) { btn.style.opacity = '0.3'; btn.style.pointerEvents = 'none'; }
-
-                await saveQuickPhoto(file);
-
-                overlay?.remove();
-                if (btn) { btn.style.opacity = ''; btn.style.pointerEvents = ''; }
-              };
-              input.click();
-            }
-          };
-        }
-        wire('#sp-btn-message-parent', () => navigate('/dashboard/admin/parents'));
-
-        el.querySelectorAll('[data-nav]').forEach((node) => {
-          const href = (node as HTMLElement).getAttribute('data-nav');
-          if (!href) return;
-          (node as HTMLElement).onclick = (e) => {
-            e.preventDefault();
-            navigate(href);
-          };
-        });
-
-        el.querySelectorAll('[data-tel]').forEach((node) => {
-          const t = (node as HTMLElement).getAttribute('data-tel');
-          if (t)
-            (node as HTMLElement).onclick = () => {
-              window.location.href = `tel:${t.replace(/\s/g, '')}`;
-            };
-        });
-        el.querySelectorAll('[data-email]').forEach((node) => {
-          const t = (node as HTMLElement).getAttribute('data-email');
-          if (t) (node as HTMLElement).onclick = () => window.open(`mailto:${t}`);
-        });
-        el.querySelectorAll('[data-whatsapp]').forEach((node) => {
-          const t = (node as HTMLElement).getAttribute('data-whatsapp');
-          if (t) (node as HTMLElement).onclick = () => window.open(`https://wa.me/${t}`, '_blank');
-        });
-
-        const TABS = ['overview', 'parents', 'academic', 'fees', 'attendance', 'documents'] as const;
-        const switchTab = (name: string) => {
-          TABS.forEach((t) => {
-            const panel = el.querySelector(`#sp-tab-${t}`) as HTMLElement | null;
-            if (panel) panel.style.display = t === name ? '' : 'none';
-          });
-          el.querySelectorAll('.sp-tab-btn').forEach((btn) => {
-            btn.classList.toggle('active', (btn as HTMLElement).dataset.tab === name);
-          });
-        };
-        el.querySelectorAll('.sp-tab-btn').forEach((btn) => {
-          (btn as HTMLElement).onclick = () => switchTab((btn as HTMLElement).dataset.tab || 'overview');
-        });
-
-        // Setup quick edit functionality
-        el.querySelectorAll('.sp-quick-edit-wrapper').forEach((wrapper) => {
-          const field = (wrapper as HTMLElement).dataset.spField;
-          if (!field) return;
-          
-          const display = wrapper.querySelector('.sp-quick-edit-display') as HTMLElement;
-          const input = wrapper.querySelector('.sp-quick-edit-input') as HTMLInputElement;
-          const select = wrapper.querySelector('.sp-quick-edit-select') as HTMLSelectElement;
-          const actions = wrapper.querySelector('.sp-quick-edit-actions') as HTMLElement;
-          const saveBtn = wrapper.querySelector('.sp-quick-edit-save') as HTMLElement;
-          const cancelBtn = wrapper.querySelector('.sp-quick-edit-cancel') as HTMLElement;
-          
-          if (!display || !actions || !saveBtn || !cancelBtn) return;
-          
-          const isSelect = !!select;
-          const inputElement = isSelect ? select : input;
-          if (!inputElement) return;
-          
-          let originalValue = inputElement.value;
-          
-          const startEdit = () => {
-            originalValue = inputElement.value;
-            display.style.display = 'none';
-            inputElement.style.display = 'block';
-            actions.style.display = 'flex';
-            inputElement.focus();
-          };
-          
-          const cancelEdit = () => {
-            inputElement.value = originalValue;
-            display.style.display = 'block';
-            inputElement.style.display = 'none';
-            actions.style.display = 'none';
-          };
-          
-          const saveEdit = async () => {
-            const newValue = inputElement.value.trim();
-            const success = await saveQuickEdit(field, newValue);
-            if (success) {
-              // Update display
-              const isEmpty = !newValue;
-              let displayText = newValue;
-              if (field === 'schoolpay_payment_code') {
-                displayText = newValue || 'Click to add payment code';
-              } else if (field === 'boarding_type') {
-                displayText = newValue || 'Day Scholar';
-              } else {
-                displayText = newValue || 'Click to edit';
-              }
-              display.textContent = displayText;
-              display.className = `sp-quick-edit-display ${isEmpty ? 'sp-quick-edit-empty' : ''}`;
-              originalValue = newValue;
-              cancelEdit();
-            }
-          };
-          
-          display.onclick = startEdit;
-          saveBtn.onclick = saveEdit;
-          cancelBtn.onclick = cancelEdit;
-          
-          if (!isSelect) {
-            inputElement.onkeydown = (e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                void saveEdit();
-              } else if (e.key === 'Escape') {
-                cancelEdit();
-              }
-            };
-          }
-          
-          // Hover effect
-          display.onmouseenter = () => {
-            if (display.style.display !== 'none') {
-              display.style.backgroundColor = 'var(--surface-2)';
-            }
-          };
-          display.onmouseleave = () => {
-            if (display.style.display !== 'none') {
-              display.style.backgroundColor = '';
-            }
-          };
-        });
-      });
+      toast.success('Trainee record updated successfully.');
+      setEditMode(false);
+      setReloadToken((t) => t + 1);
+    } catch (err: any) {
+      toast.error(`Update failed: ${err.message || 'Unknown error'}`);
+    } finally {
+      setSaving(false);
     }
+  };
 
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [htmlContent, studentId, navigate, reloadToken, authSchoolId]);
+  // Photo Upload Handler
+  const handlePhotoUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !schoolId || !studentId) return;
 
-  useEffect(() => {
-    if (location.hash !== '#discipline' || !disciplinePortalData) return;
-    const t = window.setTimeout(() => {
-      document.getElementById('discipline')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 120);
-    return () => window.clearTimeout(t);
-  }, [location.hash, disciplinePortalData]);
+    setPhotoUploading(true);
+    try {
+      const validation = validateImageFile(file);
+      if (!validation.isValid) {
+        toast.error(validation.error || 'Invalid image file.');
+        return;
+      }
 
-  useEffect(() => {
-    const syncLight = () => {
-      const dark = document.documentElement.classList.contains('dark');
-      document.documentElement.classList.toggle('light', !dark);
-    };
-    syncLight();
-    const obs = new MutationObserver(syncLight);
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-    return () => {
-      obs.disconnect();
-      document.documentElement.classList.remove('light');
-    };
-  }, [htmlContent]);
+      const { compressedFile } = await compressStudentPhoto(file);
+      const url = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(reader.error ?? new Error('FileReader failed'));
+        reader.readAsDataURL(compressedFile);
+      });
+
+      await supabase.from('student_photos').delete().eq('school_id', schoolId).eq('student_id', studentId).eq('is_primary', true);
+
+      const { error: phErr } = await supabase.from('student_photos').insert({
+        school_id: schoolId,
+        student_id: studentId,
+        photo_url: url,
+        photo_filename: compressedFile.name,
+        photo_size: compressedFile.size,
+        photo_type: compressedFile.type,
+        is_primary: true,
+      });
+
+      if (phErr) throw phErr;
+
+      setPhotoUrl(url);
+      toast.success('Passport photo updated.');
+      if (authUserId) {
+        void queryClient.invalidateQueries({ queryKey: adminQueryKeys.studentsDesign(authUserId) });
+      }
+    } catch (err) {
+      toast.error('Could not save photo.');
+    } finally {
+      setPhotoUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  // PDF Print Handler
+  const handlePrintDossier = () => {
+    if (!student) return;
+    downloadStudentProfilePdf({
+      name: fullName,
+      admission_number: formData.admission_number,
+      current_class: formData.current_class,
+      gender: formData.gender,
+      date_of_birth: formData.date_of_birth,
+      age_years: student.age_years as number | null,
+      nationality: formData.nationality,
+      religion: formData.religion,
+      address: formData.address,
+      student_phone: String(student.student_phone ?? ''),
+      student_email: String(student.student_email ?? ''),
+      guardian_name: formData.guardian_name,
+      guardian_relationship: formData.guardian_relationship,
+      guardian_phone: formData.guardian_phone,
+      guardian_email: formData.guardian_email,
+      medical_condition: (student.medical_condition as string) ?? null,
+      previous_school: formData.previous_school,
+      boarding_type: formData.boarding_type,
+      admission_date: formData.admission_date,
+      photoUrl,
+    });
+  };
+
+  // Fee Slip PDF Handler
+  const handleGenerateFeeSlip = () => {
+    if (!student) return;
+    try {
+      const doc = generateRcsnFeeSlipPdf({
+        studentName: fullName,
+        admissionNumber: formData.admission_number || '—',
+        className: formData.current_class || 'General Nursing',
+        intake: String(student.intake ?? ''),
+        boardingType: formData.boarding_type || 'Boarding',
+        tuitionAmount: Number(feeBalance.total_fees || 0),
+        functionalItems: invoices.map((inv) => ({
+          name: inv.invoice_label || inv.invoice_number || 'Tuition / Fees',
+          amount: Number(inv.total_amount || 0),
+        })),
+        amountPaid: Number(feeBalance.total_paid || 0),
+        balanceDue: Number(feeBalance.balance || 0),
+      });
+      const safeId = (formData.admission_number || fullName).replace(/[^a-zA-Z0-9_-]/g, '_');
+      doc.save(`RCSN_Fee_Slip_${safeId}.pdf`);
+      toast.success('Fee structure slip downloaded');
+    } catch (e) {
+      console.error(e);
+      toast.error('Failed to generate fee slip');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center text-xs font-mono text-[#555555]">
+        Loading trainee dossier...
+      </div>
+    );
+  }
+
+  // Combined Primary Guardian Info
+  const primaryGuardian = parentRecords[0] || null;
+  const guardianDisplayName = primaryGuardian?.name || formData.guardian_name || 'Guardian Not Recorded';
+  const guardianRelation = primaryGuardian?.relationship || formData.guardian_relationship || 'Legal Guardian';
+  const guardianPhone = primaryGuardian?.phone || formData.guardian_phone || '';
+  const guardianEmail = primaryGuardian?.email || formData.guardian_email || '';
+  const guardianOccupation = primaryGuardian?.occupation || formData.guardian_occupation || '';
+  const guardianNIN = primaryGuardian?.nin || primaryGuardian?.national_id || '';
+  const guardianAddress = primaryGuardian?.address || formData.guardian_address || '';
 
   return (
-    <>
-      <div ref={containerRef} style={{ width: '100%', minHeight: '100vh', display: 'block' }} />
-      {academicPortalData && academicMountRef.current
-        ? createPortal(
-            <StudentProfileAcademicStanding
-              {...academicPortalData}
-              onChanged={() => setReloadToken((t) => t + 1)}
-            />,
-            academicMountRef.current,
-          )
-        : null}
-      {disciplinePortalData && disciplineMountRef.current
-        ? createPortal(
-            <div id="discipline">
-              <StudentDisciplineSection
-                studentId={disciplinePortalData.studentId}
-                schoolId={disciplinePortalData.schoolId}
-                studentSnapshot={disciplinePortalData.studentSnapshot}
-                initialHasWarning={disciplinePortalData.initialHasWarning}
-                canManageDiscipline={disciplinePortalData.canManageDiscipline}
-                isOwner={disciplinePortalData.isOwner}
-                onStudentRefresh={async () => {
-                  if (authUserId) {
-                    void queryClient.invalidateQueries({ queryKey: adminQueryKeys.studentsDesign(authUserId) });
-                  }
-                  setReloadToken((t) => t + 1);
-                }}
+    <div className="space-y-4 max-w-7xl mx-auto pb-10">
+      {/* ── 1. TOP INSTITUTIONAL ACTION BAR ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-[#CCCCCC]">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            className="gov-btn gov-btn-sm"
+            onClick={() => navigate('/dashboard/admin/students')}
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Student Registry</span>
+          </button>
+          <div className="h-4 w-px bg-[#CCCCCC]" />
+          <span className="text-xs font-mono font-bold text-[#555555] uppercase tracking-wider">
+            Official Trainee Dossier &amp; Ledger
+          </span>
+        </div>
+
+        {/* Action Button Strip */}
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          {editMode ? (
+            <>
+              <button
+                type="button"
+                className="gov-btn gov-btn-sm"
+                onClick={() => setEditMode(false)}
+                disabled={saving}
+              >
+                <X className="w-3.5 h-3.5 text-rose-600" />
+                <span>Cancel</span>
+              </button>
+              <button
+                type="button"
+                className="gov-btn gov-btn-sm gov-btn-primary"
+                onClick={handleSaveBiodata}
+                disabled={saving}
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>{saving ? 'Saving Changes…' : 'Save Changes'}</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="gov-btn gov-btn-sm"
+                onClick={() => setEditMode(true)}
+                title="Edit trainee record"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+                <span>Edit Record</span>
+              </button>
+              <button
+                type="button"
+                className="gov-btn gov-btn-sm"
+                onClick={() => navigate('/dashboard/admin/cards')}
+                title="Student Identity Pass"
+              >
+                <CreditCard className="w-3.5 h-3.5" />
+                <span>Pass / ID</span>
+              </button>
+              <button
+                type="button"
+                className="gov-btn gov-btn-sm"
+                onClick={handlePrintDossier}
+                title="Download official PDF dossier"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Print Dossier</span>
+              </button>
+              <button
+                type="button"
+                className="gov-btn gov-btn-sm"
+                onClick={() => setReloadToken((t) => t + 1)}
+                title="Refresh latest records"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Refresh</span>
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* ── 2. HERO SUMMARY CARD (TRAINEE IDENTITY & METRICS) ── */}
+      <div className="gov-card p-4 sm:p-5">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
+          {/* Left: Passport Avatar & Identity */}
+          <div className="flex items-start sm:items-center gap-4 min-w-0">
+            <div className="relative shrink-0 group">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-[#CCCCCC] overflow-hidden bg-[#F0F2F5] flex items-center justify-center shadow-inner">
+                {photoUrl ? (
+                  <img src={photoUrl} alt={fullName} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="font-mono font-bold text-xl sm:text-2xl text-[#555555]">
+                    {fullName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={() => fileInputRef.current?.click()}
+                title="Upload Passport Photo"
+                disabled={photoUploading}
+              >
+                <Camera className="w-5 h-5" />
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handlePhotoUpload}
               />
-            </div>,
-            disciplineMountRef.current,
-          )
-        : null}
-      {facilityPortalData && facilityMountRef.current
-        ? createPortal(
+            </div>
+
+            <div className="min-w-0 space-y-1">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h1 className="text-lg sm:text-2xl font-bold text-[#111111] uppercase tracking-wide font-sans m-0">
+                  {fullName}
+                </h1>
+                <span className="inline-flex items-center px-2 py-0.5 text-xs font-mono font-bold bg-[#EAEAEA] text-[#222222] border border-[#CCCCCC]">
+                  {formData.admission_number || 'ADM: PENDING'}
+                </span>
+                <span className={`gov-tag text-[10px] ${registrationStatus.toLowerCase() === 'active' ? 'gov-tag-approved' : 'gov-tag-warned'}`}>
+                  {registrationStatus.toUpperCase()}
+                </span>
+                <span className="gov-tag text-[10px] bg-slate-100 text-slate-700 border-slate-300">
+                  {formData.boarding_type || 'Non-Resident'}
+                </span>
+              </div>
+
+              <div className="text-xs text-[#444444] font-medium flex items-center gap-1.5">
+                <GraduationCap className="w-3.5 h-3.5 text-[#666666] shrink-0" />
+                <span>{formData.current_class || 'General Nursing Programme'}</span>
+                {formData.stream && <span className="text-[#666666]">({formData.stream})</span>}
+              </div>
+
+              <div className="text-[11px] font-mono text-[#666666] flex items-center gap-3 flex-wrap">
+                <span>Intake: {formData.admission_date ? fmtDate(formData.admission_date) : 'Current Cohort'}</span>
+                {classTeacherName && (
+                  <span>Tutor: <strong className="text-[#222222]">{classTeacherName}</strong></span>
+                )}
+                {Boolean(student?.student_phone) && (
+                  <span className="flex items-center gap-1 text-[#444444]">
+                    <Phone className="w-3 h-3 text-[#666666]" />
+                    <a href={`tel:${String(student?.student_phone).replace(/\s+/g, '')}`} className="hover:underline">
+                      {String(student?.student_phone)}
+                    </a>
+                  </span>
+                )}
+                {Boolean(student?.student_email) && (
+                  <span className="flex items-center gap-1 text-[#444444]">
+                    <Mail className="w-3 h-3 text-[#666666]" />
+                    <a href={`mailto:${String(student?.student_email)}`} className="hover:underline">
+                      {String(student?.student_email)}
+                    </a>
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Key 3-Stat Metric Strip */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-3 md:pt-0 border-t md:border-t-0 border-[#EAEAEA] shrink-0">
+            <div className="border border-[#E0E0E0] bg-[#FAFAFA] px-3.5 py-2.5 rounded-lg text-center min-w-[110px]">
+              <div className="text-[10px] font-mono text-[#666666] uppercase">Attendance Rate</div>
+              <div className="text-base font-bold font-mono text-emerald-700 mt-0.5">
+                {attendanceRate}%
+              </div>
+            </div>
+
+            <div className="border border-[#E0E0E0] bg-[#FAFAFA] px-3.5 py-2.5 rounded-lg text-center min-w-[120px]">
+              <div className="text-[10px] font-mono text-[#666666] uppercase">Tuition Balance</div>
+              <div className="text-sm font-bold font-mono text-[#111111] mt-0.5 truncate">
+                {feeBalance.balance > 0 ? (
+                  <span className="text-amber-700">{fmtUGX(feeBalance.balance)}</span>
+                ) : (
+                  <span className="text-emerald-700">CLEARED</span>
+                )}
+              </div>
+            </div>
+
+            <div className="border border-[#E0E0E0] bg-[#FAFAFA] px-3.5 py-2.5 rounded-lg text-center col-span-2 sm:col-span-1 min-w-[110px]">
+              <div className="text-[10px] font-mono text-[#666666] uppercase">SchoolPay Code</div>
+              <div className="text-xs font-bold font-mono text-[#111111] mt-1 tracking-wider">
+                {String(formData.schoolpay_payment_code || student?.schoolpay_code || formData.admission_number || 'RCSN-SPAY')}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── 3. TRAINEE DOSSIER SECTIONS (ALL VISIBLE AS LEDGER CARDS) ── */}
+      <div className="space-y-4">
+        {/* ── SECTION 1: PERSONAL BIODATA & INSTITUTIONAL REGISTRATION ── */}
+        <div className="gov-card p-4 sm:p-5">
+          <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#CCCCCC]">
+            <div className="flex items-center gap-2">
+              <User className="w-4 h-4 text-[#111111]" />
+              <h2 className="text-xs font-bold font-mono tracking-wider text-[#111111] uppercase m-0">
+                1. Trainee Biodata &amp; Institutional Registration
+              </h2>
+            </div>
+            <span className="text-[11px] font-mono text-[#666666]">
+              {formData.nationality || 'Ugandan'} • {formData.gender || 'Student'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            {/* Left Column: Personal Demographics */}
+            <div className="space-y-3.5">
+              <div className="text-[11px] font-mono font-bold text-[#666666] uppercase pb-1 border-b border-[#EAEAEA]">
+                Personal Demographics &amp; Identity
+              </div>
+              {/* Names */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className={govLabel}>First Name</label>
+                  {editMode ? (
+                    <input
+                      type="text"
+                      className="gov-input"
+                      value={formData.first_name}
+                      onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                    />
+                  ) : (
+                    <div className="text-xs font-medium text-[#111111] py-1 border-b border-[#EAEAEA]">
+                      {formData.first_name || '—'}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className={govLabel}>Middle Name</label>
+                  {editMode ? (
+                    <input
+                      type="text"
+                      className="gov-input"
+                      value={formData.middle_name}
+                      onChange={(e) => setFormData({ ...formData, middle_name: e.target.value })}
+                    />
+                  ) : (
+                    <div className="text-xs font-medium text-[#111111] py-1 border-b border-[#EAEAEA]">
+                      {formData.middle_name || '—'}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className={govLabel}>Surname</label>
+                  {editMode ? (
+                    <input
+                      type="text"
+                      className="gov-input"
+                      value={formData.last_name}
+                      onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                    />
+                  ) : (
+                    <div className="text-xs font-medium text-[#111111] py-1 border-b border-[#EAEAEA]">
+                      {formData.last_name || '—'}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Gender, DOB, Age */}
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className={govLabel}>Gender</label>
+                  {editMode ? (
+                    <select
+                      className="gov-select"
+                      value={formData.gender}
+                      onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                    >
+                      <option value="">Select</option>
+                      <option value="Female">Female</option>
+                      <option value="Male">Male</option>
+                    </select>
+                  ) : (
+                    <div className="text-xs font-medium text-[#111111] py-1 border-b border-[#EAEAEA]">
+                      {formData.gender || '—'}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className={govLabel}>Date of Birth</label>
+                  {editMode ? (
+                    <input
+                      type="date"
+                      className="gov-input font-mono"
+                      value={formData.date_of_birth}
+                      onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
+                    />
+                  ) : (
+                    <div className="text-xs font-mono text-[#111111] py-1 border-b border-[#EAEAEA]">
+                      {formData.date_of_birth ? fmtDate(formData.date_of_birth) : '—'}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className={govLabel}>Age</label>
+                  <div className="text-xs font-mono text-[#111111] py-1 border-b border-[#EAEAEA]">
+                    {calcAge(formData.date_of_birth)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Nationality, Religion, Blood Group */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className={govLabel}>Nationality</label>
+                  {editMode ? (
+                    <input
+                      type="text"
+                      className="gov-input"
+                      value={formData.nationality}
+                      onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
+                    />
+                  ) : (
+                    <div className="text-xs font-medium text-[#111111] py-1 border-b border-[#EAEAEA]">
+                      {formData.nationality || 'Ugandan'}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className={govLabel}>Religion</label>
+                  {editMode ? (
+                    <input
+                      type="text"
+                      className="gov-input"
+                      value={formData.religion}
+                      onChange={(e) => setFormData({ ...formData, religion: e.target.value })}
+                    />
+                  ) : (
+                    <div className="text-xs font-medium text-[#111111] py-1 border-b border-[#EAEAEA]">
+                      {formData.religion || '—'}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className={govLabel}>Blood Group</label>
+                  {editMode ? (
+                    <input
+                      type="text"
+                      className="gov-input font-mono"
+                      placeholder="e.g. O+"
+                      value={formData.blood_group}
+                      onChange={(e) => setFormData({ ...formData, blood_group: e.target.value })}
+                    />
+                  ) : (
+                    <div className="text-xs font-mono text-[#111111] py-1 border-b border-[#EAEAEA]">
+                      {formData.blood_group || '—'}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Health & Medical Notes */}
+              <div>
+                <label className={govLabel}>Health Notes &amp; Known Conditions</label>
+                {editMode ? (
+                  <textarea
+                    rows={2}
+                    className="gov-input"
+                    value={formData.medical_condition}
+                    onChange={(e) => setFormData({ ...formData, medical_condition: e.target.value })}
+                    placeholder="Medical observations, allergies, or physical considerations"
+                  />
+                ) : (
+                  <div className="text-xs text-[#333333] py-1 border-b border-[#EAEAEA]">
+                    {formData.medical_condition || 'No specific health notes recorded.'}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right Column: Contact, Residence & Institutional Enrollment */}
+            <div className="space-y-3.5">
+              <div className="text-[11px] font-mono font-bold text-[#666666] uppercase pb-1 border-b border-[#EAEAEA]">
+                Contact, Residence &amp; Institutional Enrollment
+              </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className={govLabel}>Residential Address</label>
+                    {editMode ? (
+                      <input
+                        type="text"
+                        className="gov-input"
+                        value={formData.address}
+                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      />
+                    ) : (
+                      <div className="text-xs text-[#111111] py-1 border-b border-[#EAEAEA]">
+                        {formData.address || '—'}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className={govLabel}>District / Town</label>
+                    {editMode ? (
+                      <input
+                        type="text"
+                        className="gov-input"
+                        value={formData.district}
+                        onChange={(e) => setFormData({ ...formData, district: e.target.value })}
+                      />
+                    ) : (
+                      <div className="text-xs text-[#111111] py-1 border-b border-[#EAEAEA]">
+                        {formData.district || '—'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className={govLabel}>Trainee Phone</label>
+                    {editMode ? (
+                      <input
+                        type="tel"
+                        className="gov-input font-mono"
+                        value={String(student?.student_phone ?? '')}
+                        onChange={(e) => setStudent({ ...student, student_phone: e.target.value })}
+                      />
+                    ) : (
+                      <div className="text-xs font-mono text-[#111111] py-1 border-b border-[#EAEAEA]">
+                        {String(student?.student_phone ?? '') ? (
+                          <a href={`tel:${String(student?.student_phone)}`} className="text-emerald-700 hover:underline">
+                            {String(student?.student_phone)}
+                          </a>
+                        ) : (
+                          '—'
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className={govLabel}>Trainee Email</label>
+                    {editMode ? (
+                      <input
+                        type="email"
+                        className="gov-input font-mono"
+                        value={String(student?.student_email ?? '')}
+                        onChange={(e) => setStudent({ ...student, student_email: e.target.value })}
+                      />
+                    ) : (
+                      <div className="text-xs font-mono text-[#111111] py-1 border-b border-[#EAEAEA] truncate">
+                        {String(student?.student_email ?? '') ? (
+                          <a href={`mailto:${String(student?.student_email)}`} className="text-emerald-700 hover:underline">
+                            {String(student?.student_email)}
+                          </a>
+                        ) : (
+                          '—'
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className={govLabel}>Current Course &amp; Stage</label>
+                    {editMode ? (
+                      <input
+                        type="text"
+                        className="gov-input"
+                        value={formData.current_class}
+                        onChange={(e) => setFormData({ ...formData, current_class: e.target.value })}
+                      />
+                    ) : (
+                      <div className="text-xs font-semibold text-[#111111] py-1 border-b border-[#EAEAEA]">
+                        {formData.current_class || '—'}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className={govLabel}>Boarding / Residency Category</label>
+                    {editMode ? (
+                      <select
+                        className="gov-select"
+                        value={formData.boarding_type}
+                        onChange={(e) => setFormData({ ...formData, boarding_type: e.target.value })}
+                      >
+                        <option value="Non-Resident">Non-Resident (Day Scholar)</option>
+                        <option value="Resident">Resident (Hostel Boarder)</option>
+                      </select>
+                    ) : (
+                      <div className="text-xs text-[#111111] py-1 border-b border-[#EAEAEA]">
+                        {formData.boarding_type || 'Non-Resident'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className={govLabel}>Admission Date</label>
+                    {editMode ? (
+                      <input
+                        type="date"
+                        className="gov-input font-mono"
+                        value={formData.admission_date}
+                        onChange={(e) => setFormData({ ...formData, admission_date: e.target.value })}
+                      />
+                    ) : (
+                      <div className="text-xs font-mono text-[#111111] py-1 border-b border-[#EAEAEA]">
+                        {formData.admission_date ? fmtDate(formData.admission_date) : '—'}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className={govLabel}>Prior School / Institution</label>
+                    {editMode ? (
+                      <input
+                        type="text"
+                        className="gov-input"
+                        value={formData.previous_school}
+                        onChange={(e) => setFormData({ ...formData, previous_school: e.target.value })}
+                      />
+                    ) : (
+                      <div className="text-xs text-[#111111] py-1 border-b border-[#EAEAEA]">
+                        {formData.previous_school || '—'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        {/* ── SECTION 2: GUARDIAN & SPONSOR ── */}
+        <div className="gov-card p-4 sm:p-5">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#EAEAEA]">
+              <div className="flex items-center gap-2">
+                <UserCircle2 className="w-4 h-4 text-[#111111]" />
+                <h2 className="text-xs font-bold font-mono tracking-wider text-[#111111] uppercase m-0">
+                  Primary Guardian / Sponsor Profile
+                </h2>
+              </div>
+              <span className="gov-tag text-[10px]">{guardianRelation}</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+              <div className="space-y-3.5">
+                <div>
+                  <label className={govLabel}>Full Name</label>
+                  {editMode ? (
+                    <input
+                      type="text"
+                      className="gov-input"
+                      value={formData.guardian_name}
+                      onChange={(e) => setFormData({ ...formData, guardian_name: e.target.value })}
+                    />
+                  ) : (
+                    <div className="text-sm font-bold text-[#111111] py-1 border-b border-[#EAEAEA]">
+                      {guardianDisplayName}
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className={govLabel}>Contact Phone</label>
+                    {editMode ? (
+                      <input
+                        type="tel"
+                        className="gov-input font-mono"
+                        value={formData.guardian_phone}
+                        onChange={(e) => setFormData({ ...formData, guardian_phone: e.target.value })}
+                      />
+                    ) : (
+                      <div className="text-xs font-mono text-[#111111] py-1 border-b border-[#EAEAEA]">
+                        {guardianPhone ? (
+                          <a href={`tel:${guardianPhone.replace(/\s+/g, '')}`} className="text-emerald-700 hover:underline">
+                            {guardianPhone}
+                          </a>
+                        ) : (
+                          '—'
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className={govLabel}>Email Address</label>
+                    {editMode ? (
+                      <input
+                        type="email"
+                        className="gov-input font-mono"
+                        value={formData.guardian_email}
+                        onChange={(e) => setFormData({ ...formData, guardian_email: e.target.value })}
+                      />
+                    ) : (
+                      <div className="text-xs font-mono text-[#111111] py-1 border-b border-[#EAEAEA] truncate">
+                        {guardianEmail ? (
+                          <a href={`mailto:${guardianEmail}`} className="text-emerald-700 hover:underline">
+                            {guardianEmail}
+                          </a>
+                        ) : (
+                          '—'
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className={govLabel}>National ID / NIN</label>
+                    <div className="text-xs font-mono text-[#111111] py-1 border-b border-[#EAEAEA]">
+                      {guardianNIN || '—'}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={govLabel}>Occupation / Sector</label>
+                    {editMode ? (
+                      <input
+                        type="text"
+                        className="gov-input"
+                        value={formData.guardian_occupation}
+                        onChange={(e) => setFormData({ ...formData, guardian_occupation: e.target.value })}
+                      />
+                    ) : (
+                      <div className="text-xs text-[#111111] py-1 border-b border-[#EAEAEA]">
+                        {guardianOccupation || '—'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className={govLabel}>Physical / Residential Address</label>
+                  {editMode ? (
+                    <input
+                      type="text"
+                      className="gov-input"
+                      value={formData.guardian_address}
+                      onChange={(e) => setFormData({ ...formData, guardian_address: e.target.value })}
+                    />
+                  ) : (
+                    <div className="text-xs text-[#111111] py-1 border-b border-[#EAEAEA]">
+                      {guardianAddress || '—'}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Box */}
+              <div className="border border-[#CCCCCC] bg-[#FAFAFA] p-4 rounded-xl space-y-3">
+                <div className="text-xs font-bold text-[#111111] uppercase tracking-wide">
+                  Direct Communications &amp; Portal
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {guardianPhone && (
+                    <a
+                      href={`tel:${guardianPhone.replace(/\s+/g, '')}`}
+                      className="gov-btn gov-btn-sm"
+                      title="Make Phone Call"
+                    >
+                      <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Call Guardian</span>
+                    </a>
+                  )}
+                  {guardianEmail && (
+                    <a
+                      href={`mailto:${guardianEmail}`}
+                      className="gov-btn gov-btn-sm"
+                      title="Send Official Email"
+                    >
+                      <Mail className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Send Email</span>
+                    </a>
+                  )}
+                  {guardianPhone && (
+                    <a
+                      href={`https://wa.me/${guardianPhone.replace(/\D/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="gov-btn gov-btn-sm"
+                      title="Open WhatsApp chat"
+                    >
+                      <Phone className="w-3.5 h-3.5 text-teal-600" />
+                      <span>WhatsApp</span>
+                    </a>
+                  )}
+                </div>
+
+                <div className="pt-3 border-t border-[#EAEAEA] text-xs text-[#555555]">
+                  <div className="flex items-center justify-between">
+                    <span>Parent Portal Login Status:</span>
+                    <span className="gov-tag gov-tag-approved text-[10px]">
+                      {primaryGuardian ? 'ACTIVE ACCOUNT' : 'UNREGISTERED PORTAL'}
+                    </span>
+                  </div>
+                  <div className="mt-2">
+                    <button
+                      type="button"
+                      className="gov-btn gov-btn-sm w-full justify-center"
+                      onClick={() => navigate('/dashboard/admin/parents')}
+                    >
+                      View All in Parents &amp; Sponsors Directory
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        {/* ── SECTION 3: ACADEMIC STANDING & EXAM MARKS ── */}
+        <div className="space-y-4">
+          {schoolId && studentId && (
+            <StudentProfileAcademicStanding
+              schoolId={schoolId}
+              studentId={studentId}
+              currentClass={formData.current_class}
+              classSubjectRows={classSubjects}
+              initialOlevelNames={olevelSubjects}
+              initialAlevelRows={alevelSubjects}
+              onChanged={() => setReloadToken((t) => t + 1)}
+            />
+          )}
+
+          {/* Continuous Assessment & Exam Marks Table */}
+          <div className="gov-card p-4 sm:p-5">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#EAEAEA]">
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-[#111111]" />
+                <h2 className="text-xs font-bold font-mono tracking-wider text-[#111111] uppercase m-0">
+                  Examination &amp; Continuous Assessment Marks
+                </h2>
+              </div>
+              <span className="text-xs font-mono text-[#666666]">
+                {examResults.length} {examResults.length === 1 ? 'RECORD' : 'RECORDS'}
+              </span>
+            </div>
+
+            {examResults.length === 0 ? (
+              <div className="p-8 text-center text-xs font-mono text-[#666666] bg-[#FAFAFA] border border-[#EAEAEA] rounded-lg">
+                No examination marks recorded yet for this intake. Marks appear once continuous assessment tests or end-of-semester exams are graded.
+              </div>
+            ) : (
+              <div className="gov-table-container">
+                <table className="gov-table">
+                  <thead>
+                    <tr>
+                      <th>Module / Subject</th>
+                      <th>Marks Obtained</th>
+                      <th>Total Marks</th>
+                      <th>Percentage</th>
+                      <th>Grade</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {examResults.map((r, i) => {
+                      const mo = Number(r.marks_obtained ?? 0);
+                      const tm = Number(r.total_marks ?? 100) || 100;
+                      const pct = Math.round((mo / tm) * 100);
+                      return (
+                        <tr key={i}>
+                          <td className="font-semibold text-[#111111]">{r.subject || 'Module'}</td>
+                          <td className="font-mono">{mo}</td>
+                          <td className="font-mono text-[#666666]">{tm}</td>
+                          <td className="font-mono font-bold">
+                            <span className={pct >= 75 ? 'text-emerald-700' : pct >= 50 ? 'text-amber-700' : 'text-rose-700'}>
+                              {pct}%
+                            </span>
+                          </td>
+                          <td>
+                            <span className="gov-tag text-[10px]">{r.grade || (pct >= 80 ? 'A' : pct >= 70 ? 'B' : pct >= 50 ? 'C' : 'F')}</span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── SECTION 4: TUITION & FINANCIAL LEDGER ── */}
+        <div className="space-y-4">
+          {/* Tuition Balance Strip */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="gov-card p-4">
+              <div className="text-[10px] font-mono text-[#666666] uppercase">Total Fees Billed</div>
+              <div className="text-xl font-bold font-mono text-[#111111] mt-1">
+                {fmtUGX(feeBalance.total_fees)}
+              </div>
+            </div>
+
+            <div className="gov-card p-4">
+              <div className="text-[10px] font-mono text-[#666666] uppercase">Total Paid To Date</div>
+              <div className="text-xl font-bold font-mono text-emerald-700 mt-1">
+                {fmtUGX(feeBalance.total_paid)}
+              </div>
+            </div>
+
+            <div className="gov-card p-4">
+              <div className="text-[10px] font-mono text-[#666666] uppercase">Outstanding Balance</div>
+              <div className="text-xl font-bold font-mono mt-1">
+                {feeBalance.balance > 0 ? (
+                  <span className="text-amber-700">{fmtUGX(feeBalance.balance)}</span>
+                ) : (
+                  <span className="text-emerald-700">CLEARED</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Actions: Generate Fee Slip */}
+          <div className="flex items-center justify-between pb-1">
+            <div className="text-xs font-bold font-mono text-[#111111] uppercase">
+              Official Accounting Ledger &amp; Invoices
+            </div>
+            <button
+              type="button"
+              className="gov-btn gov-btn-sm gov-btn-primary"
+              onClick={handleGenerateFeeSlip}
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Download Official RCSN Fee Slip (PDF)</span>
+            </button>
+          </div>
+
+          {/* Invoices Table */}
+          <div className="gov-card p-4 sm:p-5">
+            <div className="text-xs font-bold font-mono text-[#111111] uppercase pb-2 mb-3 border-b border-[#EAEAEA]">
+              Issued Tuition &amp; Functional Invoices
+            </div>
+
+            {invoices.length === 0 ? (
+              <div className="p-6 text-center text-xs font-mono text-[#666666] bg-[#FAFAFA] border border-[#EAEAEA] rounded-lg">
+                No formal invoices generated yet.
+              </div>
+            ) : (
+              <div className="gov-table-container">
+                <table className="gov-table">
+                  <thead>
+                    <tr>
+                      <th>Invoice #</th>
+                      <th>Description / Term</th>
+                      <th>Issue Date</th>
+                      <th>Billed Amount</th>
+                      <th>Amount Paid</th>
+                      <th>Balance</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invoices.map((inv) => {
+                      const bal = Number(inv.balance ?? 0);
+                      return (
+                        <tr key={inv.id || inv.invoice_number}>
+                          <td className="font-mono font-bold text-xs">{inv.invoice_number || 'INV'}</td>
+                          <td>{inv.invoice_label || (inv.school_terms ? `Term ${inv.school_terms.term} ${inv.school_terms.year}` : 'Tuition')}</td>
+                          <td className="font-mono text-xs">{fmtDate(inv.created_at)}</td>
+                          <td className="font-mono font-bold">{fmtUGX(inv.total_amount)}</td>
+                          <td className="font-mono text-emerald-700">{fmtUGX(inv.amount_paid)}</td>
+                          <td className="font-mono font-bold">{bal > 0 ? fmtUGX(bal) : '—'}</td>
+                          <td>
+                            <span className={`gov-tag ${bal <= 0 ? 'gov-tag-approved' : 'gov-tag-warned'} text-[10px]`}>
+                              {bal <= 0 ? 'PAID' : 'PENDING'}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Payments & Receipts Table */}
+          <div className="gov-card p-4 sm:p-5">
+            <div className="text-xs font-bold font-mono text-[#111111] uppercase pb-2 mb-3 border-b border-[#EAEAEA]">
+              Verified Payment Receipts
+            </div>
+
+            {payments.length === 0 ? (
+              <div className="p-6 text-center text-xs font-mono text-[#666666] bg-[#FAFAFA] border border-[#EAEAEA] rounded-lg">
+                No verified payments on record yet.
+              </div>
+            ) : (
+              <div className="gov-table-container">
+                <table className="gov-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Receipt # / Ref</th>
+                      <th>Payment Channel</th>
+                      <th>Amount Paid</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payments.map((p, i) => (
+                      <tr key={p.id || i}>
+                        <td className="font-mono text-xs">{fmtDate(p.payment_date || p.created_at)}</td>
+                        <td className="font-mono font-bold">{p.receipt_number || p.payment_reference || 'RCP'}</td>
+                        <td>{p.payment_method || 'Bank Transfer'}</td>
+                        <td className="font-mono font-bold text-emerald-700">{fmtUGX(p.amount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── SECTION 5: DISCIPLINE, CONDUCT & CLINICAL LIABILITIES ── */}
+        <div className="space-y-4">
+          {schoolId && studentId && student && (
+            <StudentDisciplineSection
+              schoolId={schoolId}
+              studentId={studentId}
+              studentSnapshot={{
+                deleted_at: student.deleted_at as string | null | undefined,
+                discipline_deactivated_at: student.discipline_deactivated_at as string | null | undefined,
+                suspension_open: student.suspension_open as boolean | null | undefined,
+                suspension_period_start: student.suspension_period_start as string | null | undefined,
+                suspension_period_end: student.suspension_period_end as string | null | undefined,
+              }}
+              initialHasWarning={hasWarningDiscipline}
+              canManageDiscipline={canManageDiscipline}
+              isOwner={viewerIsOwner}
+              onStudentRefresh={fetchStudentDossier}
+            />
+          )}
+
+          {schoolId && studentId && (
             <StudentLiabilitiesAndFacilitySection
-              studentId={facilityPortalData.studentId}
-              schoolId={facilityPortalData.schoolId}
-              studentName={facilityPortalData.studentName}
-              admissionNumber={facilityPortalData.admissionNumber}
-              currentClass={facilityPortalData.currentClass}
-              boardingType={facilityPortalData.boardingType}
-            />,
-            facilityMountRef.current,
-          )
-        : null}
-    </>
+              schoolId={schoolId}
+              studentId={studentId}
+              studentName={fullName}
+              admissionNumber={formData.admission_number}
+              currentClass={formData.current_class}
+              boardingType={formData.boarding_type}
+            />
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

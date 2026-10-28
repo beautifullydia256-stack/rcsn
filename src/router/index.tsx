@@ -22,6 +22,7 @@ const DesignOutstandingPage = lazy(() => import('../pages/admin/finance/DesignOu
 const FinanceSubPagePlaceholder = lazy(() => import('../pages/admin/finance/FinanceSubPagePlaceholder'));
 const FinancialAnalyticsPage = lazy(() => import('../pages/finance/FinancialAnalyticsPage'));
 const DesignParentsPage = lazy(() => import('../pages/admin/parents/DesignParentsPage'));
+const AddParentPage = lazy(() => import('../pages/admin/parents/AddParentPage'));
 const DesignParentProfile = lazy(() => import('../pages/admin/parents/DesignParentProfile'));
 const AccountsPage = lazy(() => import('../pages/admin/accounts/AccountsPage'));
 const ExamSetsPage = lazy(() => import('../pages/admin/exam-sets/ExamSetsPage'));
@@ -171,7 +172,7 @@ export const router: RouteObject[] = [
           },
           { path: 'outstanding', element: <Navigate to="/dashboard/admin/finance/outstanding" replace /> },
           { path: 'parents', element: <DesignParentsPage /> },
-          { path: 'parents/add', element: <Navigate to="/dashboard/admin/parents?add=1" replace /> },
+          { path: 'parents/add', element: <AddParentPage /> },
           { path: 'parents/:parent_id', element: <DesignParentProfile /> },
           { path: 'accounts', element: <AccountsPage /> },
           { path: 'exam-sets', element: <ExamSetsPage /> },

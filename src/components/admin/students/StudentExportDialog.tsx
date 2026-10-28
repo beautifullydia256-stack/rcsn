@@ -5,7 +5,6 @@ import { downloadStudentsXlsx, type StudentExportRow } from '@/lib/studentExport
 import { isTertiarySchool } from '@/hooks/useSchoolType';
 import { TERTIARY_COURSES } from '@/pages/admin/students/AddStudentForm';
 import NativeModal from '@/components/NativeModal';
-import LiquidGlassSelect from '@/components/ui/LiquidGlassSelect';
 
 const NURSERY_PRIMARY_CLASSES = [
   'Baby Class',
@@ -80,59 +79,70 @@ export function StudentExportDialog({ isOpen, onClose, schoolId, schoolType }: S
       subtitle="Download student roster with contacts and admission codes as an Excel file (.xlsx)"
       icon={Download}
       size="sm"
+      variant="government"
     >
-      <div className="p-6 space-y-4 text-xs text-white">
+      <div className="space-y-4 text-xs text-slate-900 font-sans">
         <div className="space-y-2">
-          <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block">
+          <label className="text-xs font-semibold text-slate-700 block">
             Export Scope
           </label>
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
               onClick={() => setScope('all')}
               className={`p-3 rounded-xl border text-left transition-all ${
                 scope === 'all'
-                  ? 'border-emerald-400/80 bg-emerald-500/20 text-white font-semibold'
-                  : 'border-white/15 bg-white/5 text-white/70 hover:bg-white/10'
+                  ? 'border-slate-900 bg-slate-50/80 ring-1 ring-slate-900 text-slate-900 font-semibold'
+                  : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
               }`}
             >
-              All Active Students
+              <span className="block text-xs font-semibold">All Active Students</span>
+              <span className="text-[11px] text-slate-500">Full school registry</span>
             </button>
             <button
               type="button"
               onClick={() => setScope('class')}
               className={`p-3 rounded-xl border text-left transition-all ${
                 scope === 'class'
-                  ? 'border-emerald-400/80 bg-emerald-500/20 text-white font-semibold'
-                  : 'border-white/15 bg-white/5 text-white/70 hover:bg-white/10'
+                  ? 'border-slate-900 bg-slate-50/80 ring-1 ring-slate-900 text-slate-900 font-semibold'
+                  : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
               }`}
             >
-              Specific Cohort Class
+              <span className="block text-xs font-semibold">Specific Cohort</span>
+              <span className="text-[11px] text-slate-500">Filter by class stage</span>
             </button>
           </div>
         </div>
 
         {scope === 'class' && (
-          <div className="relative z-[30] focus-within:z-[50]">
-            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+          <div className="pt-1">
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
               Select Cohort / Class *
             </label>
-            <LiquidGlassSelect
+            <select
               value={klass}
-              onChange={(val) => setKlass(val)}
-              options={classOptions.map((c) => ({ value: c, label: c }))}
-              placeholder="Choose target class..."
-            />
+              onChange={(e) => setKlass(e.target.value)}
+              className="w-full px-3 py-2 text-xs font-sans bg-white border border-slate-300 rounded-lg focus:border-slate-800 focus:outline-none transition-colors"
+            >
+              <option value="">Choose target class cohort...</option>
+              {classOptions.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
           </div>
         )}
 
-        {error && <p className="text-xs text-rose-400">{error}</p>}
+        {error && (
+          <p className="text-xs text-rose-700 bg-rose-50 border border-rose-200 p-2.5 rounded-lg">
+            {error}
+          </p>
+        )}
 
-        <div className="pt-3 border-t border-white/15 flex justify-end gap-2.5">
+        <div className="pt-3 border-t border-slate-200 flex justify-end gap-2.5">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 text-white/80 hover:text-white font-semibold transition-all backdrop-blur-sm"
+            className="px-4 py-2 text-xs font-semibold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg transition-colors shadow-sm"
           >
             Cancel
           </button>
@@ -140,9 +150,9 @@ export function StudentExportDialog({ isOpen, onClose, schoolId, schoolType }: S
             type="button"
             disabled={loading || (scope === 'class' && !klass)}
             onClick={runExport}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-emerald-950 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:brightness-110 border border-emerald-300/60 shadow-[0_4px_16px_rgba(16,185,129,0.35)] transition-all active:scale-[0.98] disabled:opacity-50"
+            className="px-4 py-2 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors disabled:opacity-50 shadow-sm"
           >
-            {loading ? 'Exporting...' : 'Download Excel'}
+            <span>{loading ? 'Exporting...' : 'Download Excel (.xlsx)'}</span>
           </button>
         </div>
       </div>

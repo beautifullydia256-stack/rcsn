@@ -2,6 +2,7 @@
 
 import { useEffect, isValidElement, ReactNode, ComponentType } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
 import { X, UserPlus, GraduationCap, Users, type LucideIcon } from 'lucide-react';
 
 interface NativeModalProps {
@@ -14,16 +15,12 @@ interface NativeModalProps {
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
   showCloseButton?: boolean;
   closeOnOverlayClick?: boolean;
+  variant?: 'glass' | 'government';
 }
 
 /** Max height fits mobile (dynamic viewport) and desktop; inner body scrolls. */
 const MODAL_MAX_H = 'max-h-[min(88dvh,720px)]';
 
-/**
- * Desktop: centered panel — width is capped by `size` (do not use max-w-full here;
- * it overrides max-w-lg/xl and makes the dialog span the whole screen).
- * Mobile: w-full uses horizontal padding from the overlay wrapper.
- */
 export default function NativeModal({
   isOpen,
   onClose,
@@ -34,7 +31,21 @@ export default function NativeModal({
   size = 'md',
   showCloseButton = true,
   closeOnOverlayClick = true,
+  variant,
 }: NativeModalProps) {
+  let locationPathname = '';
+  try {
+    const loc = useLocation();
+    locationPathname = loc.pathname;
+  } catch {
+    // outside router context fallback
+  }
+
+  const isGovernmentMode =
+    variant === 'government' ||
+    locationPathname.startsWith('/dashboard/admin') ||
+    locationPathname.startsWith('/dashboard/students');
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -64,7 +75,6 @@ export default function NativeModal({
     lg: `max-w-2xl ${MODAL_MAX_H}`,
     xl: `max-w-3xl ${MODAL_MAX_H}`,
     '2xl': 'max-w-5xl max-h-[min(92dvh,880px)]',
-    /** Nearly full width on small screens; on sm+ cap ~1152px so desktop is not edge-to-edge */
     full: 'max-w-[calc(100vw-1.5rem)] sm:max-w-6xl sm:mx-auto max-h-[min(92dvh,880px)]',
   };
 
@@ -75,68 +85,85 @@ export default function NativeModal({
       }
       if (typeof icon === 'function' || (typeof icon === 'object' && icon !== null)) {
         const IconComponent = (icon as unknown) as ComponentType<{ className?: string }>;
-        return <IconComponent className="w-5 h-5" />;
+        return <IconComponent className="w-4 h-4" />;
       }
       return null;
     }
     const t = (title || '').toLowerCase();
     if (t.includes('teacher') || t.includes('tutor') || t.includes('instructor')) {
-      return <GraduationCap className="w-5 h-5" />;
+      return <GraduationCap className="w-4 h-4" />;
     }
     if (t.includes('parent') || t.includes('guardian')) {
-      return <Users className="w-5 h-5" />;
+      return <Users className="w-4 h-4" />;
     }
-    return <UserPlus className="w-5 h-5" />;
+    return <UserPlus className="w-4 h-4" />;
   };
 
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop - Dimmed & soft blur so modal pops with maximum clarity */}
+          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={closeOnOverlayClick ? onClose : undefined}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[240] pointer-events-auto"
+            className={`fixed inset-0 z-[240] pointer-events-auto ${
+              isGovernmentMode
+                ? 'bg-slate-900/10 backdrop-blur-none'
+                : 'bg-black/60 backdrop-blur-sm'
+            }`}
           />
 
-          {/* Modal Container: centered; inner body scrolls */}
+          {/* Modal Container */}
           <div className="fixed inset-0 z-[240] flex items-center justify-center p-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] sm:p-6 pointer-events-none overflow-y-auto overflow-x-hidden">
             <motion.div
-              initial={{ opacity: 0, scale: 0.97, y: 14 }}
+              initial={{ opacity: 0, scale: 0.98, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.97, y: 14 }}
-              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              className={`relative w-full shrink-0 ${sizeClasses[size]} pointer-events-auto my-auto flex flex-col min-h-0 rounded-[28px] 
-                bg-slate-950/75 dark:bg-black/80 
-                backdrop-blur-xl backdrop-saturate-[180%] 
-                border border-white/30 border-t-white/60 border-l-white/40 border-b-white/20 
-                shadow-[0_25px_60px_rgba(0,0,0,0.5),inset_0_1.5px_2px_rgba(255,255,255,0.5),inset_0_-1px_1px_rgba(255,255,255,0.15)] 
-                text-white overflow-hidden`}
+              exit={{ opacity: 0, scale: 0.98, y: 10 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className={`relative w-full shrink-0 ${sizeClasses[size]} pointer-events-auto my-auto flex flex-col min-h-0 overflow-hidden ${
+                isGovernmentMode
+                  ? 'rounded-2xl bg-white text-slate-900 border border-slate-200/90 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.28),0_0_0_1px_rgba(0,0,0,0.06)]'
+                  : 'rounded-[28px] bg-slate-950/75 dark:bg-black/80 backdrop-blur-xl backdrop-saturate-[180%] border border-white/30 text-white shadow-2xl'
+              }`}
             >
-              {/* Top Specular Sheen (iOS Liquid Edge) */}
-              <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 to-transparent pointer-events-none" />
-              {/* Subtle diagonal liquid light rays */}
-              <div className="absolute -top-24 -left-24 w-48 h-48 bg-emerald-500/15 rounded-full blur-2xl pointer-events-none" />
-              <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-emerald-400/10 rounded-full blur-2xl pointer-events-none" />
-
               {/* Modal Header */}
               {(title || showCloseButton) && (
-                <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/15 px-5 py-4 sm:px-7 sm:py-5 relative z-10">
+                <div
+                  className={`flex shrink-0 items-center justify-between gap-3 px-6 py-4 relative z-10 ${
+                    isGovernmentMode
+                      ? 'border-b border-slate-200 bg-slate-50/70 text-slate-900'
+                      : 'border-b border-white/15 text-white'
+                  }`}
+                >
                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="w-10 h-10 rounded-2xl bg-white/10 border border-white/25 flex items-center justify-center text-emerald-300 shadow-[inset_0_1px_2px_rgba(255,255,255,0.3)] shrink-0">
-                      {renderHeaderIcon()}
-                    </div>
+                    {isGovernmentMode ? (
+                      <div className="text-slate-700 shrink-0">
+                        {renderHeaderIcon()}
+                      </div>
+                    ) : (
+                      <div className="w-8 h-8 flex items-center justify-center shrink-0 rounded-2xl bg-white/10 border border-white/25 text-emerald-300">
+                        {renderHeaderIcon()}
+                      </div>
+                    )}
                     <div className="min-w-0 flex-1">
                       {title && (
-                        <h2 className="break-words text-base sm:text-lg font-black text-white tracking-tight drop-shadow-sm leading-snug">
+                        <h2
+                          className={`break-words text-sm font-bold uppercase tracking-wide leading-snug ${
+                            isGovernmentMode ? 'text-slate-900 font-sans' : 'text-white'
+                          }`}
+                        >
                           {title}
                         </h2>
                       )}
                       {subtitle && (
-                        <p className="text-xs text-white/70 truncate sm:text-clip mt-0.5">
+                        <p
+                          className={`text-xs truncate sm:text-clip mt-0.5 ${
+                            isGovernmentMode ? 'text-slate-500 font-sans' : 'text-white/70'
+                          }`}
+                        >
                           {subtitle}
                         </p>
                       )}
@@ -146,20 +173,28 @@ export default function NativeModal({
                     <button
                       type="button"
                       onClick={onClose}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/20 hover:bg-rose-600 text-white font-bold text-xs border border-white/30 shadow transition-all active:scale-95 shrink-0"
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-all shrink-0 ${
+                        isGovernmentMode
+                          ? 'border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 rounded-lg shadow-sm hover:border-slate-300'
+                          : 'rounded-xl bg-white/20 hover:bg-rose-600 text-white border border-white/30'
+                      }`}
                       aria-label="Close"
                       title="Close window (ESC)"
                     >
-                      <X className="w-4 h-4" />
-                      <span className="hidden sm:inline">Close</span>
+                      <X className="w-3.5 h-3.5" />
+                      <span>Close</span>
                     </button>
                   )}
                 </div>
               )}
 
-              {/* Inner body - smooth scroll with custom scrollbar */}
+              {/* Inner body */}
               <div
-                className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain touch-pan-y px-5 py-5 sm:px-7 sm:py-6 relative z-10 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.25)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/25 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/40"
+                className={`min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-6 py-5 relative z-10 ${
+                  isGovernmentMode
+                    ? 'bg-white text-slate-900'
+                    : '[scrollbar-width:thin] text-white'
+                }`}
               >
                 {children}
               </div>
@@ -172,4 +207,3 @@ export default function NativeModal({
 }
 
 export { NativeModal };
-

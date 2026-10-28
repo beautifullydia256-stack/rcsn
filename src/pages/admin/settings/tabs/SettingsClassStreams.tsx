@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { useSchoolType } from '@/hooks/useSchoolType';
 import { supabase } from '@/lib/supabase';
-import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
+import { GovRollingBox } from '@/components/ui/GovLoadingIndicator';
+import SectionHeader from './SectionHeader';
 
 type Stream = { id: string; class_name: string; stream_name: string; sort_order: number };
 type Student = { student_id: string; name: string; current_class: string };
@@ -159,78 +160,83 @@ export default function SettingsClassStreams({
     : 'e.g. Primary 5 Blue / Red';
 
   return (
-    <div className={embedded ? 'p-4 md:p-6 space-y-8' : 'space-y-8'}>
-      {/* Header */}
-      <div>
-        <h2 className="text-lg font-semibold ac-text-primary">
-          {isTertiary ? 'Programme Cohorts & Streams' : 'Class Streams'}
-        </h2>
-        <p className="text-sm ac-text-muted mt-0.5">
-          {isTertiary
-            ? `Divide a programme into cohorts or streams (${exampleText}). Tutors and timetables will work per-stream.`
-            : `Split a class into streams (${exampleText}). Teachers and timetables will work per-stream. Reports are still generated per base class.`}
-        </p>
-      </div>
+    <div className="space-y-6">
+      <SectionHeader
+        embedded={embedded}
+        title={isTertiary ? 'PROGRAMME COHORTS & STREAM REGISTRY' : 'CLASS STREAMS REGISTRY'}
+        badge="COHORT DIVISION"
+      />
 
-      {/* Add stream form */}
-      <form onSubmit={addStream} className={`${settingsInsetSurface} p-4 space-y-4`}>
-        <p className="text-sm font-medium ac-text-primary">
-          {isTertiary ? `Add a cohort stream to a programme` : `Add a stream to a class`}
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <select
-            className="ac-input w-full"
-            value={formClass}
-            onChange={(e) => setFormClass(e.target.value)}
-            required
-          >
-            <option value="">{`Select ${unitLabel.toLowerCase()}…`}</option>
-            {classOptions.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-          <input
-            className="ac-input w-full"
-            placeholder={isTertiary ? "Stream name (e.g. March Intake, Cohort A)" : "Stream name (e.g. West, East, A, B)"}
-            value={formStreamName}
-            onChange={(e) => setFormStreamName(e.target.value)}
-            required
-          />
-          <button type="submit" disabled={saving} className={settingsPrimaryActionClass}>
-            {saving ? 'Saving…' : `+ Add ${streamLabel}`}
-          </button>
+      {/* Add stream form card */}
+      <form onSubmit={addStream} className="gov-card p-5 space-y-4">
+        <div className="border-b border-[#E2E8F0] pb-2 mb-2">
+          <span className="text-xs font-mono uppercase font-bold text-[#111111] tracking-wider">
+            {isTertiary ? 'REGISTER COHORT STREAM TO PROGRAMME' : 'REGISTER STREAM TO CLASS'}
+          </span>
         </div>
-        {error && <p className="text-sm text-rose-500">{error}</p>}
-        <p className="text-xs ac-text-muted">
-          {isTertiary
-            ? `A programme needs at least 2 cohort streams before streaming is activated.`
-            : `A class needs at least 2 streams before streaming is activated.`}
-        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+          <div>
+            <label className="mb-1 block text-xs font-mono uppercase font-bold text-[#555555]">
+              {unitLabel.toUpperCase()}
+            </label>
+            <select
+              className="gov-select w-full"
+              value={formClass}
+              onChange={(e) => setFormClass(e.target.value)}
+              required
+            >
+              <option value="">{`Select ${unitLabel.toLowerCase()}…`}</option>
+              {classOptions.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-mono uppercase font-bold text-[#555555]">
+              {streamLabel.toUpperCase()} IDENTIFIER
+            </label>
+            <input
+              className="gov-input w-full"
+              placeholder={isTertiary ? "e.g. March Intake, Cohort A" : "e.g. West, East, A, B"}
+              value={formStreamName}
+              onChange={(e) => setFormStreamName(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <button type="submit" disabled={saving} className="gov-btn gov-btn-sm gov-btn-primary w-full h-[38px]">
+              {saving ? 'SAVING…' : `+ ADD ${streamLabel.toUpperCase()}`}
+            </button>
+          </div>
+        </div>
+        {error && <p className="text-xs font-mono text-red-600">{error}</p>}
       </form>
 
       {/* Existing streams grouped by class */}
       {loading ? (
-        <p className="text-sm ac-text-muted">Loading…</p>
+        <div className="py-8 flex items-center justify-center">
+          <GovRollingBox size="md" />
+        </div>
       ) : Object.keys(streamsByClass).length === 0 ? (
-        <p className="text-sm ac-text-muted">No streams set up yet.</p>
+        <div className="gov-card p-8 text-center text-xs font-mono text-[#888888]">NO STREAMS CONFIGURED YET.</div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {Object.keys(streamsByClass)
             .sort()
             .map((className) => {
               const classStreams = streamsByClass[className];
               const isActive = classStreams.length >= 2;
               return (
-                <div key={className} className={settingsInsetSurface + ' p-4'}>
-                  <div className="flex items-center gap-3 mb-3">
-                    <h3 className="font-semibold ac-text-primary">{className}</h3>
+                <div key={className} className="gov-card p-4">
+                  <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-2 mb-3">
+                    <h3 className="text-xs font-mono font-bold text-[#111111] uppercase">{className}</h3>
                     {isActive ? (
-                      <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
-                        Active
+                      <span className="gov-tag gov-tag-approved text-[10px] font-mono uppercase">
+                        ACTIVE STREAMING ({classStreams.length} DIVISIONS)
                       </span>
                     ) : (
-                      <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
-                        Need ≥2 streams
+                      <span className="gov-tag gov-tag-warned text-[10px] font-mono uppercase">
+                        PENDING (MINIMUM 2 REQUIRED)
                       </span>
                     )}
                   </div>
@@ -238,16 +244,16 @@ export default function SettingsClassStreams({
                     {classStreams.map((st) => (
                       <li
                         key={st.id}
-                        className="flex items-center gap-2 rounded-full border border-[var(--ac-border)] bg-[var(--ac-surface)] px-3 py-1.5 text-sm font-medium ac-text-primary"
+                        className="flex items-center gap-2 rounded border border-[#CCCCCC] bg-[#FAFAFA] px-3 py-1 text-xs font-mono text-[#111111]"
                       >
-                        {st.stream_name}
+                        <span className="font-bold">{st.stream_name}</span>
                         <button
-                          className="text-rose-400 hover:text-rose-600 text-xs ml-1 p-0.5 inline-flex items-center"
+                          className="text-[#888888] hover:text-red-600 text-xs ml-1 p-0.5 inline-flex items-center"
                           disabled={deletingId === st.id}
                           onClick={() => deleteStream(st.id, st.class_name, st.stream_name)}
                           title="Remove stream"
                         >
-                          {deletingId === st.id ? '…' : <X className="w-3.5 h-3.5" />}
+                          {deletingId === st.id ? '…' : <X className="w-3 h-3" />}
                         </button>
                       </li>
                     ))}
@@ -260,40 +266,46 @@ export default function SettingsClassStreams({
 
       {/* Unallocated students */}
       {!loading && unallocated.length > 0 && (
-        <div>
-          <h3 className="text-base font-semibold ac-text-primary mb-1">Unallocated Students</h3>
-          <p className="text-sm ac-text-muted mb-4">
-            These students are in a streamed class but haven't been assigned to a stream yet.
-          </p>
+        <div className="gov-card p-5 space-y-3">
+          <div className="border-b border-[#E2E8F0] pb-2 flex items-center justify-between">
+            <span className="text-xs font-mono uppercase font-bold text-[#111111] tracking-wider">
+              UNALLOCATED TRAINEES
+            </span>
+            <span className="gov-tag gov-tag-warned text-[10px] font-mono">
+              {unallocated.length} PENDING ALLOCATION
+            </span>
+          </div>
           <div className="space-y-2">
             {unallocated.map((s) => (
               <div
                 key={s.student_id}
-                className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--ac-border)] bg-[var(--ac-surface)] px-4 py-3"
+                className="flex flex-wrap items-center justify-between gap-3 rounded border border-[#E2E8F0] bg-[#FAFAFA] p-3"
               >
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium ac-text-primary text-sm">{s.name}</p>
-                  <p className="text-xs ac-text-muted">{s.current_class}</p>
+                  <p className="font-bold text-xs font-mono text-[#111111] uppercase">{s.name}</p>
+                  <p className="text-[11px] font-mono text-[#666666]">{s.current_class}</p>
                 </div>
-                <select
-                  className="ac-input text-sm"
-                  value={pendingAlloc[s.student_id] ?? ''}
-                  onChange={(e) =>
-                    setPendingAlloc((prev) => ({ ...prev, [s.student_id]: e.target.value }))
-                  }
-                >
-                  <option value="">Pick stream…</option>
-                  {s.streamOptions.map((sn) => (
-                    <option key={sn} value={sn}>{sn}</option>
-                  ))}
-                </select>
-                <button
-                  className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
-                  disabled={!pendingAlloc[s.student_id] || savingAlloc === s.student_id}
-                  onClick={() => saveAllocation(s.student_id, s.current_class)}
-                >
-                  {savingAlloc === s.student_id ? 'Saving…' : 'Assign'}
-                </button>
+                <div className="flex items-center gap-2">
+                  <select
+                    className="gov-select text-xs w-auto"
+                    value={pendingAlloc[s.student_id] ?? ''}
+                    onChange={(e) =>
+                      setPendingAlloc((prev) => ({ ...prev, [s.student_id]: e.target.value }))
+                    }
+                  >
+                    <option value="">SELECT STREAM…</option>
+                    {s.streamOptions.map((sn) => (
+                      <option key={sn} value={sn}>{sn}</option>
+                    ))}
+                  </select>
+                  <button
+                    className="gov-btn gov-btn-sm gov-btn-primary"
+                    disabled={!pendingAlloc[s.student_id] || savingAlloc === s.student_id}
+                    onClick={() => saveAllocation(s.student_id, s.current_class)}
+                  >
+                    {savingAlloc === s.student_id ? 'SAVING…' : 'ASSIGN'}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -302,7 +314,7 @@ export default function SettingsClassStreams({
 
       {/* Allocated students by stream (per class) */}
       {!loading && activeStreamedClasses.length > 0 && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {activeStreamedClasses.sort().map((className) => {
             const classStreamNames = streamsByClass[className].map((s) => s.stream_name);
             const allocatedHere = students.filter(
@@ -312,30 +324,35 @@ export default function SettingsClassStreams({
             );
             if (allocatedHere.length === 0) return null;
             return (
-              <div key={`alloc-${className}`} className={settingsInsetSurface + ' p-4'}>
-                <h4 className="font-semibold ac-text-primary mb-3">{className} — Stream Roster</h4>
+              <div key={`alloc-${className}`} className="gov-card p-5">
+                <div className="border-b border-[#E2E8F0] pb-2 mb-3">
+                  <h4 className="text-xs font-mono font-bold text-[#111111] uppercase">
+                    {className} — STREAM ALLOCATION ROSTER
+                  </h4>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {classStreamNames.map((streamName) => {
                     const inStream = allocatedHere.filter(
                       (s) => assignmentMap[`${className}::${s.student_id}`] === streamName,
                     );
                     return (
-                      <div key={streamName}>
-                        <p className="text-xs font-bold uppercase tracking-wide ac-text-muted mb-2">
-                          {streamName} ({inStream.length})
+                      <div key={streamName} className="border border-[#E2E8F0] p-3 rounded bg-[#FAFAFA]">
+                        <p className="text-[11px] font-mono font-bold uppercase text-[#444444] mb-2 flex items-center justify-between border-b border-[#E2E8F0] pb-1">
+                          <span>{streamName}</span>
+                          <span className="font-bold text-[#111111]">({inStream.length})</span>
                         </p>
                         {inStream.length === 0 ? (
-                          <p className="text-xs ac-text-muted italic">No students yet</p>
+                          <p className="text-[11px] font-mono text-[#888888]">NO TRAINEES ALLOCATED</p>
                         ) : (
-                          <ul className="space-y-1">
+                          <ul className="space-y-1.5">
                             {inStream.map((s) => (
                               <li
                                 key={s.student_id}
-                                className="flex items-center justify-between rounded-lg border border-[var(--ac-border)] bg-[var(--ac-surface)] px-3 py-2"
+                                className="flex items-center justify-between rounded border border-[#E2E8F0] bg-white px-2.5 py-1.5 text-xs font-mono"
                               >
-                                <span className="text-sm ac-text-primary">{s.name}</span>
+                                <span className="text-[#111111] font-medium">{s.name}</span>
                                 <button
-                                  className="text-rose-400 hover:text-rose-600 text-xs p-0.5 inline-flex items-center"
+                                  className="text-[#888888] hover:text-red-600 text-xs p-0.5 inline-flex items-center"
                                   onClick={async () => {
                                     await supabase
                                       .from('student_stream_assignments')
@@ -355,7 +372,7 @@ export default function SettingsClassStreams({
                                   }}
                                   title="Remove from stream"
                                 >
-                                  <X className="w-3.5 h-3.5" />
+                                  <X className="w-3 h-3" />
                                 </button>
                               </li>
                             ))}

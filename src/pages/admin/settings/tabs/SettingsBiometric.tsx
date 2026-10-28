@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import SectionHeader from './SectionHeader';
-import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
+import { ShieldCheck, Fingerprint, Save, CheckCircle2 } from 'lucide-react';
+import { GovRollingBox } from '@/components/ui/GovLoadingIndicator';
+import '@/styles/government-system.css';
 
 type BiometricSettings = {
   biometric_teacher_punch: boolean;
@@ -69,133 +70,165 @@ export default function SettingsBiometric({
     setSettings({ ...settings, [field]: !settings[field] });
   }
 
-  if (loading) return <div className="py-8 text-center text-sm text-gray-500">Loading…</div>;
+  if (loading) {
+    return (
+      <div className="gov-card p-12 flex items-center justify-center border border-[#CCCCCC]">
+        <GovRollingBox size="lg" />
+      </div>
+    );
+  }
   if (!settings) return null;
 
   return (
-    <div className="space-y-6">
-      <SectionHeader
-        title="Biometric Attendance"
-        desc="Configure fingerprint terminal integration for attendance. Supports Hikvision DS-K1A802F and ZKTeco F18. Students and teachers scan their fingerprint — attendance is recorded automatically."
-        embedded={embedded}
-      />
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3 border-b border-[#CCCCCC] pb-3">
+        <div className="flex items-center gap-3">
+          <h2 className="text-[15px] font-bold tracking-tight text-[#111111] uppercase font-sans">
+            BIOMETRIC TERMINAL INTEGRATION
+          </h2>
+          <span className="inline-flex items-center px-2 py-0.5 text-[11px] font-mono font-bold bg-[#EAEAEA] text-[#222222] border border-[#CCCCCC]">
+            HARDWARE
+          </span>
+        </div>
+      </div>
 
       {error && (
-        <div className="rounded-lg border border-red-400/40 bg-red-950/50 p-3 text-sm text-red-200">{error}</div>
+        <div className="p-3 rounded border border-[#EF4444] bg-[#FEF2F2] text-xs font-mono font-bold text-[#B91C1C]">
+          {error}
+        </div>
       )}
 
-      {/* Toggles */}
-      <div className={`${settingsInsetSurface} space-y-4 p-4 sm:p-5`}>
-        <h3 className="text-sm font-semibold ac-text-primary">Enable Features</h3>
+      {/* Feature toggles */}
+      <div className="gov-card rounded-lg border border-[#CCCCCC] bg-white p-4 space-y-3">
+        <div className="text-[12px] font-mono font-bold uppercase text-[#111111]">
+          AUTHENTICATION PROTOCOLS
+        </div>
 
-        <label className="flex cursor-pointer items-center justify-between gap-4">
+        <label className="flex cursor-pointer items-center justify-between gap-4 p-2 rounded border border-[#E5E5E5] hover:bg-[#F9FAFB]">
           <div>
-            <p className="text-sm font-medium ac-text-primary">Student attendance via fingerprint</p>
-            <p className="text-xs text-gray-500">When a student scans, mark them present for the day.</p>
+            <p className="text-xs font-mono font-bold text-[#111111] uppercase">TRAINEE ATTENDANCE BIOMETRICS</p>
+            <p className="text-[11px] font-mono text-[#666666]">Terminal scan marks trainee present for scheduled clinical/lecture block.</p>
           </div>
           <input
             type="checkbox"
             checked={settings.biometric_student_attendance}
             onChange={() => toggle('biometric_student_attendance')}
-            className="h-5 w-5 rounded accent-emerald-500"
+            className="h-4 w-4 rounded accent-[#111111]"
           />
         </label>
 
-        <label className="flex cursor-pointer items-center justify-between gap-4">
+        <label className="flex cursor-pointer items-center justify-between gap-4 p-2 rounded border border-[#E5E5E5] hover:bg-[#F9FAFB]">
           <div>
-            <p className="text-sm font-medium ac-text-primary">Teacher punch-in / punch-out via fingerprint</p>
-            <p className="text-xs text-gray-500">First scan = punch in, second scan = punch out. Uses same late-arrival logic as manual punch.</p>
+            <p className="text-xs font-mono font-bold text-[#111111] uppercase">FACULTY CLOCK-IN / OUT VIA FINGERPRINT</p>
+            <p className="text-[11px] font-mono text-[#666666]">Primary scan registers check-in, subsequent scan registers sign-out.</p>
           </div>
           <input
             type="checkbox"
             checked={settings.biometric_teacher_punch}
             onChange={() => toggle('biometric_teacher_punch')}
-            className="h-5 w-5 rounded accent-emerald-500"
+            className="h-4 w-4 rounded accent-[#111111]"
           />
         </label>
       </div>
 
-      {/* WhatsApp parent notifications */}
-      <div className={`${settingsInsetSurface} space-y-4 p-4 sm:p-5`}>
-        <div>
-          <h3 className="text-sm font-semibold ac-text-primary">Parent WhatsApp Notifications</h3>
-          <p className="mt-0.5 text-xs text-gray-500">
-            When enabled, parents receive an automatic WhatsApp message each time their child scans.
-            Requires WhatsApp (WaSender) to be configured and the notification queue to be running.
-          </p>
+      {/* WhatsApp notifications */}
+      <div className="gov-card rounded-lg border border-[#CCCCCC] bg-white p-4 space-y-3">
+        <div className="text-[12px] font-mono font-bold uppercase text-[#111111]">
+          GUARDIAN AUTOMATED DISPATCH
         </div>
 
-        <label className="flex cursor-pointer items-center justify-between gap-4">
+        <label className="flex cursor-pointer items-center justify-between gap-4 p-2 rounded border border-[#E5E5E5] hover:bg-[#F9FAFB]">
           <div>
-            <p className="text-sm font-medium ac-text-primary">Notify on student arrival</p>
-            <p className="text-xs text-gray-500">Sends a WhatsApp to parents when their child scans in at school.</p>
+            <p className="text-xs font-mono font-bold text-[#111111] uppercase">DISPATCH ON ARRIVAL CONFIRMATION</p>
+            <p className="text-[11px] font-mono text-[#666666]">Sends instantaneous timestamp notification to registered parent contact on entry.</p>
           </div>
           <input
             type="checkbox"
             checked={settings.biometric_notify_arrival}
             onChange={() => toggle('biometric_notify_arrival')}
-            className="h-5 w-5 rounded accent-emerald-500"
+            className="h-4 w-4 rounded accent-[#111111]"
           />
         </label>
 
-        <label className="flex cursor-pointer items-center justify-between gap-4">
+        <label className="flex cursor-pointer items-center justify-between gap-4 p-2 rounded border border-[#E5E5E5] hover:bg-[#F9FAFB]">
           <div>
-            <p className="text-sm font-medium ac-text-primary">Notify on student departure</p>
-            <p className="text-xs text-gray-500">Sends a WhatsApp to parents when their child scans out to go home.</p>
+            <p className="text-xs font-mono font-bold text-[#111111] uppercase">DISPATCH ON DEPARTURE CONFIRMATION</p>
+            <p className="text-[11px] font-mono text-[#666666]">Sends timestamp verification when trainee exits campus perimeter.</p>
           </div>
           <input
             type="checkbox"
             checked={settings.biometric_notify_departure}
             onChange={() => toggle('biometric_notify_departure')}
-            className="h-5 w-5 rounded accent-emerald-500"
+            className="h-4 w-4 rounded accent-[#111111]"
           />
         </label>
       </div>
 
       {/* Late cutoff times */}
-      <div className={`${settingsInsetSurface} space-y-4 p-4 sm:p-5`}>
-        <h3 className="text-sm font-semibold ac-text-primary">Late Arrival Cutoff Times</h3>
-        <p className="text-xs text-gray-500">Scans after these times are marked as "late".</p>
+      <div className="gov-card rounded-lg border border-[#CCCCCC] bg-white p-4 space-y-3">
+        <div className="text-[12px] font-mono font-bold uppercase text-[#111111]">
+          TARDINESS THRESHOLDS
+        </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <label>
-            <span className="mb-1 block text-xs font-medium text-gray-400">Students</span>
+          <div>
+            <label className="mb-1 block text-[11px] font-mono font-bold uppercase text-[#555555]">
+              TRAINEE LATE ARRIVAL CUTOFF
+            </label>
             <input
               type="time"
               value={settings.biometric_late_cutoff_student.slice(0, 5)}
               onChange={(e) => setSettings({ ...settings, biometric_late_cutoff_student: e.target.value + ':00' })}
-              className="ac-input w-full min-h-[44px]"
+              className="gov-input w-full text-xs font-mono"
             />
-          </label>
-          <label>
-            <span className="mb-1 block text-xs font-medium text-gray-400">Teachers</span>
+          </div>
+          <div>
+            <label className="mb-1 block text-[11px] font-mono font-bold uppercase text-[#555555]">
+              FACULTY LATE ARRIVAL CUTOFF
+            </label>
             <input
               type="time"
               value={settings.biometric_late_cutoff_teacher.slice(0, 5)}
               onChange={(e) => setSettings({ ...settings, biometric_late_cutoff_teacher: e.target.value + ':00' })}
-              className="ac-input w-full min-h-[44px]"
+              className="gov-input w-full text-xs font-mono"
             />
-          </label>
+          </div>
         </div>
       </div>
 
-      {/* Devices link */}
-      <div className={`${settingsInsetSurface} space-y-2 p-4 sm:p-5`}>
-        <h3 className="text-sm font-semibold ac-text-primary">Device Webhook URLs</h3>
-        <p className="text-xs text-gray-500">
-          Each registered terminal has its own unique webhook URL. Go to{' '}
-          <a href="/dashboard/admin/biometric-devices" className="text-emerald-400 underline underline-offset-2 hover:text-emerald-300">
-            Biometric Devices
-          </a>{' '}
-          to register devices and copy their URLs.
-        </p>
+      {/* Registered devices note */}
+      <div className="gov-card rounded-lg border border-[#CCCCCC] bg-white p-4 flex items-center justify-between gap-3">
+        <div>
+          <div className="text-xs font-mono font-bold uppercase text-[#111111]">
+            REGISTERED HARDWARE TERMINALS
+          </div>
+          <div className="text-[11px] font-mono text-[#666666] mt-0.5">
+            Configure terminal webhooks, device IP sockets, and encryption tokens.
+          </div>
+        </div>
+        <a
+          href="/dashboard/admin/biometric-devices"
+          className="gov-btn gov-btn-sm"
+        >
+          MANAGE TERMINALS
+        </a>
       </div>
 
-      {/* Save */}
-      <div className="flex items-center gap-3">
-        <button onClick={save} disabled={saving} className={settingsPrimaryActionClass}>
-          {saving ? 'Saving…' : 'Save Biometric Settings'}
+      {/* Actions */}
+      <div className="flex items-center gap-3 pt-2">
+        <button
+          onClick={save}
+          disabled={saving}
+          className="gov-btn gov-btn-sm gov-btn-primary"
+        >
+          <Save className="w-3.5 h-3.5 mr-1" />
+          {saving ? 'COMMITTING…' : 'SAVE BIOMETRIC CONFIGURATION'}
         </button>
-        {saved && <span className="text-sm text-emerald-400">Saved.</span>}
+        {saved && (
+          <span className="text-xs font-mono font-bold text-[#15803D] flex items-center gap-1">
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            SYNCHRONIZED
+          </span>
+        )}
       </div>
     </div>
   );

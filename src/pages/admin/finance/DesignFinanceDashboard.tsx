@@ -1,53 +1,27 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import {
+  TrendingDown,
+  TrendingUp,
+  Scale,
+  Wallet,
+  CircleDollarSign,
+  ArrowRight,
+  RefreshCw,
+  Plus,
+  Users,
+  CreditCard,
+  Building2,
+  FileText,
+  BarChart3,
+} from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
-import { SkeletonKPIStrip } from '@/components/PwezaSkeleton';
-import PosFinanceDashboard from '@/components/finance/PosFinanceDashboard';
-
-import financeTemplateRaw from '@/assets/pwezacore-finance-dashboard.html?raw';
-
-const FINANCE_FONT_HREF =
-  'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap';
-
-const GRADIENTS = [
-  'linear-gradient(135deg,#10d9a8,#3d7eff)',
-  'linear-gradient(135deg,#ffb547,#ff4f6a)',
-  'linear-gradient(135deg,#3d7eff,#9d7eff)',
-  'linear-gradient(135deg,#27e09f,#3d7eff)',
-  'linear-gradient(135deg,#ff4f6a,#9d7eff)',
-];
-const grad = (i: number) => GRADIENTS[i % GRADIENTS.length];
-
-function parseInjectedHtml(raw: string): string {
-  const styleMatch = raw.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
-  const bodyMatch = raw.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-  let inner = bodyMatch ? bodyMatch[1].trim() : raw;
-  inner = inner.replace(/<script[\s\S]*?<\/script>/gi, '');
-  const styleBlock = styleMatch ? `<style>${styleMatch[1]}</style>` : '';
-  return `${styleBlock}${inner}`;
-}
-
-function initials(name: string) {
-  return (name || '?')
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-}
-
-function escapeHtml(s: string) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
+import { GovPageLoader } from '@/components/ui/GovLoadingIndicator';
+import '@/styles/government-system.css';
 
 function fmt(n: number): string {
   return `UGX ${Math.round(n).toLocaleString()}`;
@@ -127,7 +101,7 @@ export async function fetchFinanceDashboard(userId: string): Promise<FinanceDash
       .eq('school_id', schoolId)
       .order('payment_date', { ascending: false })
       .order('created_at', { ascending: false })
-      .limit(12),
+      .limit(10),
     supabase
       .from('school_expenses')
       .select('amount, expense_date, status, category_name, description')
@@ -178,121 +152,78 @@ export async function fetchFinanceDashboard(userId: string): Promise<FinanceDash
       const bal = Math.max(0, Number((b as { balance?: number }).balance ?? 0));
       owingByStudent.set(sid, (owingByStudent.get(sid) || 0) + bal);
     }
-  } else {
-    const allPays = await supabase.from('student_payments').select('student_id, amount_paid').eq('school_id', schoolId);
-    const paidByStudent: Record<string, number> = {};
-    for (const p of allPays.data || []) {
-      const sid = (p as { student_id: string }).student_id;
-      paidByStudent[sid] = (paidByStudent[sid] || 0) + Number((p as { amount_paid?: number }).amount_paid ?? 0);
-    }
-    for (const s of students) {
-      const sid = (s as { student_id: string }).student_id;
-      const exp = Number((s as { expected_fee_amount?: number }).expected_fee_amount ?? 0);
-      const paid = paidByStudent[sid] || 0;
-      owingByStudent.set(sid, Math.max(0, exp - paid));
-    }
   }
 
+  let studentsCleared = 0;
   let studentsOwing = 0;
-  for (const v of owingByStudent.values()) {
-    if (v > 0) studentsOwing += 1;
-  }
-  const studentsCleared = Math.max(0, students.length - studentsOwing);
+  students.forEach((s) => {
+    const sid = (s as { student_id: string }).student_id;
+    const bal = owingByStudent.get(sid) ?? 0;
+    if (bal <= 0) studentsCleared++;
+    else studentsOwing++;
+  });
 
-  const collectionRate = totalExpected > 0 ? Math.round((totalCollected / totalExpected) * 100) : 0;
   const netPosition = totalCollected - totalExpenses;
+  const collectionRate = totalExpected > 0 ? Math.min(100, Math.round((totalCollected / totalExpected) * 100)) : 0;
 
   const monthlyPayments: Record<number, number> = {};
-  const monthlyExpenses: Record<number, number> = {};
-  for (let m = 0; m < 12; m++) {
-    monthlyPayments[m] = 0;
-    monthlyExpenses[m] = 0;
-  }
-  paysYear.forEach((p: { payment_date?: string; amount_paid?: number }) => {
-    const d = p.payment_date;
-    if (!d) return;
-    const monthIndex = parseInt(d.slice(5, 7), 10) - 1;
-    if (monthIndex >= 0 && monthIndex < 12) monthlyPayments[monthIndex] += Number(p.amount_paid || 0);
-  });
-  expenseApproved.forEach((e: { expense_date?: string; amount?: number }) => {
-    const d = e.expense_date;
-    if (!d) return;
-    const monthIndex = parseInt(d.slice(5, 7), 10) - 1;
-    if (monthIndex >= 0 && monthIndex < 12) monthlyExpenses[monthIndex] += Number(e.amount || 0);
-  });
-
-  const paysRecent = paysRecentRes.data || [];
-  const studentIds = [...new Set(paysRecent.map((p: { student_id: string }) => p.student_id))];
-  const nameMap: Record<string, string> = {};
-  if (studentIds.length) {
-    const { data: sn } = await supabase.from('students').select('student_id, name').eq('school_id', schoolId).in('student_id', studentIds);
-    for (const r of sn || []) {
-      nameMap[(r as { student_id: string }).student_id] = String((r as { name?: string }).name ?? '—');
+  for (const p of paysYear) {
+    const dt = (p as { payment_date?: string }).payment_date;
+    if (dt) {
+      const m = new Date(dt).getMonth();
+      monthlyPayments[m] = (monthlyPayments[m] || 0) + Number((p as { amount_paid?: number }).amount_paid ?? 0);
     }
   }
 
-  const recentPayments = paysRecent.slice(0, 8).map((p: { amount_paid?: number; payment_date?: string | null; payment_method?: string | null; student_id: string }) => ({
-    amount_paid: Number(p.amount_paid ?? 0),
-    payment_date: p.payment_date ?? null,
-    payment_method: p.payment_method ?? null,
-    student_id: p.student_id,
-    student_name: nameMap[p.student_id] || '—',
-  }));
+  const monthlyExpenses: Record<number, number> = {};
+  for (const e of expenseApproved) {
+    const dt = (e as { expense_date?: string }).expense_date;
+    if (dt) {
+      const m = new Date(dt).getMonth();
+      monthlyExpenses[m] = (monthlyExpenses[m] || 0) + Number((e as { amount?: number }).amount ?? 0);
+    }
+  }
 
-  const recentExpenses = (expRecentRes.data || []).slice(0, 6).map(
-    (e: { amount?: number; expense_date?: string | null; category_name?: string | null; description?: string | null; status?: string | null }) => ({
-      amount: Number(e.amount ?? 0),
-      expense_date: e.expense_date ?? null,
-      category_name: e.category_name ?? null,
-      description: e.description ?? null,
-      status: e.status ?? null,
-    })
-  );
+  const studentMap = new Map(students.map((s) => [(s as { student_id: string }).student_id, (s as { name?: string }).name || 'Student']));
+  const recentPayments = (paysRecentRes.data || []).map((p) => {
+    const sid = (p as { student_id: string }).student_id;
+    return {
+      amount_paid: Number((p as { amount_paid?: number }).amount_paid ?? 0),
+      payment_date: (p as { payment_date?: string | null }).payment_date ?? null,
+      payment_method: (p as { payment_method?: string | null }).payment_method ?? 'Cash',
+      student_id: sid,
+      student_name: studentMap.get(sid) || 'Student',
+    };
+  });
+
+  const recentExpenses = (expRecentRes.data || []).map((e) => ({
+    amount: Number((e as { amount?: number }).amount ?? 0),
+    expense_date: (e as { expense_date?: string | null }).expense_date ?? null,
+    category_name: (e as { category_name?: string | null }).category_name ?? null,
+    description: (e as { description?: string | null }).description ?? null,
+    status: (e as { status?: string | null }).status ?? null,
+  }));
 
   const topOutstanding: { student_id: string; name: string; current_class: string; balance: number }[] = [];
   if (balances.length > 0) {
-    const agg = new Map<string, number>();
+    const studInfoMap = new Map(students.map((s) => [(s as { student_id: string }).student_id, s]));
     for (const b of balances) {
-      const sid = (b as { student_id: string }).student_id;
-      const bal = Math.max(0, Number((b as { balance?: number }).balance ?? 0));
-      agg.set(sid, (agg.get(sid) || 0) + bal);
-    }
-    for (const s of students) {
-      const sid = (s as { student_id: string }).student_id;
-      const bal = agg.get(sid) || 0;
+      const bal = Number((b as { balance?: number }).balance ?? 0);
       if (bal > 0) {
+        const sid = (b as { student_id: string }).student_id;
+        const info = studInfoMap.get(sid) as { name?: string; current_class?: string } | undefined;
         topOutstanding.push({
           student_id: sid,
-          name: String((s as { name?: string }).name ?? '—'),
-          current_class: String((s as { current_class?: string }).current_class ?? '—'),
-          balance: bal,
-        });
-      }
-    }
-  } else {
-    const allPays = await supabase.from('student_payments').select('student_id, amount_paid').eq('school_id', schoolId);
-    const paidByStudent: Record<string, number> = {};
-    for (const p of allPays.data || []) {
-      const sid = (p as { student_id: string }).student_id;
-      paidByStudent[sid] = (paidByStudent[sid] || 0) + Number((p as { amount_paid?: number }).amount_paid ?? 0);
-    }
-    for (const s of students) {
-      const sid = (s as { student_id: string }).student_id;
-      const exp = Number((s as { expected_fee_amount?: number }).expected_fee_amount ?? 0);
-      const paid = paidByStudent[sid] || 0;
-      const bal = Math.max(0, exp - paid);
-      if (bal > 0) {
-        topOutstanding.push({
-          student_id: sid,
-          name: String((s as { name?: string }).name ?? '—'),
-          current_class: String((s as { current_class?: string }).current_class ?? '—'),
+          name: info?.name || sid.slice(0, 8),
+          current_class: info?.current_class || '—',
           balance: bal,
         });
       }
     }
   }
+
   topOutstanding.sort((a, b) => b.balance - a.balance);
-  const top5 = topOutstanding.slice(0, 5);
+  const top5 = topOutstanding.slice(0, 6);
 
   return {
     totalExpected,
@@ -314,26 +245,8 @@ export async function fetchFinanceDashboard(userId: string): Promise<FinanceDash
 export default function DesignFinanceDashboard() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const lastInjectedHtmlRef = useRef<string | null>(null);
-  const [htmlContent, setHtmlContent] = useState('');
 
-  useEffect(() => {
-    const id = 'pweza-finance-fonts';
-    if (!document.getElementById(id)) {
-      const link = document.createElement('link');
-      link.id = id;
-      link.rel = 'stylesheet';
-      link.href = FINANCE_FONT_HREF;
-      document.head.appendChild(link);
-    }
-  }, []);
-
-  useEffect(() => {
-    setHtmlContent(parseInjectedHtml(financeTemplateRaw));
-  }, []);
-
-  const { data, isPending } = useQuery({
+  const { data, isPending, refetch, isFetching } = useQuery({
     queryKey: adminQueryKeys.financeDashboard(user?.id ?? ''),
     queryFn: () => fetchFinanceDashboard(user!.id),
     enabled: !!user?.id,
@@ -343,210 +256,431 @@ export default function DesignFinanceDashboard() {
     refetchOnWindowFocus: false,
   });
 
-  const render = useCallback(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const root = el.querySelector('.pw-finance') || el;
-    const d = data;
-    const loading = !d && isPending;
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const now = new Date();
+  const currentMonth = now.getMonth();
 
-    const set = (sel: string, val: string) => {
-      const n = root.querySelector(sel);
-      if (n) n.textContent = val;
-    };
-    const setHTML = (id: string, html: string) => {
-      const n = root.querySelector(id);
-      if (n) (n as HTMLElement).innerHTML = html;
-    };
+  const maxMonthValue = useMemo(() => {
+    if (!data) return 1;
+    const mp = data.monthlyPayments || {};
+    const me = data.monthlyExpenses || {};
+    return Math.max(1, ...months.map((_, i) => Math.max(mp[i] || 0, me[i] || 0)));
+  }, [data]);
 
-    const now = new Date();
-    set(
-      '#fn-date-line',
-      `As of ${now.toLocaleDateString('en-UG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}`
-    );
-
-    set('[data-kpi="total-expected"]', loading ? '…' : fmt(d?.totalExpected ?? 0));
-    set('[data-kpi="total-collected"]', loading ? '…' : fmt(d?.totalCollected ?? 0));
-    set('[data-kpi="total-outstanding"]', loading ? '…' : fmt(d?.totalOutstanding ?? 0));
-    set('[data-kpi="total-expenses"]', loading ? '…' : fmt(d?.totalExpenses ?? 0));
-    set('[data-kpi="net-position"]', loading ? '…' : fmt(d?.netPosition ?? 0));
-    set('[data-kpi="collection-rate"]', loading ? '…' : `${d?.collectionRate ?? 0}%`);
-    set('[data-kpi="students-cleared"]', loading ? '…' : String(d?.studentsCleared ?? 0));
-    set('[data-kpi="students-owing"]', loading ? '…' : String(d?.studentsOwing ?? 0));
-
-    set('#fn-collection-pct', loading ? '—' : `${d?.collectionRate ?? 0}%`);
-    const bar = root.querySelector('#fn-collection-bar') as HTMLElement | null;
-    if (bar) bar.style.width = `${loading ? 0 : d?.collectionRate ?? 0}%`;
-    set('#fn-prog-collected', loading ? 'Collected: —' : `Collected: ${fmt(d?.totalCollected ?? 0)}`);
-    set('#fn-prog-expected', loading ? 'Target: —' : `Target: ${fmt(d?.totalExpected ?? 0)}`);
-
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const currentMonth = now.getMonth();
-    const mp = d?.monthlyPayments || {};
-    const me = d?.monthlyExpenses || {};
-    const maxM = Math.max(1, ...months.map((_, i) => (mp[i] || 0) + (me[i] || 0)));
-
-    let bestIdx = 0;
-    let bestVal = 0;
-    months.forEach((_, i) => {
-      const v = mp[i] || 0;
-      if (v > bestVal) {
-        bestVal = v;
-        bestIdx = i;
-      }
-    });
-    set('[data-kpi="monthly-collected"]', loading ? '—' : fmt(Object.values(mp).reduce((a, b) => a + b, 0)));
-    set('[data-kpi="monthly-expenses"]', loading ? '—' : fmt(Object.values(me).reduce((a, b) => a + b, 0)));
-    set('[data-kpi="best-month"]', loading ? '—' : months[bestIdx]);
-
-    setHTML(
-      '#fn-monthly-bars',
-      months
-        .map((m, i) => {
-          const amt = mp[i] || 0;
-          const pct = Math.round((amt / maxM) * 100);
-          const h = Math.max(4, (pct * 80) / 100);
-          const isFuture = i > currentMonth;
-          const bg = isFuture ? 'var(--s4)' : amt > 0 ? 'var(--em)' : 'var(--s4)';
-          const opacity = isFuture ? '.3' : amt > 0 ? '1' : '.4';
-          return `<div class="fn-bar-col"><div class="fn-bar" style="height:${h}px;background:${bg};opacity:${opacity}" title="${m}: ${fmt(amt)}"></div><div class="fn-bar-lbl">${m}</div></div>`;
-        })
-        .join('')
-    );
-
-    const pays = d?.recentPayments ?? [];
-    setHTML(
-      '#fn-recent-payments',
-      pays.length === 0
-        ? `<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">No payments recorded yet.</div>`
-        : pays
-            .map((p, i) => {
-              const ini = initials(p.student_name);
-              const date = p.payment_date
-                ? new Date(p.payment_date).toLocaleDateString('en-UG', { day: 'numeric', month: 'short' })
-                : '—';
-              return `
-                <div class="fn-trow" data-nav="/dashboard/admin/finance/payments">
-                  <div class="fn-trow-av" style="background:${grad(i)}">${escapeHtml(ini)}</div>
-                  <div style="flex:1">
-                    <div class="fn-trow-name">${escapeHtml(p.student_name)}</div>
-                    <div class="fn-trow-sub">${escapeHtml(p.payment_method || 'Cash')} · ${escapeHtml(date)}</div>
-                  </div>
-                  <span class="fn-trow-tag green">Paid</span>
-                  <div class="fn-trow-amt green">+ ${fmt(p.amount_paid)}</div>
-                </div>`;
-            })
-            .join('')
-    );
-
-    const outs = d?.topOutstanding ?? [];
-    setHTML(
-      '#fn-outstanding-list',
-      outs.length === 0
-        ? `<div style="padding:24px;text-align:center;color:var(--em);font-size:13px">🎉 All students have cleared their fees!</div>`
-        : outs
-            .map((s, i) => {
-              const ini = initials(s.name);
-              return `
-                <div class="fn-trow" data-nav="/dashboard/admin/students/${escapeHtml(s.student_id)}">
-                  <div class="fn-trow-av" style="background:${grad(i + 2)}">${escapeHtml(ini)}</div>
-                  <div style="flex:1">
-                    <div class="fn-trow-name">${escapeHtml(s.name)}</div>
-                    <div class="fn-trow-sub">${escapeHtml(s.current_class)}</div>
-                  </div>
-                  <div class="fn-trow-amt rose">${fmt(s.balance)}</div>
-                </div>`;
-            })
-            .join('')
-    );
-
-    const exps = d?.recentExpenses ?? [];
-    setHTML(
-      '#fn-recent-expenses',
-      exps.length === 0
-        ? `<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">No expenses recorded yet.</div>`
-        : exps.map((e) => {
-            const date = e.expense_date
-              ? new Date(e.expense_date).toLocaleDateString('en-UG', { day: 'numeric', month: 'short' })
-              : '—';
-            const st = String(e.status || '').toLowerCase();
-            const isApproved = ['approved', 'paid'].includes(st);
-            const isDeclined = ['declined', 'rejected'].includes(st);
-            const tagClass = isApproved ? 'green' : isDeclined ? 'rose' : 'amber';
-            const tagText = isApproved ? 'Approved' : isDeclined ? 'Declined' : 'Pending';
-            const desc = e.description || '—';
-            const cat = e.category_name || 'General';
-            return `
-                <div class="fn-trow" data-nav="/dashboard/admin/finance/expenses">
-                  <div class="fn-trow-av" style="background:linear-gradient(135deg,#ffb547,#ff4f6a);display:flex;align-items:center;justify-content:center;color:#fff;">
-                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg>
-                  </div>
-                  <div style="flex:1">
-                    <div class="fn-trow-name">${escapeHtml(desc)}</div>
-                    <div class="fn-trow-sub">${escapeHtml(cat)} · ${escapeHtml(date)}</div>
-                  </div>
-                  <span class="fn-trow-tag ${tagClass}">${tagText}</span>
-                  <div class="fn-trow-amt amber">− ${fmt(e.amount)}</div>
-                </div>`;
-          }).join('')
-    );
-
-  }, [data, isPending]);
-
-  useLayoutEffect(() => {
-    const el = containerRef.current;
-    if (!el || !htmlContent) return;
-    if (lastInjectedHtmlRef.current !== htmlContent) {
-      el.innerHTML = htmlContent;
-      lastInjectedHtmlRef.current = htmlContent;
-    }
-    requestAnimationFrame(() => render());
-  }, [htmlContent, render]);
-
-  useEffect(() => {
-    if (!htmlContent || !containerRef.current) return;
-    const root = containerRef.current.querySelector('.pw-finance') || containerRef.current;
-    const onNav = (e: Event) => {
-      const t = (e.target as HTMLElement | null)?.closest('[data-nav]');
-      if (!t) return;
-      e.preventDefault();
-      const href = t.getAttribute('data-nav');
-      if (href) navigate(href);
-    };
-    root.addEventListener('click', onNav);
-    const printBtn = root.querySelector('#fn-btn-print') as HTMLElement | null;
-    if (printBtn) printBtn.onclick = () => window.print();
-    const exportBtn = root.querySelector('#fn-btn-export') as HTMLElement | null;
-    if (exportBtn) exportBtn.onclick = () => navigate('/dashboard/admin/finance/reports');
-    const recBtn = root.querySelector('#fn-btn-record-payment') as HTMLElement | null;
-    if (recBtn) recBtn.onclick = () => navigate('/dashboard/admin/finance/payments/new');
-    return () => root.removeEventListener('click', onNav);
-  }, [htmlContent, navigate]);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const sync = () =>
-      document.documentElement.classList.toggle('light', !document.documentElement.classList.contains('dark'));
-    sync();
-    const obs = new MutationObserver(sync);
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] });
-    return () => obs.disconnect();
-  }, [htmlContent]);
-
-  if (user?.id && isPending && !data) {
-    return (
-      <div style={{ padding: '26px 28px' }}>
-        <SkeletonKPIStrip count={4} />
-        <SkeletonKPIStrip count={4} />
-        <div style={{ height: '120px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', marginBottom: '24px' }} />
-      </div>
-    );
+  if (isPending && !data) {
+    return <GovPageLoader message="LOADING TREASURY & FINANCIAL OPERATIONS HUB..." minHeight="min-h-[50vh]" />;
   }
 
+  const d = data;
+  const totalBilled = (d?.totalCollected ?? 0) + (d?.totalOutstanding ?? 0);
+  const recoveryPct = totalBilled > 0 ? Math.round(((d?.totalCollected ?? 0) / totalBilled) * 100) : 0;
+  const expenseRatio = (d?.totalCollected ?? 0) > 0 ? Math.min(100, Math.round(((d?.totalExpenses ?? 0) / (d?.totalCollected ?? 1)) * 100)) : 0;
+
   return (
-    <PosFinanceDashboard
-      onOpenRecordPayment={() => navigate('/dashboard/accountant/payments')}
-      onOpenRecordExpense={() => navigate('/dashboard/accountant/expenses')}
-    />
+    <div className="admin-terminal-page space-y-5">
+      {/* ── 1. TOP INSTITUTIONAL HEADER ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#CCCCCC] pb-4">
+        <div className="flex items-center gap-3">
+          <h1 className="text-[17px] font-bold tracking-tight text-[#111111] uppercase font-sans">
+            INSTITUTIONAL FINANCIAL OPERATIONS HUB
+          </h1>
+          <span className="inline-flex items-center px-2 py-0.5 text-[11px] font-mono font-bold bg-[#EAEAEA] text-[#222222] border border-[#CCCCCC]">
+            TREASURY
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="gov-btn gov-btn-sm"
+            title="Refresh Financial Ledger"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+            <span>REFRESH</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard/admin/finance/financial-analytics')}
+            className="gov-btn gov-btn-sm"
+          >
+            <BarChart3 className="w-3.5 h-3.5 text-emerald-700" />
+            <span>ANALYTICS & AUDIT</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard/accountant')}
+            className="gov-btn gov-btn-sm gov-btn-primary"
+          >
+            <CircleDollarSign className="w-3.5 h-3.5" />
+            <span>ACCOUNTS PORTAL</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ── 2. FIVE ELEVATED MONEY-COLORED KPI CARDS WITH PROGRESS BARS ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+        {/* Card 1: Total Expected (Target Billed) */}
+        <div className="gov-card p-4 rounded-lg border border-[#CCCCCC] bg-white">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#555555]">
+              Total Billed Fees
+            </span>
+            <span className="p-1 bg-[#F5F5F5] text-[#333333] border border-[#CCCCCC] rounded">
+              <Building2 className="w-3.5 h-3.5" />
+            </span>
+          </div>
+          <div className="text-xl font-mono font-bold text-[#111111] mt-2">
+            {fmt(d?.totalExpected ?? 0)}
+          </div>
+          <div className="text-[10px] text-[#666666] font-mono mt-0.5">
+            Total accredited fee revenue billed
+          </div>
+          {/* Target Realization Bar */}
+          <div className="mt-2.5">
+            <div className="flex justify-between text-[10px] font-mono font-bold text-[#555555] mb-1">
+              <span>ACTIVE COHORTS</span>
+              <span>{d?.studentsCleared ?? 0 + (d?.studentsOwing ?? 0)} TRAINEES</span>
+            </div>
+            <div className="h-1.5 bg-[#EAEAEA] rounded overflow-hidden">
+              <div className="h-full bg-[#111111]" style={{ width: '100%' }} />
+            </div>
+          </div>
+        </div>
+
+        {/* Card 2: Total Collections (Inflow - Emerald) */}
+        <div className="gov-card p-4 rounded-lg border border-[#CCCCCC] border-l-4 border-l-emerald-600 bg-white">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#555555]">
+              Total Collections Banked
+            </span>
+            <span className="p-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded">
+              <TrendingUp className="w-3.5 h-3.5" />
+            </span>
+          </div>
+          <div className="text-xl font-mono font-bold text-emerald-700 mt-2">
+            {fmt(d?.totalCollected ?? 0)}
+          </div>
+          <div className="text-[10px] text-[#666666] font-mono mt-0.5">
+            Realized tuition & material fees
+          </div>
+          {/* Collection Progress Bar */}
+          <div className="mt-2.5">
+            <div className="flex justify-between text-[10px] font-mono font-bold text-[#555555] mb-1">
+              <span>REALIZED</span>
+              <span className="text-emerald-700">{d?.collectionRate ?? 0}%</span>
+            </div>
+            <div className="h-1.5 bg-[#EAEAEA] rounded overflow-hidden">
+              <div
+                className="h-full bg-emerald-600 transition-all duration-300"
+                style={{ width: `${Math.min(100, d?.collectionRate ?? 0)}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Card 3: Fee Arrears (Debt - Crimson Red) */}
+        <div className="gov-card p-4 rounded-lg border border-[#CCCCCC] border-l-4 border-l-red-600 bg-white">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#555555]">
+              Total Outstanding Arrears
+            </span>
+            <span className="p-1 bg-red-50 text-red-700 border border-red-200 rounded">
+              <Wallet className="w-3.5 h-3.5" />
+            </span>
+          </div>
+          <div className="text-xl font-mono font-bold text-red-700 mt-2">
+            {fmt(d?.totalOutstanding ?? 0)}
+          </div>
+          <div className="text-[10px] text-[#666666] font-mono mt-0.5">
+            Unsettled ledger balances ({d?.studentsOwing ?? 0} students)
+          </div>
+          {/* Arrears Exposure Meter */}
+          <div className="mt-2.5">
+            <div className="flex justify-between text-[10px] font-mono font-bold text-[#555555] mb-1">
+              <span>OWING RATE</span>
+              <span className="text-red-700">{100 - (d?.collectionRate ?? 0)}%</span>
+            </div>
+            <div className="h-1.5 bg-[#EAEAEA] rounded overflow-hidden">
+              <div
+                className="h-full bg-red-600 transition-all duration-300"
+                style={{ width: `${Math.min(100, Math.max(0, 100 - (d?.collectionRate ?? 0)))}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Card 4: Operating Expenses (Outflow - Amber) */}
+        <div className="gov-card p-4 rounded-lg border border-[#CCCCCC] border-l-4 border-l-amber-600 bg-white">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#555555]">
+              Operating Expenses
+            </span>
+            <span className="p-1 bg-amber-50 text-amber-700 border border-amber-200 rounded">
+              <TrendingDown className="w-3.5 h-3.5" />
+            </span>
+          </div>
+          <div className="text-xl font-mono font-bold text-amber-700 mt-2">
+            {fmt(d?.totalExpenses ?? 0)}
+          </div>
+          <div className="text-[10px] text-[#666666] font-mono mt-0.5">
+            Approved requisitions & vouchers
+          </div>
+          {/* Expenditure Ratio Bar */}
+          <div className="mt-2.5">
+            <div className="flex justify-between text-[10px] font-mono font-bold text-[#555555] mb-1">
+              <span>OF INFLOW</span>
+              <span className="text-amber-700">{expenseRatio}%</span>
+            </div>
+            <div className="h-1.5 bg-[#EAEAEA] rounded overflow-hidden">
+              <div
+                className="h-full bg-amber-600 transition-all duration-300"
+                style={{ width: `${Math.min(100, expenseRatio)}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Card 5: Net Operating Margin (Surplus - Dynamic) */}
+        <div
+          className={`gov-card p-4 rounded-lg border border-[#CCCCCC] border-l-4 bg-white ${
+            (d?.netPosition ?? 0) >= 0 ? 'border-l-emerald-600' : 'border-l-red-600'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#555555]">
+              Net Operating Margin
+            </span>
+            <span
+              className={`p-1 rounded border ${
+                (d?.netPosition ?? 0) >= 0
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : 'bg-red-50 text-red-700 border-red-200'
+              }`}
+            >
+              <Scale className="w-3.5 h-3.5" />
+            </span>
+          </div>
+          <div
+            className={`text-xl font-mono font-bold mt-2 ${
+              (d?.netPosition ?? 0) >= 0 ? 'text-[#111111]' : 'text-red-700'
+            }`}
+          >
+            {(d?.netPosition ?? 0) < 0 ? '-' : '+'}
+            {fmt(Math.abs(d?.netPosition ?? 0))}
+          </div>
+          <div className="text-[10px] text-[#666666] font-mono mt-0.5">
+            {(d?.netPosition ?? 0) >= 0 ? 'Net Cashflow Surplus' : 'Operating Deficit'}
+          </div>
+          {/* Surplus Ratio Meter */}
+          <div className="mt-2.5">
+            <div className="flex justify-between text-[10px] font-mono font-bold text-[#555555] mb-1">
+              <span>POSITION</span>
+              <span className={(d?.netPosition ?? 0) >= 0 ? 'text-emerald-700' : 'text-red-700'}>
+                {(d?.netPosition ?? 0) >= 0 ? 'SOLVENT' : 'DEFICIT'}
+              </span>
+            </div>
+            <div className="h-1.5 bg-[#EAEAEA] rounded overflow-hidden">
+              <div
+                className={`h-full ${
+                  (d?.netPosition ?? 0) >= 0 ? 'bg-emerald-600' : 'bg-red-600'
+                }`}
+                style={{ width: '100%' }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── 3. ANNUAL CASH FLOW TRAJECTORY BARS ── */}
+      <div className="gov-card p-4 rounded-lg border border-[#CCCCCC] bg-white">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#EAEAEA] pb-3 mb-3">
+          <div>
+            <h3 className="text-xs font-mono font-bold text-[#111111] uppercase tracking-wide">
+              ANNUAL CASH FLOW COMPARISON · COLLECTIONS VS. EXPENDITURES ({now.getFullYear()})
+            </h3>
+            <p className="text-[10px] text-[#666666] font-mono mt-0.5">
+              Monthly breakdown of fee deposits (emerald) vs operating disbursements (amber).
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 text-xs font-mono font-bold">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm bg-emerald-600 inline-block" />
+              <span className="text-[#111111]">COLLECTIONS</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm bg-amber-600 inline-block" />
+              <span className="text-[#111111]">EXPENDITURES</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 12-Month Bar Visualizer */}
+        <div className="grid grid-cols-6 sm:grid-cols-12 gap-2 items-end h-40 border-b border-[#CCCCCC] pb-1 pt-2">
+          {months.map((m, i) => {
+            const inc = d?.monthlyPayments?.[i] || 0;
+            const exp = d?.monthlyExpenses?.[i] || 0;
+            const incH = Math.max(4, Math.round((inc / maxMonthValue) * 110));
+            const expH = Math.max(4, Math.round((exp / maxMonthValue) * 110));
+            const isFuture = i > currentMonth;
+
+            return (
+              <div
+                key={m}
+                className="flex flex-col items-center justify-end h-full gap-1 p-1 hover:bg-[#F9FAFB] rounded"
+              >
+                <div className="flex items-end gap-1 h-28">
+                  {/* Collections Bar */}
+                  <div
+                    title={`${m} Collections: ${fmt(inc)}`}
+                    className={`w-2.5 sm:w-3.5 bg-emerald-600 rounded-t ${
+                      isFuture ? 'opacity-30' : 'opacity-100'
+                    }`}
+                    style={{ height: `${incH}px` }}
+                  />
+                  {/* Expense Bar */}
+                  <div
+                    title={`${m} Expenses: ${fmt(exp)}`}
+                    className={`w-2.5 sm:w-3.5 bg-amber-600 rounded-t ${
+                      isFuture ? 'opacity-30' : 'opacity-100'
+                    }`}
+                    style={{ height: `${expH}px` }}
+                  />
+                </div>
+                <span className="text-[10px] font-mono font-bold text-[#555555] uppercase">
+                  {m}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── 4. TWO-COLUMN HIGH-DENSITY PAPER TABLES ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* Left: Recent Verified Receipts */}
+        <div className="gov-card p-4 rounded-lg border border-[#CCCCCC] bg-white">
+          <div className="flex items-center justify-between border-b border-[#EAEAEA] pb-3 mb-3">
+            <div className="flex items-center gap-2">
+              <CreditCard className="w-4 h-4 text-emerald-700" />
+              <h3 className="text-xs font-mono font-bold text-[#111111] uppercase tracking-wide">
+                RECENT VERIFIED FEE RECEIPTS
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard/accountant/receipts')}
+              className="gov-btn gov-btn-sm text-[10px]"
+            >
+              <span>VIEW ALL RECEIPTS</span>
+              <ArrowRight className="w-3 h-3" />
+            </button>
+          </div>
+
+          {(!d?.recentPayments || d.recentPayments.length === 0) ? (
+            <div className="py-8 text-center text-xs font-mono text-[#777777]">
+              NO RECENT PAYMENTS LOGGED.
+            </div>
+          ) : (
+            <div className="gov-table-container">
+              <table className="gov-table">
+                <thead>
+                  <tr>
+                    <th>Student Name</th>
+                    <th>Method</th>
+                    <th>Date</th>
+                    <th className="text-right">Amount (UGX)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {d.recentPayments.map((p, idx) => (
+                    <tr key={`${p.student_id}-${idx}`}>
+                      <td className="font-semibold text-[#111111] text-xs">
+                        {p.student_name}
+                      </td>
+                      <td className="font-mono text-[11px] text-[#555555]">
+                        <span className="inline-flex items-center px-1.5 py-0.5 text-[9px] font-bold bg-[#F0FDF4] text-emerald-800 border border-emerald-300 rounded">
+                          {p.payment_method || 'CASH'}
+                        </span>
+                      </td>
+                      <td className="font-mono text-[11px] text-[#666666]">
+                        {p.payment_date ? new Date(p.payment_date).toLocaleDateString('en-UG', { day: '2-digit', month: 'short' }) : '—'}
+                      </td>
+                      <td className="font-mono font-bold text-xs text-right text-emerald-800">
+                        +{fmt(p.amount_paid)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Right: Priority Tuition Debtors (Top Outstanding) */}
+        <div className="gov-card p-4 rounded-lg border border-[#CCCCCC] bg-white">
+          <div className="flex items-center justify-between border-b border-[#EAEAEA] pb-3 mb-3">
+            <div className="flex items-center gap-2">
+              <Wallet className="w-4 h-4 text-red-700" />
+              <h3 className="text-xs font-mono font-bold text-[#111111] uppercase tracking-wide">
+                TOP TUITION ARREARS (PRIORITY DEBTORS)
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard/admin/finance/outstanding')}
+              className="gov-btn gov-btn-sm text-[10px]"
+            >
+              <span>DEBTOR ROSTER</span>
+              <ArrowRight className="w-3 h-3" />
+            </button>
+          </div>
+
+          {(!d?.topOutstanding || d.topOutstanding.length === 0) ? (
+            <div className="py-8 text-center text-xs font-mono text-emerald-700">
+              ALL STUDENTS HAVE SETTLED CURRENT FEES.
+            </div>
+          ) : (
+            <div className="gov-table-container">
+              <table className="gov-table">
+                <thead>
+                  <tr>
+                    <th>Candidate</th>
+                    <th>Cohort / Class</th>
+                    <th className="text-right">Outstanding (UGX)</th>
+                    <th className="text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {d.topOutstanding.map((s) => (
+                    <tr key={s.student_id}>
+                      <td className="font-semibold text-[#111111] text-xs">
+                        {s.name}
+                      </td>
+                      <td className="font-mono text-[11px] text-[#555555]">
+                        {s.current_class}
+                      </td>
+                      <td className="font-mono font-bold text-xs text-right text-red-700">
+                        {fmt(s.balance)}
+                      </td>
+                      <td className="text-center">
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/dashboard/admin/students/${s.student_id}`)}
+                          className="gov-btn gov-btn-sm text-[10px] px-2 py-0.5"
+                        >
+                          PROFILE
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

@@ -9,6 +9,7 @@ import { displayParentsForStudent } from '@/lib/studentDisplayParents';
 import { useAuthStore } from '@/store/authStore';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
 import { useSchoolType } from '@/hooks/useSchoolType';
+import { GovTableLoader } from '@/components/ui/GovLoadingIndicator';
 import { computeTertiaryProgress } from '@/features/tertiary/services/tertiaryProgress';
 import {
   Settings,
@@ -117,11 +118,23 @@ export default function StudentsPage() {
     if (t) {
       out = out.filter((r) => {
         const parentsList = displayParentsForStudent(r.student_id, r, parentsByStudent);
+        const name = (r.name || '').toLowerCase();
+        const cls = (r.current_class || '').toLowerCase();
+        const adm = (r.admission_number || '').toLowerCase();
+        const phone = (r.student_phone || '').toLowerCase();
+        const email = (r.student_email || '').toLowerCase();
+        const guardianName = (r.guardian_name || '').toLowerCase();
+        const guardianPhone = (r.guardian_phone || '').toLowerCase();
+
         return (
-          (r.name || '').toLowerCase().includes(t) ||
-          (r.current_class || '').toLowerCase().includes(t) ||
-          (r.guardian_name || '').toLowerCase().includes(t) ||
-          parentsList.some((p) => p.name?.toLowerCase().includes(t))
+          name.includes(t) ||
+          cls.includes(t) ||
+          adm.includes(t) ||
+          phone.includes(t) ||
+          email.includes(t) ||
+          guardianName.includes(t) ||
+          guardianPhone.includes(t) ||
+          parentsList.some((p) => (p.name || '').toLowerCase().includes(t) || (p.phone || '').toLowerCase().includes(t))
         );
       });
     }
@@ -388,18 +401,7 @@ export default function StudentsPage() {
               </thead>
               <tbody>
                 {loading ? (
-                  Array.from({ length: 8 }).map((_, i) => (
-                    <tr key={`skeleton-${i}`} className="border-b border-[var(--ac-border)]">
-                      <td className="px-4 py-3 border-r border-[var(--ac-border)]"><div className="h-5 w-32 rounded ac-skeleton-block animate-pulse" /></td>
-                      <td className="px-4 py-3 border-r border-[var(--ac-border)]"><div className="h-5 w-24 rounded ac-skeleton-block animate-pulse" /></td>
-                      <td className="px-4 py-3 border-r border-[var(--ac-border)]"><div className="h-5 w-28 rounded ac-skeleton-block animate-pulse" /></td>
-                      <td className="px-4 py-3 border-r border-[var(--ac-border)]"><div className="h-5 w-20 rounded ac-skeleton-block animate-pulse" /></td>
-                      <td className="px-4 py-3 border-r border-[var(--ac-border)]"><div className="h-5 w-16 rounded ac-skeleton-block animate-pulse" /></td>
-                      <td className="px-4 py-3 border-r border-[var(--ac-border)]"><div className="h-5 w-28 rounded ac-skeleton-block animate-pulse" /></td>
-                      <td className="px-4 py-3 border-r border-[var(--ac-border)]"><div className="h-5 w-24 rounded ac-skeleton-block animate-pulse" /></td>
-                      <td className="px-4 py-3"><div className="h-8 w-20 rounded ac-skeleton-block animate-pulse" /></td>
-                    </tr>
-                  ))
+                  <GovTableLoader colSpan={8} />
                 ) : sorted.length === 0 ? (
                   <tr><td colSpan={7} className="px-4 py-8 text-center ac-text-muted">No students found.</td></tr>
                 ) : (

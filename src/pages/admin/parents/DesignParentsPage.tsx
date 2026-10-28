@@ -1,32 +1,30 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { loadOutstandingBalanceAggByStudentAllTerms } from '@/lib/adminFinanceTerm';
 import { useAuthStore } from '@/store/authStore';
-import { useUIStore } from '@/store/uiStore';
-import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults';
+import { useSchoolType } from '@/hooks/useSchoolType';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
-import { SkeletonKPIStrip, SkeletonTable } from '@/components/PwezaSkeleton';
-import NativeModal from '@/components/NativeModal';
-import { AddParentForm } from './AddParentForm';
+import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
+import { downloadParentListPdf } from '@/lib/adminPdfDownload';
+import { getOfflineStudents, type CachedStudent } from '@/lib/offlineDb';
 import {
-  addParentSchoolQueryKey,
-  addParentSchoolStaleOptions,
-  fetchAddParentSchoolContext,
-} from './addParentSchoolQuery';
+  Search,
+  Plus,
+  RefreshCw,
+  Download,
+  Printer,
+  Phone,
+  Mail,
+  GraduationCap,
+  ExternalLink,
+} from 'lucide-react';
+import '@/styles/government-system.css';
 
-import parentsTemplateRaw from '@/assets/pwezacore-parents-page.html?raw';
+const PAGE_SIZE = 15;
 
-const PAGE_SIZE = 12;
-
-const SIDEBAR_FILTER_LABELS: Record<string, string> = {
-  all: 'All parents',
-  outstanding: 'Parents with outstanding balances',
-  missing_contact: 'Parents with missing contact information',
-};
-
-function fmtUGXParents(n: number): string {
+function fmtUGX(n: number): string {
   if (!Number.isFinite(n) || n <= 0) return '—';
   return `UGX ${Math.round(n).toLocaleString()}`;
 }
@@ -35,68 +33,6 @@ function parentMissingContact(email: string | null | undefined, phone: string | 
   const e = String(email || '').trim();
   const p = String(phone || '').trim();
   return !e || !p;
-}
-
-const PARENTS_FONT_HREF =
-  'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap';
-
-const PARENTS_MOTION_KILL = `
-.pw-parents .par-fu,
-.pw-parents .par-d1,
-.pw-parents .par-d2,
-.pw-parents .par-d3,
-.pw-parents .par-d4 {
-  animation: none !important;
-  animation-delay: 0 !important;
-  opacity: 1 !important;
-  transform: none !important;
-}
-.pw-parents .par-kpi:hover,
-.pw-parents .par-pcard:hover {
-  transform: none !important;
-}
-.pw-parents .par-kpi,
-.pw-parents .par-pcard {
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-`;
-
-const GRADIENTS = [
-  'linear-gradient(135deg,#ffb547,#ff4f6a)',
-  'linear-gradient(135deg,#3d7eff,#9d7eff)',
-  'linear-gradient(135deg,#27e09f,#3d7eff)',
-  'linear-gradient(135deg,#9d7eff,#ff4f6a)',
-  'linear-gradient(135deg,#ff4f6a,#ffb547)',
-  'linear-gradient(135deg,#00e5c3,#9d7eff)',
-  'linear-gradient(135deg,#9d7eff,#00e5c3)',
-];
-const grad = (i: number) => GRADIENTS[i % GRADIENTS.length];
-
-function parseInjectedHtml(raw: string): string {
-  const styleMatch = raw.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
-  const bodyMatch = raw.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-  let inner = bodyMatch ? bodyMatch[1].trim() : raw;
-  inner = inner.replace(/<script[\s\S]*?<\/script>/gi, '');
-  const styleBlock = styleMatch ? `<style>${styleMatch[1]}</style>` : '';
-  return `${styleBlock}${inner}`;
-}
-
-function initials(name: string) {
-  return (name || '?')
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-}
-
-function escapeHtml(s: string) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }
 
 function pickStr(v: unknown): string | null {
@@ -112,6 +48,14 @@ function displayStudentName(s: Record<string, unknown>): string {
   const parts = [fn, mn, ln].filter(Boolean);
   if (parts.length) return parts.join(' ');
   return String(s.name ?? '').trim() || '—';
+}
+
+function normalizeKey(str?: unknown): string {
+  return String(str || '').trim().toLowerCase();
+}
+
+function extractDigits(phone?: unknown): string {
+  return String(phone || '').replace(/\D/g, '').slice(-9);
 }
 
 export type ParentDirectoryRow = {
@@ -140,40 +84,62 @@ export type ParentsStats = {
   unlinkedParents: number;
 };
 
-type SortKey = 'name-asc' | 'name-desc' | 'children' | 'recent';
-
 export async function fetchParentsDirectory(userId: string): Promise<{ rows: ParentDirectoryRow[]; stats: ParentsStats }> {
   const { data: userData } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
-  const schoolId = userData?.school_id as string | undefined;
-  if (!schoolId) return { rows: [], stats: { totalParents: 0, linkedParents: 0, portalParents: 0, unlinkedParents: 0 } };
-
-  const [{ data: parentRows }, { data: parentUsers }] = await Promise.all([
-    supabase.from('parents').select('*').eq('school_id', schoolId),
-    supabase.from('users').select('user_id, name, email, phone, is_active, created_at').eq('school_id', schoolId).eq('role', 'parent'),
-  ]);
-
-  const byUser = new Map((parentUsers || []).map((u) => [u.user_id as string, u as Record<string, unknown>]));
-  const linkedParentIds = new Set<string>();
-  for (const r of parentRows || []) {
-    const pid = (r as { parent_id?: string }).parent_id;
-    if (pid) linkedParentIds.add(pid);
+  const schoolId = (userData?.school_id as string | undefined) || useAuthStore.getState().schoolId;
+  if (!schoolId) {
+    return { rows: [], stats: { totalParents: 0, linkedParents: 0, portalParents: 0, unlinkedParents: 0 } };
   }
 
-  const studentIds = [...new Set((parentRows || []).map((r) => (r as { student_id?: string }).student_id).filter(Boolean))] as string[];
-  const studentMap: Record<string, Record<string, unknown>> = {};
-  if (studentIds.length) {
-    const { data: studs } = await supabase
+  // 1. Fetch parents table, portal user accounts, and students with their guardian columns in parallel
+  const [parentsRes, usersRes, studentsRes] = await Promise.all([
+    supabase.from('parents').select('*').eq('school_id', schoolId),
+    supabase.from('users').select('user_id, name, email, phone, is_active, created_at').eq('school_id', schoolId).eq('role', 'parent'),
+    supabase
       .from('students')
-      .select('student_id, name, first_name, middle_name, last_name, current_class')
+      .select('student_id, name, first_name, middle_name, last_name, current_class, admission_number, guardian_name, guardian_relationship, guardian_phone, guardian_email, guardian_occupation, guardian_address, created_at')
       .eq('school_id', schoolId)
-      .in('student_id', studentIds);
-    for (const st of studs || []) {
-      studentMap[String((st as { student_id: string }).student_id)] = st as Record<string, unknown>;
+      .is('deleted_at', null),
+  ]);
+
+  const parentRows = parentsRes.data || [];
+  const parentUsers = usersRes.data || [];
+  const studentRows = studentsRes.data || [];
+
+  // Offline fallback if network is unavailable or students table returns empty
+  let offlineFallbackStudents: CachedStudent[] = [];
+  if (!studentRows.length) {
+    try {
+      offlineFallbackStudents = await getOfflineStudents(schoolId);
+    } catch {
+      // ignore
     }
   }
 
+  // Build lookup map for students
+  const studentMap = new Map<string, Record<string, unknown>>();
+  for (const st of studentRows) {
+    studentMap.set(String(st.student_id), st as Record<string, unknown>);
+  }
+  for (const ost of offlineFallbackStudents) {
+    if (!studentMap.has(ost.student_id)) {
+      studentMap.set(ost.student_id, {
+        student_id: ost.student_id,
+        name: ost.student_name,
+        current_class: ost.class_name,
+        guardian_name: ost.parent_name,
+        guardian_phone: ost.parent_phone,
+      });
+    }
+  }
+
+  const byUser = new Map((parentUsers || []).map((u) => [u.user_id as string, u as Record<string, unknown>]));
+  const linkedParentIds = new Set<string>();
+  const parentKeyMap = new Map<string, ParentDirectoryRow>();
+
+  // 2. Process explicit rows from the `parents` table
   const groups = new Map<string, Record<string, unknown>[]>();
-  for (const r of parentRows || []) {
+  for (const r of parentRows) {
     const row = r as Record<string, unknown>;
     const pid = row.parent_id as string | undefined;
     if (!pid) continue;
@@ -181,9 +147,8 @@ export async function fetchParentsDirectory(userId: string): Promise<{ rows: Par
     groups.get(pid)!.push(row);
   }
 
-  const rows: ParentDirectoryRow[] = [];
-
   for (const [pid, prow] of groups) {
+    linkedParentIds.add(pid);
     const u = byUser.get(pid);
     const first = prow[0];
     const sidSet = new Set<string>();
@@ -192,7 +157,7 @@ export async function fetchParentsDirectory(userId: string): Promise<{ rows: Par
       if (sid) sidSet.add(sid);
     }
     const students = [...sidSet].map((sid) => {
-      const st = studentMap[sid];
+      const st = studentMap.get(sid);
       return {
         student_id: sid,
         displayName: st ? displayStudentName(st) : '—',
@@ -202,18 +167,14 @@ export async function fetchParentsDirectory(userId: string): Promise<{ rows: Par
     students.sort((a, b) => a.displayName.localeCompare(b.displayName));
 
     const primary = prow.find((x) => x.is_primary_contact === true) || first;
-    const name =
-      pickStr(primary?.name) ||
-      pickStr(u?.name) ||
-      (students.length ? 'Guardian' : 'Parent');
+    const name = pickStr(primary?.name) || pickStr(u?.name) || (students.length ? 'Guardian' : 'Parent');
     const email = pickStr(primary?.email) ?? pickStr(u?.email);
     const phone = pickStr(primary?.phone) ?? pickStr(u?.phone);
     const relationship = pickStr(primary?.relationship);
     const occupation = pickStr(primary?.occupation);
-    const nin =
-      pickStr(primary?.nin) ?? pickStr(primary?.national_id) ?? pickStr(primary?.national_identification_number);
+    const nin = pickStr(primary?.nin) ?? pickStr(primary?.national_id) ?? pickStr(primary?.national_identification_number);
 
-    rows.push({
+    parentKeyMap.set(pid, {
       parent_id: pid,
       name,
       email,
@@ -233,12 +194,13 @@ export async function fetchParentsDirectory(userId: string): Promise<{ rows: Par
     });
   }
 
-  for (const u of parentUsers || []) {
+  // 3. Process unlinked portal users
+  for (const u of parentUsers) {
     const uid = u.user_id as string;
-    if (linkedParentIds.has(uid)) continue;
+    if (linkedParentIds.has(uid) || parentKeyMap.has(uid)) continue;
     const ue = pickStr(u.email);
     const up = pickStr(u.phone);
-    rows.push({
+    parentKeyMap.set(uid, {
       parent_id: uid,
       name: pickStr(u.name) || pickStr(u.email) || 'Parent',
       email: ue,
@@ -258,8 +220,145 @@ export async function fetchParentsDirectory(userId: string): Promise<{ rows: Par
     });
   }
 
-  const balanceByStudent = await loadOutstandingBalanceAggByStudentAllTerms(supabase, schoolId);
-  const enrichedRows: ParentDirectoryRow[] = rows.map((r) => {
+  // 4. CRITICAL: Aggregate all guardians defined on student enrollment records
+  // Build lookup index to attach students to existing parents or create unified guardian records
+  const guardianLookup = new Map<string, ParentDirectoryRow>();
+
+  for (const p of parentKeyMap.values()) {
+    const digits = extractDigits(p.phone);
+    if (digits) {
+      guardianLookup.set(`${normalizeKey(p.name)}|${digits}`, p);
+    }
+    if (!guardianLookup.has(normalizeKey(p.name))) {
+      guardianLookup.set(normalizeKey(p.name), p);
+    }
+  }
+
+  // Loop through student rows and ensure their guardian appears in the directory
+  for (const st of studentRows) {
+    const sid = String(st.student_id);
+    const gName = pickStr(st.guardian_name);
+    const gPhone = pickStr(st.guardian_phone);
+    const gEmail = pickStr(st.guardian_email);
+    const gRel = pickStr(st.guardian_relationship) || 'Guardian';
+    const gOcc = pickStr(st.guardian_occupation);
+
+    // Skip students who genuinely have no guardian data entered
+    if (!gName && !gPhone && !gEmail) continue;
+
+    const guardianDisplayName = gName || 'Guardian';
+    const digits = extractDigits(gPhone);
+    const keyWithDigits = `${normalizeKey(guardianDisplayName)}|${digits}`;
+    const keyNameOnly = normalizeKey(guardianDisplayName);
+
+    let existing = (digits ? guardianLookup.get(keyWithDigits) : null) || guardianLookup.get(keyNameOnly);
+
+    const studentSummary = {
+      student_id: sid,
+      displayName: displayStudentName(st as Record<string, unknown>),
+      current_class: String(st.current_class ?? '—'),
+    };
+
+    if (existing) {
+      if (!existing.students.some((s) => s.student_id === sid)) {
+        existing.students.push(studentSummary);
+        existing.childCount = existing.students.length;
+        existing.has_linked_students = true;
+      }
+      if (!existing.phone && gPhone) existing.phone = gPhone;
+      if (!existing.email && gEmail) existing.email = gEmail;
+      if (!existing.relationship && gRel) existing.relationship = gRel;
+      if (!existing.occupation && gOcc) existing.occupation = gOcc;
+      existing.missingContact = parentMissingContact(existing.email, existing.phone);
+    } else {
+      const syntheticParentId = `guardian_${sid}`;
+      const newGuardianRow: ParentDirectoryRow = {
+        parent_id: syntheticParentId,
+        name: guardianDisplayName,
+        email: gEmail,
+        phone: gPhone,
+        relationship: gRel,
+        occupation: gOcc,
+        nin: null,
+        students: [studentSummary],
+        portal_active: false,
+        has_linked_students: true,
+        has_parent_user: false,
+        created_at: pickStr(st.created_at) || null,
+        childCount: 1,
+        totalOutstanding: 0,
+        hasOutstanding: false,
+        missingContact: parentMissingContact(gEmail, gPhone),
+      };
+
+      parentKeyMap.set(syntheticParentId, newGuardianRow);
+      if (digits) guardianLookup.set(keyWithDigits, newGuardianRow);
+      guardianLookup.set(keyNameOnly, newGuardianRow);
+    }
+  }
+
+  // Also include offline fallback students if online query didn't return them
+  for (const ost of offlineFallbackStudents) {
+    const sid = ost.student_id;
+    const gName = pickStr(ost.parent_name);
+    const gPhone = pickStr(ost.parent_phone);
+    if (!gName && !gPhone) continue;
+
+    const guardianDisplayName = gName || 'Guardian';
+    const digits = extractDigits(gPhone);
+    const keyWithDigits = `${normalizeKey(guardianDisplayName)}|${digits}`;
+    const keyNameOnly = normalizeKey(guardianDisplayName);
+
+    let existing = (digits ? guardianLookup.get(keyWithDigits) : null) || guardianLookup.get(keyNameOnly);
+    const studentSummary = {
+      student_id: sid,
+      displayName: ost.student_name,
+      current_class: ost.class_name || '—',
+    };
+
+    if (existing) {
+      if (!existing.students.some((s) => s.student_id === sid)) {
+        existing.students.push(studentSummary);
+        existing.childCount = existing.students.length;
+        existing.has_linked_students = true;
+      }
+      if (!existing.phone && gPhone) existing.phone = gPhone;
+    } else {
+      const syntheticParentId = `guardian_${sid}`;
+      const newGuardianRow: ParentDirectoryRow = {
+        parent_id: syntheticParentId,
+        name: guardianDisplayName,
+        email: null,
+        phone: gPhone,
+        relationship: 'Guardian',
+        occupation: null,
+        nin: null,
+        students: [studentSummary],
+        portal_active: false,
+        has_linked_students: true,
+        has_parent_user: false,
+        created_at: null,
+        childCount: 1,
+        totalOutstanding: 0,
+        hasOutstanding: false,
+        missingContact: parentMissingContact(null, gPhone),
+      };
+
+      parentKeyMap.set(syntheticParentId, newGuardianRow);
+      if (digits) guardianLookup.set(keyWithDigits, newGuardianRow);
+      guardianLookup.set(keyNameOnly, newGuardianRow);
+    }
+  }
+
+  // 5. Compute real-time outstanding balances across all linked students
+  let balanceByStudent = new Map<string, { balance: number }>();
+  try {
+    balanceByStudent = await loadOutstandingBalanceAggByStudentAllTerms(supabase, schoolId);
+  } catch {
+    // fallback gracefully
+  }
+
+  const enrichedRows: ParentDirectoryRow[] = Array.from(parentKeyMap.values()).map((r) => {
     let totalOutstanding = 0;
     let hasOutstanding = false;
     for (const st of r.students) {
@@ -269,17 +368,15 @@ export async function fetchParentsDirectory(userId: string): Promise<{ rows: Par
     }
     return {
       ...r,
-      childCount: r.students.length,
       totalOutstanding,
       hasOutstanding,
-      missingContact: parentMissingContact(r.email, r.phone),
     };
   });
 
-  const totalParents = (parentUsers || []).length;
-  const linkedParents = linkedParentIds.size;
-  const unlinkedParents = (parentUsers || []).filter((u) => !linkedParentIds.has(u.user_id as string)).length;
-  const portalParents = (parentUsers || []).filter((u) => (u as { is_active?: boolean }).is_active !== false).length;
+  const totalParents = enrichedRows.length;
+  const linkedParents = enrichedRows.filter((r) => r.has_linked_students).length;
+  const portalParents = enrichedRows.filter((r) => r.portal_active).length;
+  const unlinkedParents = enrichedRows.filter((r) => !r.has_linked_students).length;
 
   return {
     rows: enrichedRows,
@@ -292,118 +389,85 @@ export async function fetchParentsDirectory(userId: string): Promise<{ rows: Par
   };
 }
 
+type SortKey = 'name-asc' | 'name-desc' | 'children' | 'outstanding' | 'recent';
+
 export default function DesignParentsPage() {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const theme = useUIStore((s) => s.theme);
   const user = useAuthStore((s) => s.user);
+  const schoolId = useAuthStore((s) => s.schoolId);
+  const { isTertiary } = useSchoolType();
 
-  /** Same query key as AddParentForm — runs as soon as this page mounts so the modal hits a warm cache. */
-  useQuery({
-    queryKey: addParentSchoolQueryKey(user?.id ?? ''),
-    queryFn: () => fetchAddParentSchoolContext(user!.id),
-    enabled: !!user?.id,
-    ...addParentSchoolStaleOptions,
-  });
-
-  const addParentModalOpen = searchParams.get('add') === '1';
-  const sidebarFilter = (searchParams.get('filter') || 'all').toLowerCase();
-
-  const closeAddParentModal = () => {
-    setSearchParams(
-      (prev) => {
-        const p = new URLSearchParams(prev);
-        p.delete('add');
-        return p;
-      },
-      { replace: true }
-    );
-  };
-  const containerRef = useRef<HTMLDivElement>(null);
-  const lastInjectedHtmlRef = useRef<string | null>(null);
-  const [htmlContent, setHtmlContent] = useState('');
-
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState(() => {
-    if (sidebarFilter === 'outstanding' || sidebarFilter === 'missing_contact') {
-      return sidebarFilter;
-    }
-    return '';
-  });
+  const [q, setQ] = useState('');
+  const [relationshipFilter, setRelationshipFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [sortKey, setSortKey] = useState<SortKey>('name-asc');
   const [page, setPage] = useState(1);
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>(() => {
-    try {
-      return (localStorage.getItem('pwezacore-parents-view') as 'list' | 'grid') || 'list';
-    } catch {
-      return 'list';
-    }
-  });
-  useEffect(() => {
-    const id = 'pweza-parents-fonts';
-    if (!document.getElementById(id)) {
-      const link = document.createElement('link');
-      link.id = id;
-      link.rel = 'stylesheet';
-      link.href = PARENTS_FONT_HREF;
-      document.head.appendChild(link);
-    }
-  }, []);
 
-  useEffect(() => {
-    setHtmlContent(parseInjectedHtml(parentsTemplateRaw));
-  }, []);
-
-  const { data, isPending } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: adminQueryKeys.parentsDesign(user?.id ?? ''),
     queryFn: () => fetchParentsDirectory(user!.id),
     enabled: !!user?.id,
-    staleTime: ADMIN_STALE_TIME_MS,
-    gcTime: ADMIN_GC_TIME_MS,
-    placeholderData: keepPreviousData,
-    refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: schoolData } = useQuery({
+    queryKey: ['school-details', schoolId ?? ''],
+    queryFn: async () => {
+      const { data } = await supabase.from('schools').select('name').eq('school_id', schoolId!).single();
+      return (data as { name?: string } | null)?.name ?? 'Rakai Community School of Nursing';
+    },
+    enabled: !!schoolId,
+    staleTime: 60 * 60 * 1000,
   });
 
   const allRows = data?.rows ?? [];
-  const stats = data?.stats;
-
-  /** If React ever dropped imperative KPI updates, derive from rows so counts stay consistent with the table. */
-  const effectiveStats = useMemo((): ParentsStats | null => {
-    if (stats) return stats;
-    if (!allRows.length) return null;
-    return {
-      totalParents: allRows.length,
-      linkedParents: allRows.filter((r) => r.has_linked_students).length,
-      portalParents: allRows.filter((r) => r.portal_active).length,
-      unlinkedParents: allRows.filter((r) => !r.has_linked_students).length,
-    };
-  }, [stats, allRows]);
 
   const filteredSorted = useMemo(() => {
     let out = [...allRows];
-    const q = searchQuery.trim().toLowerCase();
-    if (q) {
+    const query = q.trim().toLowerCase();
+
+    if (query) {
       out = out.filter((p) => {
-        const childMatch = p.students.some((s) => s.displayName.toLowerCase().includes(q));
+        const studentMatch = p.students.some((s) => s.displayName.toLowerCase().includes(query));
+        const classMatch = p.students.some((s) => s.current_class.toLowerCase().includes(query));
         return (
-          (p.name || '').toLowerCase().includes(q) ||
-          (p.email || '').toLowerCase().includes(q) ||
-          (p.phone || '').includes(searchQuery.trim()) ||
-          childMatch
+          (p.name || '').toLowerCase().includes(query) ||
+          (p.email || '').toLowerCase().includes(query) ||
+          (p.phone || '').includes(q.trim()) ||
+          (p.nin || '').toLowerCase().includes(query) ||
+          (p.occupation || '').toLowerCase().includes(query) ||
+          studentMatch ||
+          classMatch
         );
       });
     }
+
+    // Relationship filter
+    if (relationshipFilter !== 'all') {
+      out = out.filter((p) => {
+        const rel = (p.relationship || '').toLowerCase();
+        if (relationshipFilter === 'mother') return rel.includes('mother');
+        if (relationshipFilter === 'father') return rel.includes('father');
+        if (relationshipFilter === 'guardian') return rel.includes('guardian');
+        if (relationshipFilter === 'sponsor') return rel.includes('sponsor') || rel.includes('ngo');
+        if (relationshipFilter === 'relative') return rel.includes('relative') || rel.includes('sibling');
+        if (relationshipFilter === 'other') {
+          return !rel.includes('mother') && !rel.includes('father') && !rel.includes('guardian') && !rel.includes('sponsor');
+        }
+        return true;
+      });
+    }
+
+    // Status filter
     if (statusFilter === 'linked') out = out.filter((p) => p.has_linked_students);
     if (statusFilter === 'unlinked') out = out.filter((p) => !p.has_linked_students);
     if (statusFilter === 'portal') out = out.filter((p) => p.portal_active);
-    if (statusFilter === 'no-portal') out = out.filter((p) => p.has_parent_user && !p.portal_active);
+    if (statusFilter === 'no-portal') out = out.filter((p) => !p.portal_active);
     if (statusFilter === 'outstanding') out = out.filter((p) => p.hasOutstanding);
     if (statusFilter === 'missing_contact') out = out.filter((p) => p.missingContact);
 
-    if (sidebarFilter === 'outstanding' && !statusFilter) out = out.filter((p) => p.hasOutstanding);
-    if (sidebarFilter === 'missing_contact' && !statusFilter) out = out.filter((p) => p.missingContact);
-
+    // Sorting
     out.sort((a, b) => {
       const an = (a.name || '').toLowerCase();
       const bn = (b.name || '').toLowerCase();
@@ -412,447 +476,479 @@ export default function DesignParentsPage() {
           return bn.localeCompare(an);
         case 'children':
           return b.students.length - a.students.length || an.localeCompare(bn);
+        case 'outstanding':
+          return b.totalOutstanding - a.totalOutstanding || an.localeCompare(bn);
         case 'recent': {
           const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
           const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
           return tb - ta;
         }
+        case 'name-asc':
         default:
           return an.localeCompare(bn);
       }
     });
+
     return out;
-  }, [allRows, searchQuery, statusFilter, sortKey, sidebarFilter]);
+  }, [allRows, q, relationshipFilter, statusFilter, sortKey]);
 
   const totalPages = Math.max(1, Math.ceil(filteredSorted.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
-
-  useEffect(() => {
-    setPage((p) => Math.min(p, totalPages));
-  }, [totalPages]);
-
   const startIdx = filteredSorted.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
   const endIdx = Math.min(safePage * PAGE_SIZE, filteredSorted.length);
+  const pageSlice = filteredSorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
-  const renderTableAndGrid = useCallback(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const root = el.querySelector('.pw-parents') || el;
-    const start = (safePage - 1) * PAGE_SIZE;
-    const pageSlice = filteredSorted.slice(start, start + PAGE_SIZE);
-
-    const setKpi = (sel: string, val: string) => {
-      const n = root.querySelector(sel);
-      if (n) n.textContent = val;
-    };
-    const initialLoad = !data && allRows.length === 0 && isPending;
-    const k = effectiveStats;
-    const kpiVals = {
-      total: initialLoad ? '—' : String(k?.totalParents ?? allRows.length),
-      linked: initialLoad ? '—' : String(k?.linkedParents ?? 0),
-      portal: initialLoad ? '—' : String(k?.portalParents ?? 0),
-      unlinked: initialLoad ? '—' : String(k?.unlinkedParents ?? 0),
-    };
-    setKpi('[data-kpi="total-parents"]', kpiVals.total);
-    setKpi('[data-kpi="linked-parents"]', kpiVals.linked);
-    setKpi('[data-kpi="portal-parents"]', kpiVals.portal);
-    setKpi('[data-kpi="unlinked-parents"]', kpiVals.unlinked);
-
-    const filterBannerEl = root.querySelector('#par-filter-banner') as HTMLElement | null;
-    if (filterBannerEl) {
-      const activeFilter = statusFilter || (sidebarFilter !== 'all' ? sidebarFilter : '');
-      if (activeFilter === 'outstanding') {
-        filterBannerEl.style.display = 'block';
-        filterBannerEl.textContent = 'Showing: Parents with outstanding balances';
-      } else if (activeFilter === 'missing_contact') {
-        filterBannerEl.style.display = 'block';
-        filterBannerEl.textContent = 'Showing: Parents with missing contact information';
-      } else if (activeFilter === 'linked') {
-        filterBannerEl.style.display = 'block';
-        filterBannerEl.textContent = 'Showing: Parents with linked students';
-      } else if (activeFilter === 'unlinked') {
-        filterBannerEl.style.display = 'block';
-        filterBannerEl.textContent = 'Showing: Unlinked parents (no student assigned)';
-      } else if (activeFilter === 'portal') {
-        filterBannerEl.style.display = 'block';
-        filterBannerEl.textContent = 'Showing: Parents with active portal access';
-      } else if (activeFilter === 'no-portal') {
-        filterBannerEl.style.display = 'block';
-        filterBannerEl.textContent = 'Showing: Parents without active portal access';
-      } else {
-        filterBannerEl.style.display = 'none';
-      }
+  const handleRefresh = () => {
+    if (user?.id) {
+      void queryClient.invalidateQueries({
+        queryKey: adminQueryKeys.parentsDesign(user.id),
+      });
     }
+  };
 
-    const info = root.querySelector('#par-page-info');
-    if (info) {
-      info.innerHTML =
-        filteredSorted.length === 0
-          ? 'Showing <strong>0</strong> of <strong>0</strong> parents'
-          : `Showing <strong>${startIdx}</strong>–<strong>${endIdx}</strong> of <strong>${filteredSorted.length}</strong> parents`;
-    }
+  const handlePrint = () => {
+    downloadParentListPdf(
+      filteredSorted.map((r) => ({
+        id: r.parent_id,
+        name: r.name,
+        email: r.email,
+        phone: r.phone,
+        student_name: r.students.map((s) => s.displayName).join(', ') || '—',
+        student_class: r.students.map((s) => s.current_class).join(', ') || '—',
+        created_at: r.created_at,
+      })),
+      schoolData ?? undefined
+    );
+  };
 
-    // Manage List (Table) vs Grid view display
-    const listView = root.querySelector('#par-list-view') as HTMLElement | null;
-    const gridView = root.querySelector('#par-grid-view') as HTMLElement | null;
-    const listBtn = root.querySelector('#par-list-btn') as HTMLElement | null;
-    const gridBtn = root.querySelector('#par-grid-btn') as HTMLElement | null;
-
-    if (listView && gridView) {
-      if (viewMode === 'list') {
-        listView.style.display = 'block';
-        gridView.style.display = 'none';
-        listBtn?.classList.add('active');
-        gridBtn?.classList.remove('active');
-      } else {
-        listView.style.display = 'none';
-        gridView.style.display = 'block';
-        listBtn?.classList.remove('active');
-        gridBtn?.classList.add('active');
-      }
-    }
-
-    // Populate Table View
-    const tableBody = root.querySelector('#par-table-body');
-    if (tableBody) {
-      if (pageSlice.length === 0) {
-        tableBody.innerHTML = initialLoad
-          ? `<div style="padding:40px;text-align:center;color:var(--t2);font-size:13px">Loading parents…</div>`
-          : `<div style="padding:40px;text-align:center;color:var(--t3);font-size:13px">No parents found.</div>`;
-      } else {
-        tableBody.innerHTML = pageSlice
-          .map((p, i) => {
-            const ini = initials(p.name);
-            const bg = grad(start + i);
-            const rel = (p.relationship || 'Guardian').toLowerCase();
-            const phone = String(p.phone ?? '').trim();
-            const email = String(p.email ?? '').trim();
-            return `
-            <div class="par-trow" data-nav="/dashboard/admin/parents/${escapeHtml(p.parent_id)}" style="cursor:pointer">
-              <div class="par-td">
-                <div class="par-cell">
-                  <div class="par-av" style="background:${bg}">${escapeHtml(ini)}</div>
-                  <div>
-                    <div class="par-name">${escapeHtml(p.name)}</div>
-                    <div class="par-sub" style="font-size:11.5px;color:var(--t3)">${escapeHtml(p.relationship || 'Guardian')}</div>
-                  </div>
-                </div>
-              </div>
-              <div class="par-td">
-                ${
-                  p.students.length > 0
-                    ? p.students
-                        .map(
-                          (s) =>
-                            `<span class="par-stag" data-nav="/dashboard/admin/students/${escapeHtml(
-                              s.student_id
-                            )}" onclick="event.stopPropagation()">${escapeHtml(s.displayName)} (${escapeHtml(
-                              s.current_class
-                            )})</span>`
-                        )
-                        .join('')
-                    : '<span class="par-td muted">No child linked</span>'
-                }
-              </div>
-              <div class="par-td">
-                <span class="par-chip ${rel === 'mother' ? 'teal' : 'violet'}" style="font-size:11px;padding:2px 8px">${escapeHtml(
-                  p.relationship || 'Guardian'
-                )}</span>
-              </div>
-              <div class="par-td">
-                <div>${
-                  phone
-                    ? `<a href="tel:${phone.replace(/\s/g, '')}" onclick="event.stopPropagation()">${escapeHtml(phone)}</a>`
-                    : '<span class="par-td muted">—</span>'
-                }</div>
-                <div style="font-size:11px;color:var(--blue)">${email ? escapeHtml(email) : ''}</div>
-              </div>
-              <div class="par-td">${p.occupation ? escapeHtml(p.occupation) : '<span class="par-td muted">—</span>'}</div>
-              <div class="par-td">
-                <span class="par-chip ${p.portal_active ? 'green' : 'rose'}" style="font-size:11px;padding:2px 8px">${
-                  p.portal_active ? 'Active' : 'No Portal'
-                }</span>
-              </div>
-              <div class="par-td" style="justify-content:flex-end;display:flex;gap:6px" onclick="event.stopPropagation()">
-                <button type="button" class="par-crd-btn par-crd-primary" data-nav="/dashboard/admin/parents/${escapeHtml(
-                  p.parent_id
-                )}">View Profile</button>
-              </div>
-            </div>`;
-          })
-          .join('');
-      }
-    }
-
-    // Populate Card Grid View
-    const cardGrid = root.querySelector('#par-card-grid');
-    if (cardGrid) {
-      if (pageSlice.length === 0) {
-        cardGrid.innerHTML = initialLoad
-          ? `<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--t2);font-size:13px">Loading parents…</div>`
-          : `<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--t3);font-size:13px">No parents found.</div>`;
-      } else {
-        cardGrid.innerHTML = pageSlice
-          .map((p, i) => {
-            const ini = initials(p.name);
-            const bg = grad(start + i);
-            const portalDotColor = p.portal_active ? 'var(--green)' : 'var(--t3)';
-            const portalChip = p.portal_active
-              ? `<span class="par-chip green" style="font-size:11px;padding:2px 8px">Active</span>`
-              : `<span class="par-chip rose" style="font-size:11px;padding:2px 8px">No Portal</span>`;
-            const rel = (p.relationship || 'Guardian').toLowerCase();
-            const cornerChip = p.relationship
-              ? `<span class="par-chip ${rel === 'mother' ? 'teal' : 'violet'}" style="font-size:10.5px;padding:2px 8px">${escapeHtml(p.relationship)}</span>`
-              : `<span class="par-chip muted" style="font-size:10.5px;padding:2px 8px">—</span>`;
-            const kids =
-              p.students.length === 0
-                ? ''
-                : `<div class="par-pcard-kids">${p.students
-                    .map(
-                      (s) =>
-                        `<span class="par-stag" data-nav="/dashboard/admin/students/${escapeHtml(s.student_id)}">${escapeHtml(s.displayName)} · ${escapeHtml(s.current_class)}</span>`
-                    )
-                    .join('')}</div>`;
-            const phone = String(p.phone ?? '').trim();
-            const email = String(p.email ?? '').trim();
-            return `
-              <div class="par-pcard" data-nav="/dashboard/admin/parents/${escapeHtml(p.parent_id)}" style="cursor:pointer">
-                <div class="par-pcard-top">
-                  <div class="par-pcard-av" style="background:${bg};position:relative">
-                    ${escapeHtml(ini)}
-                    <div style="position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:${portalDotColor};border:2px solid var(--s2)"></div>
-                  </div>
-                  <div class="par-pcard-name">${escapeHtml(p.name)}</div>
-                  <div class="par-pcard-rel">${escapeHtml(p.relationship || 'Guardian')}</div>
-                  <div class="par-pcard-corner">${cornerChip}</div>
-                </div>
-                <div class="par-pcard-body">
-                  <div class="par-pcard-row">
-                    <span class="par-pcard-label">Phone</span>
-                    <span class="par-pcard-val">${phone ? `<a href="tel:${phone.replace(/\s/g, '')}" onclick="event.stopPropagation()">${escapeHtml(phone)}</a>` : '<span style="color:var(--t3);font-style:italic">—</span>'}</span>
-                  </div>
-                  <div class="par-pcard-row">
-                    <span class="par-pcard-label">Email</span>
-                    <span class="par-pcard-val" style="font-size:12px;color:var(--blue)">${email ? escapeHtml(email) : '<span style="color:var(--t3);font-style:italic">—</span>'}</span>
-                  </div>
-                  <div class="par-pcard-row">
-                    <span class="par-pcard-label">Occupation</span>
-                    <span class="par-pcard-val">${p.occupation ? escapeHtml(p.occupation) : '<span style="color:var(--t3);font-style:italic">—</span>'}</span>
-                  </div>
-                  <div class="par-pcard-row">
-                    <span class="par-pcard-label">Portal</span>
-                    ${portalChip}
-                  </div>
-                  <div class="par-pcard-row">
-                    <span class="par-pcard-label">Children</span>
-                    <span class="par-pcard-val">${p.childCount}</span>
-                  </div>
-                  <div class="par-pcard-row">
-                    <span class="par-pcard-label">Total outstanding</span>
-                    <span class="par-pcard-val" style="${p.hasOutstanding ? 'color:var(--amber);font-weight:600' : ''}">${escapeHtml(fmtUGXParents(p.totalOutstanding))}</span>
-                  </div>
-                </div>
-                ${kids}
-                <div class="par-pcard-foot">
-                  <button type="button" class="par-crd-btn par-crd-ghost" onclick="event.stopPropagation()">Message</button>
-                  <button type="button" class="par-crd-btn par-crd-primary" data-nav="/dashboard/admin/parents/${escapeHtml(p.parent_id)}">View Profile →</button>
-                </div>
-              </div>`;
-          })
-          .join('');
-      }
-    }
-
-    const pageBtns = root.querySelector('#par-page-btns');
-    if (pageBtns) {
-      if (totalPages <= 1) {
-        pageBtns.innerHTML = '';
-      } else {
-        const pages: string[] = [];
-        pages.push(`<button type="button" class="par-pbtn" ${safePage === 1 ? 'disabled' : ''} data-page="prev">‹</button>`);
-        for (let i = 1; i <= totalPages; i++) {
-          if (i === 1 || i === totalPages || Math.abs(i - safePage) <= 1) {
-            pages.push(`<button type="button" class="par-pbtn ${i === safePage ? 'active' : ''}" data-page="${i}">${i}</button>`);
-          } else if (Math.abs(i - safePage) === 2) {
-            pages.push(`<span class="par-pbtn" style="pointer-events:none;border:none;background:transparent">…</span>`);
-          }
-        }
-        pages.push(`<button type="button" class="par-pbtn" ${safePage === totalPages ? 'disabled' : ''} data-page="next">›</button>`);
-        pageBtns.innerHTML = pages.join('');
-      }
-    }
-
-    const statusSel = root.querySelector('#par-status-filter') as HTMLSelectElement | null;
-    if (statusSel) statusSel.value = statusFilter;
-
-    const sortSel = root.querySelector('#par-sort-select') as HTMLSelectElement | null;
-    if (sortSel) sortSel.value = sortKey;
-  }, [
-    data,
-    isPending,
-    effectiveStats,
-    allRows.length,
-    filteredSorted,
-    safePage,
-    startIdx,
-    endIdx,
-    totalPages,
-    statusFilter,
-    sortKey,
-    sidebarFilter,
-    viewMode,
-  ]);
-
-  // Inject template once per htmlContent string — React must NOT re-apply dangerouslySetInnerHTML on every
-  // state change or KPI/table updates are wiped (same fix as teachers / admin design dashboard).
-  useLayoutEffect(() => {
-    const el = containerRef.current;
-    if (!el || !htmlContent) return;
-    if (lastInjectedHtmlRef.current !== htmlContent) {
-      el.innerHTML = htmlContent;
-      lastInjectedHtmlRef.current = htmlContent;
-    }
-    requestAnimationFrame(() => renderTableAndGrid());
-  }, [htmlContent, renderTableAndGrid]);
-
-  useEffect(() => {
-    if (!htmlContent || !containerRef.current) return;
-    const root = containerRef.current;
-
-    const onNav = (e: Event) => {
-      const t = (e.target as HTMLElement | null)?.closest('[data-nav]');
-      if (!t) return;
-      e.preventDefault();
-      const href = t.getAttribute('data-nav');
-      if (href) navigate(href);
-    };
-    root.addEventListener('click', onNav);
-
-    const searchEl = root.querySelector('#par-search') as HTMLInputElement | null;
-    const statusEl = root.querySelector('#par-status-filter') as HTMLSelectElement | null;
-    const sortEl = root.querySelector('#par-sort-select') as HTMLSelectElement | null;
-
-    const onSearch = () => {
-      if (searchEl) setSearchQuery(searchEl.value);
-      setPage(1);
-    };
-    const onStatus = () => {
-      if (statusEl) {
-        setStatusFilter(statusEl.value);
-        if (searchParams.get('filter')) {
-          setSearchParams(
-            (prev) => {
-              const p = new URLSearchParams(prev);
-              p.delete('filter');
-              return p;
-            },
-            { replace: true }
-          );
-        }
-      }
-      setPage(1);
-    };
-    const onSort = () => {
-      if (sortEl) setSortKey((sortEl.value || 'name-asc') as SortKey);
-      setPage(1);
-    };
-
-    searchEl?.addEventListener('input', onSearch);
-    statusEl?.addEventListener('change', onStatus);
-    sortEl?.addEventListener('change', onSort);
-
-    const onPageClick = (e: Event) => {
-      const btn = (e.target as HTMLElement | null)?.closest('[data-page]') as HTMLButtonElement | null;
-      if (!btn || btn.disabled) return;
-      const p = btn.dataset.page;
-      if (p === 'prev') setPage((x) => Math.max(1, x - 1));
-      else if (p === 'next') setPage((x) => Math.min(totalPages, x + 1));
-      else if (p) setPage(Number(p));
-    };
-    const pageBtnsEl = root.querySelector('#par-page-btns');
-    pageBtnsEl?.addEventListener('click', onPageClick);
-
-    const onAdd = () => {
-      setSearchParams(
-        (prev) => {
-          const p = new URLSearchParams(prev);
-          p.set('add', '1');
-          return p;
-        },
-        { replace: true }
-      );
-    };
-    const onAddStudent = () => navigate('/dashboard/admin/students?add=1');
-    const onAddTeacher = () => navigate('/dashboard/admin/teachers?add=1');
-    const onInvite = () => window.alert('Bulk portal invite will be available in a future update.');
-    root.querySelector('#par-btn-add')?.addEventListener('click', onAdd);
-    root.querySelector('#par-btn-add-student')?.addEventListener('click', onAddStudent);
-    root.querySelector('#par-btn-add-teacher')?.addEventListener('click', onAddTeacher);
-    root.querySelector('#par-btn-invite')?.addEventListener('click', onInvite);
-
-    const listBtnEl = root.querySelector('#par-list-btn');
-    const gridBtnEl = root.querySelector('#par-grid-btn');
-    const onListClick = () => {
-      setViewMode('list');
-      try { localStorage.setItem('pwezacore-parents-view', 'list'); } catch {}
-    };
-    const onGridClick = () => {
-      setViewMode('grid');
-      try { localStorage.setItem('pwezacore-parents-view', 'grid'); } catch {}
-    };
-    listBtnEl?.addEventListener('click', onListClick);
-    gridBtnEl?.addEventListener('click', onGridClick);
-
-    return () => {
-      root.removeEventListener('click', onNav);
-      searchEl?.removeEventListener('input', onSearch);
-      statusEl?.removeEventListener('change', onStatus);
-      sortEl?.removeEventListener('change', onSort);
-      pageBtnsEl?.removeEventListener('click', onPageClick);
-      root.querySelector('#par-btn-add')?.removeEventListener('click', onAdd);
-      root.querySelector('#par-btn-add-student')?.removeEventListener('click', onAddStudent);
-      root.querySelector('#par-btn-add-teacher')?.removeEventListener('click', onAddTeacher);
-      root.querySelector('#par-btn-invite')?.removeEventListener('click', onInvite);
-      listBtnEl?.removeEventListener('click', onListClick);
-      gridBtnEl?.removeEventListener('click', onGridClick);
-    };
-  }, [htmlContent, navigate, totalPages, setSearchParams]);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const sync = () =>
-      document.documentElement.classList.toggle('light', !document.documentElement.classList.contains('dark'));
-    sync();
-    const obs = new MutationObserver(sync);
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] });
-    return () => obs.disconnect();
-  }, [htmlContent]);
-
-  const showSkeleton = Boolean(user?.id && isPending && !data);
+  const handleExportCsv = () => {
+    if (!filteredSorted.length) return;
+    const headers = ['#', 'Full Name', 'Relationship', 'Linked Trainees', 'Phone', 'Email', 'NIN', 'Account Balance (UGX)', 'Portal Access'];
+    const rows = filteredSorted.map((r, i) => [
+      i + 1,
+      `"${(r.name || '').replace(/"/g, '""')}"`,
+      `"${(r.relationship || 'Guardian').replace(/"/g, '""')}"`,
+      `"${r.students.map((s) => `${s.displayName} (${s.current_class})`).join('; ').replace(/"/g, '""')}"`,
+      `"${r.phone || ''}"`,
+      `"${r.email || ''}"`,
+      `"${r.nin || ''}"`,
+      r.totalOutstanding > 0 ? r.totalOutstanding : 0,
+      r.portal_active ? 'Active' : 'Inactive',
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `parents-sponsors-registry-${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
-    <>
-      <style>{PARENTS_MOTION_KILL}</style>
-      {showSkeleton && (
-        <div style={{ padding: '26px 28px' }}>
-          <SkeletonKPIStrip count={4} />
-          <SkeletonTable rows={6} cols={7} />
+    <AdminPageWrapper>
+      <div className="space-y-4">
+        {/* ── 1. TOP HEADER (MATCHING STUDENTS & TRAINEES REGISTRY) ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-[17px] font-bold tracking-tight text-[#111111] uppercase font-sans m-0">
+              {isTertiary ? 'Parents & Sponsors Registry' : 'Parents & Guardians Registry'}
+            </h1>
+            <span className="inline-flex items-center px-2 py-0.5 text-[11px] font-mono font-bold bg-[#EAEAEA] text-[#222222] border border-[#CCCCCC]">
+              {filteredSorted.length} {filteredSorted.length === 1 ? 'RECORD' : 'RECORDS'}
+            </span>
+          </div>
+
+          {/* Action Button Group */}
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            {/* Export */}
+            <button
+              type="button"
+              className="gov-btn gov-btn-sm flex-1 sm:flex-initial justify-center whitespace-nowrap"
+              onClick={handleExportCsv}
+              title="Export registry to CSV"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Export</span>
+            </button>
+
+            {/* Print Roster */}
+            <button
+              type="button"
+              className="gov-btn gov-btn-sm flex-1 sm:flex-initial justify-center whitespace-nowrap"
+              onClick={handlePrint}
+              title="Print official parent directory"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>Print Roster</span>
+            </button>
+
+            {/* Refresh */}
+            <button
+              type="button"
+              className="gov-btn gov-btn-sm flex-1 sm:flex-initial justify-center whitespace-nowrap"
+              onClick={handleRefresh}
+              title="Refresh database"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Refresh</span>
+            </button>
+
+            {/* Add Parent / Sponsor Primary CTA */}
+            <button
+              type="button"
+              className="gov-btn gov-btn-sm gov-btn-primary flex-1 sm:flex-initial justify-center whitespace-nowrap"
+              onClick={() => navigate('/dashboard/admin/parents/add')}
+              title={isTertiary ? 'Add New Guardian or Sponsor' : 'Add New Parent'}
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>{isTertiary ? 'Add Guardian / Sponsor' : 'Add Parent'}</span>
+            </button>
+          </div>
         </div>
-      )}
-      <div ref={containerRef} data-theme={theme} style={{ width: '100%', minHeight: showSkeleton ? '0' : '100vh', display: showSkeleton ? 'none' : 'block' }} />
-      <NativeModal isOpen={addParentModalOpen} onClose={closeAddParentModal} title="Add parent" size="lg">
-        <AddParentForm
-          mode="modal"
-          onCompleted={() => {
-            closeAddParentModal();
-            if (user?.id) {
-              void queryClient.invalidateQueries({ queryKey: adminQueryKeys.parentsDesign(user.id) });
-              void queryClient.invalidateQueries({ queryKey: addParentSchoolQueryKey(user.id) });
-            }
-          }}
-          onCancel={closeAddParentModal}
-        />
-      </NativeModal>
-    </>
+
+        {/* ── 2. TOP CONTROL BAR (FRAMED IN SOLID BORDERS) ── */}
+        <div className="gov-control-bar">
+          <div className="gov-control-bar-left">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="w-3.5 h-3.5 text-[#555555] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                className="gov-input pl-8 font-mono text-xs"
+                placeholder="Search by Name, Trainee name, Phone, Email, NIN, or Organization…"
+                value={q}
+                onChange={(e) => {
+                  setQ(e.target.value);
+                  setPage(1);
+                }}
+              />
+            </div>
+
+            {/* Relationship Filter */}
+            <select
+              className="gov-select w-auto text-xs"
+              value={relationshipFilter}
+              onChange={(e) => {
+                setRelationshipFilter(e.target.value);
+                setPage(1);
+              }}
+              aria-label="Filter Relationship"
+            >
+              <option value="all">Role: All Relationships</option>
+              <option value="mother">Role: Mother</option>
+              <option value="father">Role: Father</option>
+              <option value="guardian">Role: Legal Guardian</option>
+              <option value="sponsor">Role: Sponsor / NGO</option>
+              <option value="relative">Role: Relative</option>
+              <option value="other">Role: Other</option>
+            </select>
+
+            {/* Status Filter */}
+            <select
+              className="gov-select w-auto text-xs"
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(1);
+              }}
+              aria-label="Filter Status"
+            >
+              <option value="all">Status: All Records</option>
+              <option value="linked">Status: Linked to Trainee</option>
+              <option value="unlinked">Status: Unlinked (No Trainee)</option>
+              <option value="portal">Status: Active Portal</option>
+              <option value="no-portal">Status: Inactive Portal</option>
+              <option value="outstanding">Status: Outstanding Balance</option>
+              <option value="missing_contact">Status: Missing Contact</option>
+            </select>
+
+            {/* Sort Dropdown */}
+            <select
+              className="gov-select w-auto text-xs"
+              value={sortKey}
+              onChange={(e) => {
+                setSortKey(e.target.value as SortKey);
+                setPage(1);
+              }}
+              aria-label="Sort Records"
+            >
+              <option value="name-asc">Sort: Name (A–Z)</option>
+              <option value="name-desc">Sort: Name (Z–A)</option>
+              <option value="children">Sort: Most Trainees</option>
+              <option value="outstanding">Sort: Highest Outstanding</option>
+              <option value="recent">Sort: Enrollment Date</option>
+            </select>
+          </div>
+        </div>
+
+        {/* ── 3. DATA GRID TABLE (HIGH-DENSITY MINIMALIST DESIGN) ── */}
+        <div className="gov-desktop-table-view">
+          <div className="gov-table-container">
+            <table className="gov-table">
+              <thead>
+                <tr>
+                  <th>Guardian / Sponsor Name</th>
+                  <th>Relationship</th>
+                  <th>Associated Trainee(s)</th>
+                  <th>Contact Phone</th>
+                  <th>Email Address</th>
+                  <th>National ID / NIN</th>
+                  <th>Financial Balance</th>
+                  <th>Portal Access</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={9} className="text-center py-8 text-[#555555]">
+                      Loading official parents &amp; sponsors database...
+                    </td>
+                  </tr>
+                ) : pageSlice.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="text-center py-8 text-[#555555]">
+                      No guardian or sponsor records matched the specified filters.
+                    </td>
+                  </tr>
+                ) : (
+                  pageSlice.map((r) => {
+                    const hasStudents = r.students.length > 0;
+                    return (
+                      <tr key={r.parent_id}>
+                        {/* 1. Full Name */}
+                        <td className="font-semibold text-[#111111]">
+                          <button
+                            type="button"
+                            className="text-left hover:text-emerald-700 hover:underline transition-colors block"
+                            onClick={() => navigate(`/dashboard/admin/parents/${r.parent_id}`)}
+                          >
+                            {r.name}
+                          </button>
+                          {r.occupation && (
+                            <div className="text-[10px] text-[#666666] font-normal truncate max-w-[200px]">
+                              {r.occupation}
+                            </div>
+                          )}
+                        </td>
+
+                        {/* 2. Relationship */}
+                        <td className="whitespace-nowrap">
+                          <span className="gov-tag text-[10px]">
+                            {r.relationship || 'Guardian'}
+                          </span>
+                        </td>
+
+                        {/* 3. Linked Trainees */}
+                        <td className="text-xs">
+                          {hasStudents ? (
+                            <div className="flex flex-col gap-1">
+                              {r.students.map((st) => (
+                                <button
+                                  key={st.student_id}
+                                  type="button"
+                                  className="text-left flex items-center gap-1.5 hover:text-emerald-600 transition-colors"
+                                  onClick={() => navigate(`/dashboard/admin/students/${st.student_id}`)}
+                                  title="View Trainee Profile"
+                                >
+                                  <GraduationCap className="w-3 h-3 text-[#666666] shrink-0" />
+                                  <span className="font-medium text-[#222222] truncate max-w-[150px]">
+                                    {st.displayName}
+                                  </span>
+                                  <span className="text-[10px] font-mono text-[#888888]">
+                                    ({st.current_class})
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-[11px] font-mono text-[#888888]">— None Linked —</span>
+                          )}
+                        </td>
+
+                        {/* 4. Contact Phone */}
+                        <td className="font-mono text-[11px] text-[#444444] whitespace-nowrap">
+                          {r.phone ? (
+                            <a
+                              href={`tel:${r.phone.replace(/\s+/g, '')}`}
+                              className="flex items-center gap-1 hover:text-emerald-700 transition-colors"
+                            >
+                              <Phone className="w-3 h-3 text-[#666666] shrink-0" />
+                              <span>{r.phone}</span>
+                            </a>
+                          ) : (
+                            <span className="text-[#888888]">—</span>
+                          )}
+                        </td>
+
+                        {/* 5. Email */}
+                        <td className="text-[11px] text-[#444444] font-mono">
+                          {r.email ? (
+                            <a
+                              href={`mailto:${r.email}`}
+                              className="flex items-center gap-1 hover:text-emerald-700 transition-colors truncate max-w-[170px]"
+                              title={r.email}
+                            >
+                              <Mail className="w-3 h-3 text-[#666666] shrink-0" />
+                              <span className="truncate">{r.email}</span>
+                            </a>
+                          ) : (
+                            <span className="text-[#888888]">—</span>
+                          )}
+                        </td>
+
+                        {/* 6. National ID / NIN */}
+                        <td className="font-mono text-[11px] text-[#555555] whitespace-nowrap">
+                          {r.nin || '—'}
+                        </td>
+
+                        {/* 7. Balance */}
+                        <td className="whitespace-nowrap">
+                          {r.totalOutstanding > 0 ? (
+                            <span className="font-mono text-xs font-bold text-amber-700">
+                              {fmtUGX(r.totalOutstanding)}
+                            </span>
+                          ) : (
+                            <span className="gov-tag gov-tag-approved text-[10px]">CLEARED</span>
+                          )}
+                        </td>
+
+                        {/* 8. Portal Access */}
+                        <td className="whitespace-nowrap">
+                          {r.portal_active ? (
+                            <span className="gov-tag gov-tag-approved text-[10px]">ACTIVE</span>
+                          ) : (
+                            <span className="gov-tag text-[10px]">INACTIVE</span>
+                          )}
+                        </td>
+
+                        {/* 9. Actions */}
+                        <td className="whitespace-nowrap">
+                          <button
+                            type="button"
+                            className="gov-btn gov-btn-sm"
+                            onClick={() => navigate(`/dashboard/admin/parents/${r.parent_id}`)}
+                            title="View Guardian Dossier"
+                          >
+                            <span>View</span>
+                            <ExternalLink className="w-3 h-3 ml-1" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* ── 4. MOBILE CARDS VIEW (STACKED BORDER-DIVIDED CARD MODULES) ── */}
+        <div className="gov-mobile-card-stack">
+          {isLoading ? (
+            <div className="gov-card p-6 text-center text-[#555555]">
+              Loading guardian records...
+            </div>
+          ) : pageSlice.length === 0 ? (
+            <div className="gov-card p-6 text-center text-[#555555]">
+              No records found.
+            </div>
+          ) : (
+            pageSlice.map((r) => (
+              <div key={r.parent_id} className="gov-student-card-module">
+                <div className="gov-student-card-header">
+                  <span className="font-mono font-bold text-xs text-[#111111]">
+                    {r.relationship || 'Guardian'}
+                  </span>
+                  {r.portal_active ? (
+                    <span className="gov-tag gov-tag-approved text-[10px]">PORTAL ACTIVE</span>
+                  ) : (
+                    <span className="gov-tag text-[10px]">NO PORTAL</span>
+                  )}
+                </div>
+
+                <div className="text-sm font-bold text-[#111111] uppercase tracking-wide">
+                  {r.name}
+                </div>
+
+                {r.students.length > 0 && (
+                  <div className="gov-student-card-row">
+                    <span className="gov-student-card-label">Trainees:</span>
+                    <span className="gov-student-card-val">
+                      {r.students.map((s) => s.displayName).join(', ')}
+                    </span>
+                  </div>
+                )}
+
+                <div className="gov-student-card-row">
+                  <span className="gov-student-card-label">Phone:</span>
+                  <span className="gov-student-card-val font-mono">{r.phone || '—'}</span>
+                </div>
+
+                <div className="gov-student-card-row">
+                  <span className="gov-student-card-label">Email:</span>
+                  <span className="gov-student-card-val font-mono">{r.email || '—'}</span>
+                </div>
+
+                <div className="gov-student-card-row">
+                  <span className="gov-student-card-label">Balance:</span>
+                  <span className="gov-student-card-val font-mono font-bold">
+                    {r.totalOutstanding > 0 ? fmtUGX(r.totalOutstanding) : 'CLEARED'}
+                  </span>
+                </div>
+
+                <div className="pt-2 border-t border-[#CCCCCC]">
+                  <button
+                    type="button"
+                    className="gov-btn gov-btn-sm w-full justify-center"
+                    onClick={() => navigate(`/dashboard/admin/parents/${r.parent_id}`)}
+                  >
+                    View Guardian File
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* ── 5. PAPER PAGINATION BAR ── */}
+        {!isLoading && filteredSorted.length > 0 && (
+          <div className="bg-[#FFFFFF] border border-[#CCCCCC] p-3 flex items-center justify-between flex-wrap gap-2 text-xs">
+            <div className="font-mono text-[#555555]">
+              SHOWING <strong className="text-[#111111]">{startIdx}</strong>–<strong className="text-[#111111]">{endIdx}</strong> OF{' '}
+              <strong className="text-[#111111]">{filteredSorted.length}</strong> GUARDIANS &amp; SPONSORS
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                className="gov-btn gov-btn-sm font-mono"
+                disabled={safePage <= 1}
+                onClick={() => setPage(Math.max(1, safePage - 1))}
+              >
+                [PREV]
+              </button>
+              {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => i + 1).map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  className={`gov-btn gov-btn-sm font-mono ${n === safePage ? 'gov-btn-primary' : ''}`}
+                  onClick={() => setPage(n)}
+                >
+                  {n}
+                </button>
+              ))}
+              <button
+                type="button"
+                className="gov-btn gov-btn-sm font-mono"
+                disabled={safePage >= totalPages}
+                onClick={() => setPage(Math.min(totalPages, safePage + 1))}
+              >
+                [NEXT]
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </AdminPageWrapper>
   );
 }

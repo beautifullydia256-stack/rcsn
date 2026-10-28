@@ -1,5 +1,14 @@
+import { useNavigate } from 'react-router-dom';
 import { AddParentForm } from './AddParentForm';
 
 export default function AddParentPage() {
-  return <AddParentForm mode="page" />;
+  const navigate = useNavigate();
+
+  return (
+    <AddParentForm
+      mode="page"
+      onCompleted={() => navigate('/dashboard/admin/parents')}
+      onCancel={() => navigate('/dashboard/admin/parents')}
+    />
+  );
 }

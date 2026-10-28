@@ -23,6 +23,10 @@ import { useAuthStore } from '../../../store/authStore';
 import { useUIStore } from '../../../store/uiStore';
 import { getTokens, PosTokens } from '../../../styles/posThemeTokens';
 import { useSchoolType } from '../../../hooks/useSchoolType';
+import { useNavigate } from 'react-router-dom';
+import AdminPageWrapper from '../../../components/layout/AdminPageWrapper';
+import { GovTableLoader } from '@/components/ui/GovLoadingIndicator';
+import '@/styles/government-system.css';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -247,6 +251,7 @@ export default function TeacherAttendancePage() {
   const isDark = useUIStore((s) => s.theme === 'dark');
   const t: PosTokens = getTokens(isDark);
   const { isTertiary } = useSchoolType();
+  const navigate = useNavigate();
 
   const [filterMode, setFilterMode] = useState<'term' | 'custom'>('custom');
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
@@ -417,472 +422,127 @@ export default function TeacherAttendancePage() {
   const staffPluralLabel = isTertiary ? 'Tutors' : 'Teachers';
 
   return (
-    <div
-      className="pw-page space-y-6"
-      style={{
-        color: t.textPrimary,
-        fontFamily: "'Instrument Sans', 'Cabinet Grotesk', system-ui, sans-serif",
-      }}
-    >
-      {/* ── Top Hero Banner ─────────────────────────────────────────────────── */}
-      <div
-        style={{
-          borderRadius: 16,
-          background: isDark
-            ? 'linear-gradient(135deg, rgba(13, 22, 38, 0.95), rgba(8, 15, 28, 0.98))'
-            : 'linear-gradient(135deg, #ffffff, #f8fafc)',
-          border: `1px solid ${t.cardBorder}`,
-          padding: '24px 28px',
-          boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.35)' : '0 4px 20px rgba(0,0,0,0.06)',
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 16,
-        }}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '4px 10px',
-                borderRadius: 99,
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: '0.04em',
-                textTransform: 'uppercase',
-                background: isDark ? 'rgba(16, 217, 168, 0.12)' : 'rgba(13, 148, 136, 0.1)',
-                color: t.teal,
-                border: `1px solid ${isDark ? 'rgba(16, 217, 168, 0.25)' : 'rgba(13, 148, 136, 0.2)'}`,
-              }}
-            >
-              <ClipboardCheck className="w-3.5 h-3.5" />
-              FACULTY ATTENDANCE AUDIT
-            </span>
-
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                fontSize: 11,
-                color: t.textMuted,
-              }}
-            >
-              <span
-                style={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: '50%',
-                  background: t.teal,
-                  display: 'inline-block',
-                  boxShadow: `0 0 8px ${t.teal}`,
-                }}
-              />
-              Auto-syncs 30s
-            </span>
-          </div>
-
-          <h1
-            style={{
-              fontSize: 26,
-              fontWeight: 800,
-              letterSpacing: '-0.025em',
-              margin: 0,
-              color: t.textPrimary,
-            }}
-          >
-            {staffRoleLabel} Clock-In & Presence Ledger
+    <AdminPageWrapper>
+      {/* INSTITUTIONAL GOVERNMENT HEADER */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#CCCCCC] pb-4">
+        <div className="flex items-center gap-3">
+          <h1 className="text-[17px] font-bold tracking-tight text-[#111111] uppercase font-sans">
+            FACULTY & CLINICAL TUTOR ATTENDANCE AUDIT
           </h1>
-          <p style={{ margin: 0, fontSize: 13, color: t.textSecondary }}>
-            Live punch-in records, GPS geofence compliance, and termly attendance analytics for all academic staff.
-          </p>
+          <span className="inline-flex items-center px-2 py-0.5 text-[11px] font-mono font-bold bg-[#EAEAEA] text-[#222222] border border-[#CCCCCC]">
+            {Math.round(attendanceRate)}% SIGN-IN RATE
+          </span>
         </div>
 
-        {/* Date & Refresh Quick Action */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div
-            style={{
-              padding: '8px 14px',
-              borderRadius: 12,
-              background: t.surface,
-              border: `1px solid ${t.cardBorder}`,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-            }}
-          >
-            <Calendar className="w-4 h-4 text-emerald-500" />
-            <span style={{ fontSize: 12, fontWeight: 700 }}>
-              {new Date().toLocaleDateString('en-UG', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
-            </span>
-          </div>
-
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => void refetch()}
             disabled={isFetching}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '8px 14px',
-              borderRadius: 12,
-              background: t.surface,
-              border: `1px solid ${t.cardBorder}`,
-              color: t.textPrimary,
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
+            className="gov-btn gov-btn-sm"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
-            <span>{isFetching ? 'Syncing...' : 'Sync'}</span>
+            <RefreshCw className={`w-3.5 h-3.5 mr-1 ${isFetching ? 'animate-spin' : ''}`} />
+            SYNC
           </button>
-
           <button
             type="button"
             onClick={downloadPdf}
             disabled={visibleLogs.length === 0}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '8px 16px',
-              borderRadius: 12,
-              background: 'linear-gradient(135deg, #0d9488, #059669)',
-              color: '#ffffff',
-              fontSize: 12,
-              fontWeight: 700,
-              border: 'none',
-              cursor: visibleLogs.length === 0 ? 'not-allowed' : 'pointer',
-              opacity: visibleLogs.length === 0 ? 0.4 : 1,
-              boxShadow: '0 4px 14px rgba(13, 148, 136, 0.3)',
-            }}
+            className="gov-btn gov-btn-sm"
           >
-            <Download className="w-3.5 h-3.5" />
-            <span>Export PDF Audit</span>
+            <Download className="w-3.5 h-3.5 mr-1" />
+            EXPORT PDF AUDIT
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard/admin/attendance')}
+            className="gov-btn gov-btn-sm"
+          >
+            STUDENT ATTENDANCE
           </button>
         </div>
       </div>
 
-      {/* ── 4 Top Calibrated POS Metric Cards ───────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
-        {/* Card 1: Attendance Rate Gauge */}
-        <div
-          style={{
-            background: t.card,
-            border: `1px solid ${t.cardBorder}`,
-            borderRadius: 14,
-            padding: '18px 20px',
-            boxShadow: t.cardShadow,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <div>
-            <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-              Sign-In Rate
-            </span>
-            <div style={{ fontSize: 24, fontWeight: 800, color: t.textPrimary, marginTop: 4 }}>
-              {Math.round(attendanceRate)}%
-            </div>
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-                fontSize: 11,
-                fontWeight: 600,
-                color: attendanceRate >= 80 ? t.teal : t.red,
-                marginTop: 4,
-              }}
-            >
-              {attendanceRate >= 80 ? (
-                <>
-                  <CheckCircle2 className="w-3 h-3" /> Optimal Roster
-                </>
-              ) : (
-                <>
-                  <AlertTriangle className="w-3 h-3" /> Attention Needed
-                </>
-              )}
-            </span>
-          </div>
-
-          <SemiCircleGauge
-            percent={attendanceRate}
-            color={attendanceRate >= 80 ? t.teal : attendanceRate >= 50 ? t.gold : t.red}
-            trackColor={isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}
-          />
-        </div>
-
-        {/* Card 2: Present Staff */}
-        <div
-          style={{
-            background: t.card,
-            border: `1px solid ${t.cardBorder}`,
-            borderRadius: 14,
-            padding: '18px 20px',
-            boxShadow: t.cardShadow,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <div>
-            <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-              Signed In on Duty
-            </span>
-            <div style={{ fontSize: 24, fontWeight: 800, color: t.textPrimary, marginTop: 4 }}>
-              {presentCount} <span style={{ fontSize: 14, fontWeight: 500, color: t.textMuted }}>/ {totalRoster}</span>
-            </div>
-            <span style={{ fontSize: 11, color: t.teal, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
-              <Check className="w-3 h-3" /> Active Present
-            </span>
-          </div>
-          <div
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 12,
-              background: isDark ? 'rgba(16, 217, 168, 0.12)' : 'rgba(13, 148, 136, 0.1)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: t.teal,
-            }}
-          >
-            <Users className="w-5 h-5" />
+      {/* 4 TOP CALIBRATED GOVERNMENT METRIC CARDS */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="gov-card p-3 rounded-lg text-center border border-[#CCCCCC]">
+          <div className="text-[10px] font-mono uppercase text-[#666666] tracking-wider">SIGN-IN RATE</div>
+          <div className="text-xl font-bold font-mono text-[#111111] mt-0.5">
+            {Math.round(attendanceRate)}%
           </div>
         </div>
-
-        {/* Card 3: Late Arrivals */}
-        <div
-          style={{
-            background: t.card,
-            border: `1px solid ${t.cardBorder}`,
-            borderRadius: 14,
-            padding: '18px 20px',
-            boxShadow: t.cardShadow,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <div>
-            <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-              Late Arrivals
-            </span>
-            <div style={{ fontSize: 24, fontWeight: 800, color: t.textPrimary, marginTop: 4 }}>
-              {lateCount}
-            </div>
-            <span style={{ fontSize: 11, color: lateCount > 0 ? t.gold : t.textMuted, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
-              <Clock className="w-3 h-3" /> {lateCount > 0 ? 'Punched Past 8:00 AM' : 'Zero Tardiness'}
-            </span>
-          </div>
-          <div
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 12,
-              background: isDark ? 'rgba(245, 192, 68, 0.12)' : 'rgba(217, 119, 6, 0.1)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: t.gold,
-            }}
-          >
-            <Clock className="w-5 h-5" />
+        <div className="gov-card p-3 rounded-lg text-center border border-[#CCCCCC]">
+          <div className="text-[10px] font-mono uppercase text-[#666666] tracking-wider">SIGNED IN ON DUTY</div>
+          <div className="text-xl font-bold font-mono text-[#111111] mt-0.5">
+            {presentCount} / {totalRoster}
           </div>
         </div>
-
-        {/* Card 4: Unaccounted / Absent */}
-        <div
-          style={{
-            background: t.card,
-            border: `1px solid ${t.cardBorder}`,
-            borderRadius: 14,
-            padding: '18px 20px',
-            boxShadow: t.cardShadow,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <div>
-            <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-              Pending / Absent
-            </span>
-            <div style={{ fontSize: 24, fontWeight: 800, color: t.textPrimary, marginTop: 4 }}>
-              {absentCount}
-            </div>
-            <span style={{ fontSize: 11, color: absentCount > 0 ? t.red : t.teal, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
-              {absentCount > 0 ? (
-                <>
-                  <XCircle className="w-3 h-3" /> No Punch-In Logged
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-3 h-3" /> Full Turnout
-                </>
-              )}
-            </span>
+        <div className="gov-card p-3 rounded-lg text-center border border-[#CCCCCC]">
+          <div className="text-[10px] font-mono uppercase text-[#666666] tracking-wider">LATE ARRIVALS</div>
+          <div className="text-xl font-bold font-mono text-[#111111] mt-0.5">
+            {lateCount}
           </div>
-          <div
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 12,
-              background: isDark ? 'rgba(247, 92, 92, 0.12)' : 'rgba(239, 68, 68, 0.1)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: t.red,
-            }}
-          >
-            <XCircle className="w-5 h-5" />
+        </div>
+        <div className="gov-card p-3 rounded-lg text-center border border-[#CCCCCC]">
+          <div className="text-[10px] font-mono uppercase text-[#666666] tracking-wider">PENDING / ABSENT</div>
+          <div className="text-xl font-bold font-mono text-[#111111] mt-0.5">
+            {absentCount}
           </div>
         </div>
       </div>
 
       {/* ── Filters & Controls Toolbar ──────────────────────────────────────── */}
-      <div
-        style={{
-          background: t.card,
-          border: `1px solid ${t.cardBorder}`,
-          borderRadius: 16,
-          padding: '16px 20px',
-          boxShadow: t.cardShadow,
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 16,
-        }}
-      >
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
+      <div className="gov-card p-3 rounded-lg border border-[#CCCCCC] bg-white flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           {/* View Tab Switcher */}
-          <div
-            style={{
-              display: 'inline-flex',
-              padding: 3,
-              borderRadius: 10,
-              background: t.surface,
-              border: `1px solid ${t.cardBorder}`,
-            }}
-          >
+          <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={() => setActiveTab('summary')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '6px 14px',
-                borderRadius: 8,
-                fontSize: 12,
-                fontWeight: 700,
-                border: 'none',
-                cursor: 'pointer',
-                background: activeTab === 'summary' ? (isDark ? '#1e293b' : '#ffffff') : 'transparent',
-                color: activeTab === 'summary' ? t.textPrimary : t.textMuted,
-                boxShadow: activeTab === 'summary' ? '0 2px 8px rgba(0,0,0,0.1)' : 'none',
-                transition: 'all 0.15s ease',
-              }}
+              className={`gov-btn gov-btn-sm ${activeTab === 'summary' ? 'gov-btn-primary' : ''}`}
             >
-              <Users className="w-3.5 h-3.5" />
-              <span>Staff Roll-Call</span>
+              STAFF ROLL-CALL
             </button>
-
             <button
               type="button"
               onClick={() => setActiveTab('logs')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '6px 14px',
-                borderRadius: 8,
-                fontSize: 12,
-                fontWeight: 700,
-                border: 'none',
-                cursor: 'pointer',
-                background: activeTab === 'logs' ? (isDark ? '#1e293b' : '#ffffff') : 'transparent',
-                color: activeTab === 'logs' ? t.textPrimary : t.textMuted,
-                boxShadow: activeTab === 'logs' ? '0 2px 8px rgba(0,0,0,0.1)' : 'none',
-                transition: 'all 0.15s ease',
-              }}
+              className={`gov-btn gov-btn-sm ${activeTab === 'logs' ? 'gov-btn-primary' : ''}`}
             >
-              <FileSpreadsheet className="w-3.5 h-3.5" />
-              <span>Punch Audit Logs</span>
-              <span
-                style={{
-                  padding: '1px 6px',
-                  borderRadius: 99,
-                  fontSize: 10,
-                  fontWeight: 700,
-                  background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
-                }}
-              >
-                {visibleLogs.length}
-              </span>
+              PUNCH AUDIT LOGS ({visibleLogs.length})
             </button>
           </div>
 
           {/* Quick Date Presets */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <div className="flex items-center gap-1 flex-wrap">
             {QUICK_BTNS.map(({ label, preset }) => (
               <button
                 key={preset}
                 type="button"
                 onClick={() => applyQuick(preset)}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: 8,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  border: `1px solid ${t.cardBorder}`,
-                  background: filterMode === 'custom' && customStart === quickRange(preset).start && customEnd === quickRange(preset).end ? (isDark ? '#1e293b' : '#0d9488') : t.surface,
-                  color: filterMode === 'custom' && customStart === quickRange(preset).start && customEnd === quickRange(preset).end ? '#ffffff' : t.textSecondary,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
+                className={`gov-btn gov-btn-sm ${
+                  filterMode === 'custom' &&
+                  customStart === quickRange(preset).start &&
+                  customEnd === quickRange(preset).end
+                    ? 'gov-btn-primary'
+                    : ''
+                }`}
               >
-                {label}
+                {label.toUpperCase()}
               </button>
             ))}
           </div>
         </div>
 
         {/* Filters: Search & Department */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <div style={{ position: 'relative', width: 200 }}>
-            <Search
-              className="w-3.5 h-3.5 text-slate-400"
-              style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }}
-            />
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="relative w-44">
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[#777777] pointer-events-none" />
             <input
               type="text"
-              placeholder={`Search ${staffRoleLabel.toLowerCase()}...`}
+              placeholder={`Search ${staffRoleLabel.toLowerCase()}…`}
               value={teacherSearch}
               onChange={(e) => setTeacherSearch(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '6px 10px 6px 30px',
-                borderRadius: 8,
-                background: t.surface,
-                border: `1px solid ${t.cardBorder}`,
-                color: t.textPrimary,
-                fontSize: 12,
-                outline: 'none',
-                boxSizing: 'border-box',
-              }}
+              className="gov-input pl-8 py-1 text-xs w-full"
             />
           </div>
 
@@ -890,22 +550,12 @@ export default function TeacherAttendancePage() {
             <select
               value={selectedDepartment}
               onChange={(e) => setSelectedDepartment(e.target.value)}
-              style={{
-                padding: '6px 10px',
-                borderRadius: 8,
-                background: t.surface,
-                border: `1px solid ${t.cardBorder}`,
-                color: t.textPrimary,
-                fontSize: 12,
-                fontWeight: 600,
-                outline: 'none',
-                cursor: 'pointer',
-              }}
+              className="gov-select text-xs py-1"
             >
-              <option value="all">All Departments</option>
+              <option value="all">ALL DEPARTMENTS</option>
               {departments.map((d) => (
                 <option key={d} value={d}>
-                  {d}
+                  {d.toUpperCase()}
                 </option>
               ))}
             </select>
@@ -914,20 +564,9 @@ export default function TeacherAttendancePage() {
           <select
             value={selectedTeacher}
             onChange={(e) => setSelectedTeacher(e.target.value)}
-            style={{
-              padding: '6px 10px',
-              borderRadius: 8,
-              background: t.surface,
-              border: `1px solid ${t.cardBorder}`,
-              color: t.textPrimary,
-              fontSize: 12,
-              fontWeight: 600,
-              outline: 'none',
-              cursor: 'pointer',
-              maxWidth: 160,
-            }}
+            className="gov-select text-xs py-1 max-w-[150px]"
           >
-            <option value="all">All {staffPluralLabel}</option>
+            <option value="all">ALL {staffPluralLabel.toUpperCase()}</option>
             {teachers.map((tch) => (
               <option key={tch.teacher_id} value={tch.teacher_id}>
                 {tch.name}
@@ -996,12 +635,7 @@ export default function TeacherAttendancePage() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr>
-                    <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: t.textMuted }}>
-                      <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" style={{ color: t.teal }} />
-                      Loading faculty attendance data...
-                    </td>
-                  </tr>
+                  <GovTableLoader colSpan={8} />
                 ) : filteredTeachers.length === 0 ? (
                   <tr>
                     <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: t.textMuted }}>
@@ -1269,12 +903,7 @@ export default function TeacherAttendancePage() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr>
-                    <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: t.textMuted }}>
-                      <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" style={{ color: t.teal }} />
-                      Loading logs...
-                    </td>
-                  </tr>
+                  <GovTableLoader colSpan={7} />
                 ) : visibleLogs.length === 0 ? (
                   <tr>
                     <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: t.textMuted }}>
@@ -1377,6 +1006,6 @@ export default function TeacherAttendancePage() {
           </div>
         </div>
       )}
-    </div>
+    </AdminPageWrapper>
   );
 }

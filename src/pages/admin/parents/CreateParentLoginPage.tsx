@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { isValidEmailFormat } from '@/lib/emailValidator';
@@ -51,9 +51,26 @@ export default function CreateParentLoginPage() {
         .from('parents')
         .select('name, email, school_id, is_primary_contact')
         .eq('parent_id', parentId);
-      const list = rows ?? [];
-      const primary =
-        list.find((r: { is_primary_contact?: boolean }) => r.is_primary_contact === true) || list[0];
+      let list = rows ?? [];
+      let primary = list.find((r: { is_primary_contact?: boolean }) => r.is_primary_contact === true) || list[0];
+
+      if (!primary && parentId.startsWith('guardian_')) {
+        const sid = parentId.replace('guardian_', '');
+        const { data: st } = await supabase
+          .from('students')
+          .select('guardian_name, guardian_email, school_id')
+          .eq('student_id', sid)
+          .maybeSingle();
+        if (st) {
+          primary = {
+            name: st.guardian_name ? String(st.guardian_name) : '',
+            email: st.guardian_email ? String(st.guardian_email) : '',
+            school_id: st.school_id,
+            is_primary_contact: true,
+          };
+        }
+      }
+
       const rosterEmail = primary?.email ? String(primary.email) : '';
       setGuardianName(primary?.name ? String(primary.name) : '');
       setEmail(rosterEmail);

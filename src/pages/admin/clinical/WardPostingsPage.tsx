@@ -6,8 +6,9 @@ import { useSchoolType } from '@/hooks/useSchoolType';
 import { supabase } from '@/lib/supabase';
 import WardPostingManager from '@/features/tertiary/components/WardPostingManager';
 import { HospitalWardPosting, TertiaryStudentProfile } from '@/features/tertiary/types';
-import { Stethoscope, CheckCircle2, Clock, Building2, BookOpen, ShieldCheck } from 'lucide-react';
+import { Stethoscope, CheckCircle2, Clock, Building2, BookOpen, ShieldCheck, Printer } from 'lucide-react';
 import { getTokens, cardGrad, SORA, INTER } from '@/styles/posThemeTokens';
+import '@/styles/government-system.css';
 
 const DEFAULT_SAMPLE_POSTINGS: HospitalWardPosting[] = [
   {
@@ -173,124 +174,73 @@ export default function WardPostingsPage() {
   );
 
   return (
-    <AdminPageWrapper
-      eyebrow="Clinical Rotations & Practicum"
-      title="Hospital Ward Postings & Clinical Clearance"
-      subtitle="Track hospital practicum, clinical hours, and verified physical Uganda Nurses & Midwives Council logbooks."
-    >
-      <div className="w-full space-y-6">
-        {/* Overview 4-Card Stat Strip */}
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
-          <div
-            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
-            style={{
-              background: cardGrad(t, 'blue'),
-              border: `1px solid ${t.stroke}`,
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
-                Total Rotations
-              </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/15 text-blue-400">
-                <Stethoscope className="w-4 h-4" />
-              </div>
+    <AdminPageWrapper>
+      <div className="space-y-4">
+        {/* ── 1. TOP HEADER (GOVERNMENT DESIGN SYSTEM STANDARD) ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-[17px] font-bold tracking-tight text-[#111111] uppercase font-sans m-0">
+              Ward Postings &amp; Clinical Rotations
+            </h1>
+            <span className="inline-flex items-center px-2 py-0.5 text-[11px] font-mono font-bold bg-[#EAEAEA] text-[#222222] border border-[#CCCCCC]">
+              {postings.length} {postings.length === 1 ? 'ROTATION' : 'ROTATIONS'}
+            </span>
+          </div>
+
+          {/* Action Button Group */}
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="gov-btn gov-btn-sm"
+              title="Print Roster"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>Print Roster</span>
+            </button>
+          </div>
+        </div>
+
+        {/* ── 2. METRIC SUMMARY BOXES (PLAIN, HIGH-DENSITY, NO FLUFF) ── */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="gov-card p-3 rounded-lg text-center border border-[#CCCCCC]">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-[#555555]">
+              Total Rotations
             </div>
-            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+            <div className="text-2xl font-mono font-bold text-[#111111] mt-1">
               {postings.length}
-            </p>
-            <p className="mt-1 text-xs text-blue-400/90 font-medium">
-              Hospital ward assignments
-            </p>
+            </div>
           </div>
 
-          <div
-            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
-            style={{
-              background: cardGrad(t, 'emerald'),
-              border: `1px solid ${t.stroke}`,
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
-                Logbooks Cleared
-              </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
-                <CheckCircle2 className="w-4 h-4" />
-              </div>
+          <div className="gov-card p-3 rounded-lg text-center border border-[#CCCCCC]">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-[#555555]">
+              Logbooks Cleared
             </div>
-            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+            <div className="text-2xl font-mono font-bold text-[#111111] mt-1">
               {clearedCount}
-            </p>
-            <p className="mt-1 text-xs text-emerald-400/90 font-medium">
-              Signed &amp; stamped for OSCE
-            </p>
+            </div>
           </div>
 
-          <div
-            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
-            style={{
-              background: cardGrad(t, 'amber'),
-              border: `1px solid ${t.stroke}`,
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
-                Pending Sign-off
-              </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-400">
-                <Clock className="w-4 h-4" />
-              </div>
+          <div className="gov-card p-3 rounded-lg text-center border border-[#CCCCCC]">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-[#555555]">
+              Pending Sign-Off
             </div>
-            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+            <div className="text-2xl font-mono font-bold text-[#111111] mt-1">
               {pendingCount}
-            </p>
-            <p className="mt-1 text-xs text-amber-400/90 font-medium">
-              Awaiting In-charge verification
-            </p>
-          </div>
-
-          <div
-            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
-            style={{
-              background: cardGrad(t, 'purple'),
-              border: `1px solid ${t.stroke}`,
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
-                Prescribed Hours
-              </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/15 text-purple-400">
-                <BookOpen className="w-4 h-4" />
-              </div>
             </div>
-            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+          </div>
+
+          <div className="gov-card p-3 rounded-lg text-center border border-[#CCCCCC]">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-[#555555]">
+              Prescribed Hours
+            </div>
+            <div className="text-2xl font-mono font-bold text-[#111111] mt-1">
               {totalHours} hrs
-            </p>
-            <p className="mt-1 text-xs text-purple-400/90 font-medium">
-              Total clinical curriculum requirement
-            </p>
+            </div>
           </div>
         </div>
 
-        {/* Guidelines Banner */}
-        <div
-          className="rounded-2xl p-4 flex items-start gap-3 border"
-          style={{
-            backgroundColor: isDark ? 'rgba(46,111,216,0.08)' : 'rgba(46,111,216,0.05)',
-            borderColor: isDark ? 'rgba(46,111,216,0.25)' : 'rgba(46,111,216,0.18)',
-          }}
-        >
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/15 text-blue-400 shrink-0">
-            <Building2 className="w-4 h-4" />
-          </div>
-          <div className="text-xs leading-relaxed text-slate-300">
-            <strong className="text-slate-100">UHPAB &amp; Nursing Council Regulatory Requirement:</strong> In Uganda health training institutions, students cannot sit practical OSCE examination stations without verified stamped paper logbooks from Hospital Ward In-charges and approved clinical instructors.
-          </div>
-        </div>
-
-        {/* Ward Posting Manager Interactive Component */}
+        {/* ── 3. WARD POSTING MANAGER COMPONENT ── */}
         <WardPostingManager
           postings={postings}
           students={students}

@@ -10,6 +10,9 @@ import {
   buildSingleStudentReportPdfFilename,
 } from '../../../lib/reportPdfFilenames';
 import { useSchoolType } from '../../../hooks/useSchoolType';
+import { GovPageLoader, GovRollingBox, GovTableLoader } from '@/components/ui/GovLoadingIndicator';
+import { ArrowLeft, Download, RefreshCw, Archive, Search } from 'lucide-react';
+import '@/styles/government-system.css';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -370,113 +373,125 @@ export default function ReportRecordsPage() {
   const loading = tab === 'students' ? isLoading : bundlesLoading;
 
   return (
-    <AdminPageWrapper
-      eyebrow="Academic Records"
-      title="Archived Result Slips & Broadsheets"
-      subtitle="View and download archived semester result slips and cohort broadsheet bundles."
-    >
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={() => navigate('/dashboard/admin/reports/generate-tertiary')}
-          className="ac-glass-btn-secondary min-h-[44px] rounded-xl px-4 py-2 text-sm font-medium ac-text-primary"
-        >
-          Back to Result Slips & Broadsheets
-        </button>
+    <div className="admin-terminal-page space-y-5">
+      {/* ── 1. TOP HEADER ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#CCCCCC] pb-4">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-[#111111] uppercase font-mono">
+            ARCHIVED RESULT SLIPS &amp; OFFICIAL TRANSCRIPTS
+          </h1>
+          <p className="text-xs text-[#555555] font-mono tracking-wider uppercase mt-0.5">
+            HISTORICAL CANDIDATE EXAMINATION SLIPS &amp; COHORT ARCHIVE BUNDLES
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard/admin/reports/generate-tertiary')}
+            className="gov-btn gov-btn-sm flex items-center gap-1.5"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>RESULT SLIPS &amp; TRANSCRIPTS DESK</span>
+          </button>
+        </div>
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-2 rounded-xl border border-[var(--ac-border)] bg-[var(--ac-card-bg)] p-1">
-        <button
-          type="button"
-          onClick={() => setTab('students')}
-          className={`min-h-[40px] flex-1 rounded-lg px-4 py-2 text-sm font-medium transition sm:flex-none ${
-            tab === 'students'
-              ? 'bg-emerald-600 text-white shadow-sm'
-              : 'ac-text-muted hover:ac-text-primary'
-          }`}
-        >
-          Trainee Result Slips
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab('class_zips')}
-          className={`min-h-[40px] flex-1 rounded-lg px-4 py-2 text-sm font-medium transition sm:flex-none ${
-            tab === 'class_zips'
-              ? 'bg-emerald-600 text-white shadow-sm'
-              : 'ac-text-muted hover:ac-text-primary'
-          }`}
-        >
-          Cohort ZIP Bundles
-        </button>
-      </div>
-
-      <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-6">
-        {tab === 'students' ? (
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Filter by trainee, cohort, or exam"
-            className="ac-input rounded-xl px-3 py-2.5 lg:col-span-2"
-          />
-        ) : (
-          <div className="ac-text-muted text-sm lg:col-span-2 flex items-center px-1 font-medium">
-            Complete cohort ZIP bundles for download
+      {/* ── 2. CONTROL BAR ── */}
+      <div className="gov-control-bar flex flex-wrap items-center justify-between gap-3 p-3 bg-white border border-[#CCCCCC]">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Tabs */}
+          <div className="inline-flex border border-[#CCCCCC]">
+            <button
+              type="button"
+              onClick={() => setTab('students')}
+              className={`px-3 py-1.5 text-xs font-mono uppercase tracking-wider transition-colors ${
+                tab === 'students'
+                  ? 'bg-[#111111] text-white font-bold'
+                  : 'bg-white text-[#555555] hover:bg-[#F3F4F6]'
+              }`}
+            >
+              CANDIDATE SLIPS ({filteredStudents.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab('class_zips')}
+              className={`px-3 py-1.5 text-xs font-mono uppercase tracking-wider transition-colors ${
+                tab === 'class_zips'
+                  ? 'bg-[#111111] text-white font-bold'
+                  : 'bg-white text-[#555555] hover:bg-[#F3F4F6]'
+              }`}
+            >
+              COHORT ZIP BUNDLES ({filteredBundles.length})
+            </button>
           </div>
-        )}
-        <select
-          value={filterYear}
-          onChange={(e) => setFilterYear(e.target.value)}
-          className="ac-input rounded-xl px-3 py-2.5"
-          aria-label="Filter by academic year"
-        >
-          <option value="">All Academic Years</option>
-          {yearOptions.map((y) => (
-            <option key={y} value={y}>
-              {`${y}/${Number(y) + 1} Academic Year`}
-            </option>
-          ))}
-        </select>
-        <select
-          value={filterTerm}
-          onChange={(e) => setFilterTerm(e.target.value)}
-          className="ac-input rounded-xl px-3 py-2.5"
-          aria-label="Filter by academic semester"
-        >
-          <option value="">All Semesters</option>
-          <option value="1">Semester 1</option>
-          <option value="2">Semester 2</option>
-        </select>
-        <select
-          value={filterExamId}
-          onChange={(e) => setFilterExamId(e.target.value)}
-          className="ac-input rounded-xl px-3 py-2.5"
-          aria-label="Filter by examination"
-        >
-          <option value="">All exams</option>
-          {examOptions.map(([id, name]) => (
-            <option key={id} value={id}>
-              {name}
-            </option>
-          ))}
-        </select>
-        <select
-          value={sortNewestFirst ? 'newest' : 'oldest'}
-          onChange={(e) => setSortNewestFirst(e.target.value === 'newest')}
-          className="ac-input rounded-xl px-3 py-2.5"
-          aria-label="Sort by date"
-        >
-          <option value="newest">Newest first</option>
-          <option value="oldest">Oldest first</option>
-        </select>
+
+          {tab === 'students' && (
+            <div className="relative min-w-[220px]">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#888888]" />
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Filter candidate, cohort, exam…"
+                className="gov-input pl-8 text-xs font-mono w-full"
+              />
+            </div>
+          )}
+
+          <select
+            value={filterYear}
+            onChange={(e) => setFilterYear(e.target.value)}
+            className="gov-select text-xs font-mono"
+          >
+            <option value="">ALL ACADEMIC YEARS</option>
+            {yearOptions.map((y) => (
+              <option key={y} value={y}>
+                {`${y}/${Number(y) + 1} ACADEMIC YEAR`}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filterTerm}
+            onChange={(e) => setFilterTerm(e.target.value)}
+            className="gov-select text-xs font-mono"
+          >
+            <option value="">ALL SEMESTERS</option>
+            <option value="1">SEMESTER 1</option>
+            <option value="2">SEMESTER 2</option>
+          </select>
+
+          <select
+            value={filterExamId}
+            onChange={(e) => setFilterExamId(e.target.value)}
+            className="gov-select text-xs font-mono"
+          >
+            <option value="">ALL EXAMS</option>
+            {examOptions.map(([id, name]) => (
+              <option key={id} value={id}>
+                {name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={sortNewestFirst ? 'newest' : 'oldest'}
+            onChange={(e) => setSortNewestFirst(e.target.value === 'newest')}
+            className="gov-select text-xs font-mono"
+          >
+            <option value="newest">NEWEST FIRST</option>
+            <option value="oldest">OLDEST FIRST</option>
+          </select>
+        </div>
       </div>
 
+      {/* Errors & Retries */}
       {downloadErr && (
-        <div className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-200">
-          {downloadErr}
+        <div className="border border-rose-300 bg-rose-50 p-3 text-xs font-mono text-rose-800 flex items-center justify-between">
+          <span>{downloadErr}</span>
           <button
             type="button"
             onClick={() => setDownloadErr(null)}
-            className="ml-2 text-red-300 hover:text-red-100"
+            className="font-bold text-rose-900"
           >
             ×
           </button>
@@ -484,84 +499,79 @@ export default function ReportRecordsPage() {
       )}
 
       {failedDownloads.length > 0 && (
-        <div className="mb-4 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-amber-200">
-              {failedDownloads.length} download(s) failed. 
-              <button
-                type="button"
-                onClick={retryFailedDownloads}
-                disabled={downloadQueue.size >= 5}
-                className="ml-2 font-semibold text-amber-100 hover:text-amber-50 disabled:opacity-50"
-              >
-                Retry Failed
-              </button>
-            </div>
+        <div className="border border-amber-300 bg-amber-50 p-3 text-xs font-mono text-amber-800 flex items-center justify-between">
+          <div>
+            <span>{failedDownloads.length} ARCHIVED DOWNLOAD(S) FAILED.</span>
             <button
               type="button"
-              onClick={() => setFailedDownloads([])}
-              className="text-amber-300 hover:text-amber-100"
+              onClick={retryFailedDownloads}
+              disabled={downloadQueue.size >= 5}
+              className="ml-3 underline font-bold"
             >
-              Clear
+              RETRY FAILED
             </button>
           </div>
+          <button
+            type="button"
+            onClick={() => setFailedDownloads([])}
+            className="font-bold text-amber-900"
+          >
+            CLEAR
+          </button>
         </div>
       )}
 
-      <div className={`${adminCardClass} overflow-x-auto p-0 sm:p-0`}>
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--ac-border)] border-t-emerald-500" />
-          </div>
-        ) : tab === 'students' ? (
-          <div className="ac-table-wrap overflow-hidden rounded-xl border border-[var(--ac-border)]">
-            <table className="min-w-full text-sm">
+      {/* ── 3. DATA TABLE ── */}
+      <div className="gov-card overflow-hidden">
+        <div className="overflow-x-auto">
+          {tab === 'students' ? (
+            <table className="gov-table w-full text-left">
               <thead>
-                <tr className="border-b border-[var(--ac-border)] bg-[var(--ac-card-bg)] text-left">
-                  <th className="px-4 py-3 font-medium ac-text-muted hidden sm:table-cell">Date</th>
-                  <th className="px-4 py-3 font-medium ac-text-muted">Trainee</th>
-                  <th className="px-4 py-3 font-medium ac-text-muted">Course / Cohort</th>
-                  <th className="px-4 py-3 font-medium ac-text-muted">Exam</th>
-                  <th className="px-4 py-3 font-medium ac-text-muted hidden md:table-cell">
-                    Academic Semester & Year
-                  </th>
-                  <th className="px-4 py-3 font-medium ac-text-muted">Result Slip</th>
+                <tr>
+                  <th>DATE RECORDED</th>
+                  <th>CANDIDATE / TRAINEE</th>
+                  <th>COURSE / COHORT</th>
+                  <th>EXAMINATION SERIES</th>
+                  <th>ACADEMIC CYCLE</th>
+                  <th className="text-right">RESULT SLIP</th>
                 </tr>
               </thead>
-              <tbody className="[&>tr:nth-child(even)]:bg-[var(--ac-sidebar-active-bg)]/50">
-                {filteredStudents.length === 0 ? (
+              <tbody>
+                {loading ? (
+                  <GovTableLoader colSpan={6} message="AUDITING HISTORICAL EXAMINATION ARCHIVES..." />
+                ) : filteredStudents.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="ac-text-muted px-4 py-8 text-center hidden sm:table-cell">
-                      No archived trainee result slips found
-                    </td>
-                    <td colSpan={5} className="ac-text-muted px-4 py-8 text-center sm:hidden md:table-cell">
-                      No archived trainee result slips found
-                    </td>
-                    <td colSpan={5} className="ac-text-muted px-4 py-8 text-center sm:table-cell md:hidden">
-                      No archived trainee result slips found
+                    <td colSpan={6} className="text-center py-12 text-xs font-mono text-[#777777]">
+                      NO ARCHIVED TRAINEE RESULT SLIPS FOUND
                     </td>
                   </tr>
                 ) : (
                   filteredStudents.map((r) => (
-                    <tr key={r.id} className="border-t border-[var(--ac-border)]">
-                      <td className="ac-text-secondary px-4 py-2.5 hidden sm:table-cell">
-                        {new Date(r.date).toLocaleString()}
+                    <tr key={r.id} className="hover:bg-[#F9FAFB] transition-colors">
+                      <td className="font-mono text-xs text-[#555555] whitespace-nowrap">
+                        {new Date(r.date).toLocaleString('en-UG')}
                       </td>
-                      <td className="ac-text-primary px-4 py-2.5 font-medium">{r.student}</td>
-                      <td className="ac-text-secondary px-4 py-2.5">{r.class}</td>
-                      <td className="ac-text-secondary px-4 py-2.5">{r.exam}</td>
-                      <td className="ac-text-secondary px-4 py-2.5 hidden md:table-cell font-medium">
+                      <td className="font-bold text-xs text-[#111111]">
+                        {r.student}
+                      </td>
+                      <td className="font-mono text-xs text-[#333333]">
+                        {r.class}
+                      </td>
+                      <td className="font-mono text-xs text-[#555555]">
+                        {r.exam}
+                      </td>
+                      <td className="font-mono text-xs text-[#555555]">
                         {`Semester ${r.term} · ${r.year}/${Number(r.year) + 1} Academic Year`}
                       </td>
-                      <td className="px-4 py-2.5">
+                      <td className="text-right whitespace-nowrap">
                         <button
                           type="button"
                           disabled={downloadingKey === r.id || downloadQueue.size >= 5}
                           onClick={() => downloadStudentPdf(r)}
-                          className="inline-flex rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-500 disabled:opacity-60 dark:bg-emerald-500 dark:hover:bg-emerald-400"
-                          title={downloadQueue.size >= 5 ? `Queue full (${downloadQueue.size}/5)` : ''}
+                          className="gov-btn gov-btn-sm flex items-center gap-1.5 ml-auto"
                         >
-                          {downloadingKey === r.id ? '…' : 'Download'}
+                          {downloadingKey === r.id ? <GovRollingBox size="sm" /> : <Download className="w-3.5 h-3.5" />}
+                          <span>{downloadingKey === r.id ? 'FETCHING...' : 'DOWNLOAD PDF'}</span>
                         </button>
                       </td>
                     </tr>
@@ -569,53 +579,50 @@ export default function ReportRecordsPage() {
                 )}
               </tbody>
             </table>
-          </div>
-        ) : (
-          <div className="ac-table-wrap overflow-hidden rounded-xl border border-[var(--ac-border)]">
-            <table className="min-w-full text-sm">
+          ) : (
+            <table className="gov-table w-full text-left">
               <thead>
-                <tr className="border-b border-[var(--ac-border)] bg-[var(--ac-card-bg)] text-left">
-                  <th className="px-4 py-3 font-medium ac-text-muted hidden sm:table-cell">Date</th>
-                  <th className="px-4 py-3 font-medium ac-text-muted">Cohort</th>
-                  <th className="px-4 py-3 font-medium ac-text-muted">Exam</th>
-                  <th className="px-4 py-3 font-medium ac-text-muted hidden md:table-cell">
-                    Academic Semester & Year
-                  </th>
-                  <th className="px-4 py-3 font-medium ac-text-muted">ZIP Bundle</th>
+                <tr>
+                  <th>PUBLISHED DATE</th>
+                  <th>COHORT / CLASS</th>
+                  <th>EXAMINATION SERIES</th>
+                  <th>ACADEMIC CYCLE</th>
+                  <th className="text-right">ZIP BUNDLE</th>
                 </tr>
               </thead>
-              <tbody className="[&>tr:nth-child(even)]:bg-[var(--ac-sidebar-active-bg)]/50">
-                {filteredBundles.length === 0 ? (
+              <tbody>
+                {loading ? (
+                  <GovTableLoader colSpan={5} message="AUDITING COHORT BUNDLE ARCHIVES..." />
+                ) : filteredBundles.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="ac-text-muted px-4 py-8 text-center hidden sm:table-cell">
-                      No cohort ZIP bundles found
-                    </td>
-                    <td colSpan={3} className="ac-text-muted px-4 py-8 text-center sm:hidden md:table-cell">
-                      No cohort ZIP bundles found
-                    </td>
-                    <td colSpan={4} className="ac-text-muted px-4 py-8 text-center sm:table-cell md:hidden">
-                      No cohort ZIP bundles found
+                    <td colSpan={5} className="text-center py-12 text-xs font-mono text-[#777777]">
+                      NO COHORT ZIP BUNDLES FOUND
                     </td>
                   </tr>
                 ) : (
                   filteredBundles.map((r) => (
-                    <tr key={r.id} className="border-t border-[var(--ac-border)]">
-                      <td className="ac-text-secondary px-4 py-2.5 hidden sm:table-cell">
-                        {new Date(r.published_at).toLocaleString()}
+                    <tr key={r.id} className="hover:bg-[#F9FAFB] transition-colors">
+                      <td className="font-mono text-xs text-[#555555] whitespace-nowrap">
+                        {new Date(r.published_at).toLocaleString('en-UG')}
                       </td>
-                      <td className="ac-text-primary px-4 py-2.5 font-medium">{r.class_name}</td>
-                      <td className="ac-text-secondary px-4 py-2.5">{r.exam_name}</td>
-                      <td className="ac-text-secondary px-4 py-2.5 hidden md:table-cell font-medium">
+                      <td className="font-bold text-xs text-[#111111]">
+                        {r.class_name}
+                      </td>
+                      <td className="font-mono text-xs text-[#555555]">
+                        {r.exam_name}
+                      </td>
+                      <td className="font-mono text-xs text-[#555555]">
                         {`Semester ${r.term} · ${r.year}/${Number(r.year) + 1} Academic Year`}
                       </td>
-                      <td className="px-4 py-2.5">
+                      <td className="text-right whitespace-nowrap">
                         <button
                           type="button"
                           disabled={downloadingKey === `bundle-${r.id}`}
                           onClick={() => downloadBundle(r)}
-                          className="inline-flex rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-500 disabled:opacity-60 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                          className="gov-btn gov-btn-primary gov-btn-sm flex items-center gap-1.5 ml-auto"
                         >
-                          {downloadingKey === `bundle-${r.id}` ? '…' : 'Download'}
+                          {downloadingKey === `bundle-${r.id}` ? <GovRollingBox size="sm" /> : <Download className="w-3.5 h-3.5" />}
+                          <span>{downloadingKey === `bundle-${r.id}` ? 'PACKING...' : 'DOWNLOAD BUNDLE'}</span>
                         </button>
                       </td>
                     </tr>
@@ -623,9 +630,9 @@ export default function ReportRecordsPage() {
                 )}
               </tbody>
             </table>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </AdminPageWrapper>
+    </div>
   );
 }

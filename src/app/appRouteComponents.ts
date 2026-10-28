@@ -87,6 +87,7 @@ export const DesignTeacherProfile = lazyWithRetry(() => import('@/pages/admin/te
 export const TeacherEditPage = lazyWithRetry(() => import('@/pages/admin/teachers/TeacherEditPage'));
 export const CreateTeacherLoginPage = lazyWithRetry(() => import('@/pages/admin/teachers/CreateTeacherLoginPage'));
 export const DesignParentsPage = lazyWithRetry(() => import('@/pages/admin/parents/DesignParentsPage'));
+export const AddParentPage = lazyWithRetry(() => import('@/pages/admin/parents/AddParentPage'));
 export const DesignParentProfile = lazyWithRetry(() => import('@/pages/admin/parents/DesignParentProfile'));
 export const CreateParentLoginPage = lazyWithRetry(() => import('@/pages/admin/parents/CreateParentLoginPage'));
 export const AccountsPage = lazyWithRetry(() => import('@/pages/admin/accounts/AccountsPage'));

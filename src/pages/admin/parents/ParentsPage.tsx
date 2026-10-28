@@ -6,6 +6,7 @@ import { useAuthStore } from '../../../store/authStore';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
 import { UserPlus, Users } from 'lucide-react';
 import { downloadParentListPdf } from '../../../lib/adminPdfDownload';
+import { GovTableLoader } from '@/components/ui/GovLoadingIndicator';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -197,17 +198,7 @@ export default function ParentsPage() {
               </thead>
               <tbody>
                 {loading ? (
-                  Array.from({ length: 8 }).map((_, i) => (
-                    <tr key={`skeleton-${i}`} className="border-b border-[var(--ac-border)]">
-                      <td className="px-4 py-3"><div className="h-5 w-28 rounded ac-skeleton-block animate-pulse" /></td>
-                      <td className="px-4 py-3"><div className="h-5 w-36 rounded ac-skeleton-block animate-pulse" /></td>
-                      <td className="px-4 py-3"><div className="h-5 w-24 rounded ac-skeleton-block animate-pulse" /></td>
-                      <td className="px-4 py-3"><div className="h-5 w-24 rounded ac-skeleton-block animate-pulse" /></td>
-                      <td className="px-4 py-3"><div className="h-5 w-16 rounded ac-skeleton-block animate-pulse" /></td>
-                      <td className="px-4 py-3"><div className="h-5 w-24 rounded ac-skeleton-block animate-pulse" /></td>
-                      <td className="px-4 py-3"><div className="h-7 w-16 rounded ac-skeleton-block animate-pulse" /></td>
-                    </tr>
-                  ))
+                  <GovTableLoader colSpan={7} />
                 ) : (
                   filteredParents.map((p) => (
                     <tr key={p.id} className="border-b border-[var(--ac-border)]">

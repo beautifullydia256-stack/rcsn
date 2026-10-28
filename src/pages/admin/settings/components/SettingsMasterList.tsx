@@ -1,8 +1,9 @@
-import { ChevronRight, Mic, Search } from 'lucide-react';
+import { ChevronRight, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { SettingsExtraNavItem, SettingsTabKey } from '../settingsNavConfig';
-import { SETTINGS_EXTRA_NAV, SETTINGS_SECTIONS, getSettingsSections, getSettingsExtraNav } from '../settingsNavConfig';
+import { SETTINGS_SECTIONS, getSettingsSections, getSettingsExtraNav } from '../settingsNavConfig';
 import { useSchoolType } from '@/hooks/useSchoolType';
+import '@/styles/government-system.css';
 
 type Row =
   | { type: 'section'; id: SettingsTabKey; title: string; description: string }
@@ -72,87 +73,74 @@ export default function SettingsMasterList({
           ? all.filter((r) => rowSearchText(r).includes(norm))
           : all;
     return groupRows(filtered);
-  }, [norm, schoolProfile]);
+  }, [norm, schoolProfile, sections, isTertiary]);
 
   return (
-    <div className="space-y-5 pb-[calc(var(--pw-botnav-h,64px)+env(safe-area-inset-bottom,0px)+16px)] md:pb-0">
+    <div className="space-y-4 pb-[calc(var(--pw-botnav-h,64px)+env(safe-area-inset-bottom,0px)+16px)] md:pb-12">
       <div className="relative">
         <Search
-          className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400 dark:text-slate-500"
+          className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#777777]"
           aria-hidden
         />
         <input
           type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search"
+          placeholder="SEARCH CONFIGURATION MODULES…"
           autoComplete="off"
-          className="ac-input w-full rounded-2xl py-3 pl-10 pr-11 text-[16px] min-h-[48px] shadow-sm"
+          className="gov-input w-full pl-8 py-2 text-xs"
           aria-label="Search settings"
         />
-        <span
-          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"
-          title="Search is text only"
-          aria-hidden
-        >
-          <Mic className="h-5 w-5" strokeWidth={1.75} />
-        </span>
       </div>
 
       {schoolProfile && (
         <button
           type="button"
           onClick={() => onSchoolProfileClick?.()}
-          className="flex w-full min-h-[72px] items-center gap-3 rounded-2xl border border-slate-200/80 bg-white/80 p-3 text-left shadow-sm transition-colors hover:bg-slate-200/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:border-white/10 dark:bg-[#0D1512]/90 dark:hover:bg-[#131d19]/90"
-          aria-label={`${schoolProfile.name}. Open school branding.`}
+          className="gov-card flex w-full items-center gap-3 rounded-lg border border-[#CCCCCC] bg-white p-3 text-left transition-colors hover:bg-[#F9FAFB]"
+          aria-label={`${schoolProfile.name}. Open institutional identity.`}
         >
-          <span className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200/40 bg-slate-200/50 dark:border-white/10 dark:bg-[#070B09]">
+          <span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded border border-[#CCCCCC] bg-[#F4F4F5]">
             {schoolProfile.logoUrl ? (
               <img
                 src={schoolProfile.logoUrl}
                 alt=""
-                className="h-full w-full object-contain p-1"
+                className="h-full w-full object-contain p-0.5"
               />
             ) : (
-              <span className="text-lg font-semibold text-slate-500 dark:text-slate-400" aria-hidden>
-                {schoolProfile.name.slice(0, 1).toUpperCase()}
+              <span className="text-sm font-mono font-bold text-[#333333]" aria-hidden>
+                {schoolProfile.name.slice(0, 2).toUpperCase()}
               </span>
             )}
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[17px] font-semibold leading-tight text-slate-900 dark:text-white">
+            <span className="block truncate text-xs font-bold uppercase font-sans text-[#111111]">
               {schoolProfile.name}
             </span>
-            <span className="mt-0.5 line-clamp-2 block text-[13px] leading-snug text-slate-600 dark:text-white/60">
-              {schoolProfile.subtitle ? (
-                <>
-                  {schoolProfile.subtitle}
-                  <span className="text-slate-400 dark:text-slate-500"> · </span>
-                </>
-              ) : null}
-              Branding, fee structure, and school setup
+            <span className="block truncate text-[10px] font-mono text-[#666666]">
+              INSTITUTIONAL IDENTITY & BRANDING
             </span>
           </span>
           <ChevronRight
-            className="h-[18px] w-[18px] shrink-0 text-slate-400 dark:text-slate-500"
+            className="h-3.5 w-3.5 shrink-0 text-[#888888]"
             aria-hidden
           />
         </button>
       )}
 
-      <nav aria-label="Settings sections" className="space-y-5">
+      <nav aria-label="Settings sections" className="space-y-4">
         {norm && filteredGroups.length === 0 ? (
-          <p className="rounded-2xl border border-slate-200/80 bg-white/60 px-4 py-6 text-center text-sm text-slate-600 dark:border-white/10 dark:bg-[#0D1512]/80 dark:text-white/60">
-            No settings match &quot;{q.trim()}&quot;. Try another word or clear the search.
+          <p className="gov-card rounded-lg border border-[#CCCCCC] bg-white p-4 text-center text-xs font-mono text-[#666666]">
+            NO CONFIGURATION MODULES MATCH &quot;{q.trim().toUpperCase()}&quot;.
           </p>
         ) : null}
         {filteredGroups.map(({ group, rows }) => (
-          <div key={group}>
-            <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+          <div key={group} className="space-y-1">
+            <p className="px-1 text-[10px] font-mono font-bold uppercase tracking-wider text-[#666666]">
               {group}
             </p>
-            <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white/80 shadow-sm dark:border-white/10 dark:bg-[#0D1512]/90">
-              <ul className="divide-y divide-slate-200/30 dark:divide-white/10">
+            <div className="gov-card overflow-hidden rounded-lg border border-[#CCCCCC] bg-white">
+              <ul className="divide-y divide-[#E5E5E5]">
                 {rows.map((row) => {
                   if (row.type === 'section') {
                     const meta = SETTINGS_SECTIONS.find((s) => s.id === row.id)!;
@@ -163,28 +151,23 @@ export default function SettingsMasterList({
                         <button
                           type="button"
                           onClick={() => onSelectSection(row.id)}
-                          className={`flex w-full min-h-[52px] items-center gap-3 px-3 py-2.5 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 ${
+                          className={`flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors ${
                             isActive
-                              ? 'bg-slate-200/90 dark:bg-white/10'
-                              : 'hover:bg-slate-200/60 dark:hover:bg-white/5'
+                              ? 'bg-[#EAEAEA] font-bold text-[#111111]'
+                              : 'hover:bg-[#F9FAFB] text-[#333333]'
                           }`}
                           aria-current={isActive ? 'page' : undefined}
                         >
-                          <span
-                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white ${meta.iconBg}`}
-                          >
-                            <Icon className="h-4 w-4" aria-hidden />
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-[#CCCCCC] bg-[#F8F9FA] text-[#111111]">
+                            <Icon className="h-3.5 w-3.5" aria-hidden />
                           </span>
                           <span className="min-w-0 flex-1">
-                            <span className="block text-[15px] font-medium leading-tight text-slate-900 dark:text-white">
+                            <span className="block text-xs uppercase font-sans tracking-tight">
                               {row.title}
-                            </span>
-                            <span className="mt-0.5 block text-[12px] leading-snug text-slate-600 dark:text-white/60">
-                              {row.description}
                             </span>
                           </span>
                           <ChevronRight
-                            className="h-[18px] w-[18px] shrink-0 text-slate-400 dark:text-slate-500"
+                            className="h-3.5 w-3.5 shrink-0 text-[#888888]"
                             aria-hidden
                           />
                         </button>
@@ -198,23 +181,18 @@ export default function SettingsMasterList({
                       <button
                         type="button"
                         onClick={() => onNavigate(item.to)}
-                        className="flex w-full min-h-[52px] items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-slate-200/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:hover:bg-white/5"
+                        className="flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-[#F9FAFB] text-[#333333]"
                       >
-                        <span
-                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white ${item.iconBg}`}
-                        >
-                          <Icon className="h-4 w-4" aria-hidden />
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-[#CCCCCC] bg-[#F8F9FA] text-[#111111]">
+                          <Icon className="h-3.5 w-3.5" aria-hidden />
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block text-[15px] font-medium leading-tight text-slate-900 dark:text-white">
+                          <span className="block text-xs uppercase font-sans tracking-tight">
                             {item.title}
-                          </span>
-                          <span className="mt-0.5 block text-[12px] leading-snug text-slate-600 dark:text-white/60">
-                            {item.description}
                           </span>
                         </span>
                         <ChevronRight
-                          className="h-[18px] w-[18px] shrink-0 text-slate-400 dark:text-slate-500"
+                          className="h-3.5 w-3.5 shrink-0 text-[#888888]"
                           aria-hidden
                         />
                       </button>

@@ -3,8 +3,18 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/authStore';
 import { useSchoolType } from '@/hooks/useSchoolType';
 import { supabase } from '../../../lib/supabase';
-import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
-import { Stethoscope, FileText, Clock, Archive, FileSpreadsheet } from 'lucide-react';
+import {
+  Stethoscope,
+  FileText,
+  Clock,
+  Archive,
+  FileSpreadsheet,
+  ArrowLeft,
+  ChevronRight,
+  Printer,
+  Award,
+} from 'lucide-react';
+import '@/styles/government-system.css';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -38,10 +48,8 @@ export async function fetchReportStats(userId: string): Promise<{ today: number;
       todayCount = t ?? 0;
       termCount = r ?? 0;
     } catch {
-      // Graceful fallback if exact count times out
+      // Graceful fallback
     }
-    const today = todayCount;
-    const term = termCount;
 
     const { data: pendingSnapshots } = await supabase
       .from('report_snapshots')
@@ -51,8 +59,8 @@ export async function fetchReportStats(userId: string): Promise<{ today: number;
       .limit(50);
 
     return {
-      today: today ?? 0,
-      term: term ?? 0,
+      today: todayCount ?? 0,
+      term: termCount ?? 0,
       pending: pendingSnapshots?.length ?? 0,
     };
   } catch {
@@ -67,162 +75,177 @@ export default function ReportsHub() {
 
   const { data: stats = { today: 0, term: 0, pending: 0 } } = useQuery({
     queryKey: ['admin', 'report-stats', user?.id ?? ''],
-    queryFn: () => fetchReportStats(user!.id),
+    queryFn: () => (user?.id ? fetchReportStats(user.id) : { today: 0, term: 0, pending: 0 }),
     enabled: !!user?.id,
     staleTime: STALE_TIME_MS,
   });
 
   return (
-    <AdminPageWrapper
-      eyebrow={isTertiary ? 'Academic Records' : 'Academic reports'}
-      title={isTertiary ? 'Result Slips & Transcripts' : 'Reports'}
-      subtitle={
-        isTertiary
-          ? 'Generate and manage UNMEB result slips, semester records, and transcripts'
-          : 'Generate and manage student academic reports'
-      }
-    >
-      <div className="flex items-center justify-end mb-4">
-        <button
-          type="button"
-          onClick={() => navigate('/dashboard/admin')}
-          className="ac-glass-btn-secondary rounded-xl px-4 py-2 text-sm font-medium ac-text-primary"
-        >
-          Back to Dashboard
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <button
-          type="button"
-          className="ac-glass-card p-6 text-left cursor-pointer border border-[var(--ac-border)] transition-all hover:border-emerald-500/35 hover:shadow-lg hover:shadow-emerald-900/10 dark:hover:border-emerald-400/25"
-          onClick={() => navigate('/dashboard/admin/reports/generate')}
-        >
-          <div className="text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full ac-glass-icon ac-icon-blue flex items-center justify-center">
-              <FileText className="w-8 h-8 [color:var(--ac-accent-blue)]" />
-            </div>
-            <h3 className="ac-text-primary text-lg font-medium mb-2">
-              {isTertiary ? 'Generate Result Slips & Transcripts' : 'Generate reports'}
-            </h3>
-            <p className="ac-text-muted text-sm">
-              {isTertiary
-                ? 'Generate UNMEB semester result slips and academic transcripts for trainees.'
-                : 'Opens the primary or secondary generator from your school type (System Settings).'}
-            </p>
-          </div>
-        </button>
-
-        <button
-          type="button"
-          className="ac-glass-card p-6 text-left cursor-pointer border border-[var(--ac-border)] transition-all hover:border-emerald-500/35 hover:shadow-lg hover:shadow-emerald-900/10 dark:hover:border-emerald-400/25"
-          onClick={() => navigate('/dashboard/admin/report-records')}
-        >
-          <div className="text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full ac-glass-icon ac-icon-green flex items-center justify-center">
-              <Archive className="w-8 h-8 [color:var(--ac-accent-green)]" />
-            </div>
-            <h3 className="ac-text-primary text-lg font-medium mb-2">
-              {isTertiary ? 'Historical Records & Slips' : 'Report Records'}
-            </h3>
-            <p className="ac-text-muted text-sm">
-              {isTertiary
-                ? 'View and manage historical result slip records and archives'
-                : 'View and manage historical report records'}
-            </p>
-          </div>
-        </button>
-
-        {isTertiary ? (
-          <>
-            <button
-              type="button"
-              className="ac-glass-card p-6 text-left cursor-pointer border border-[var(--ac-border)] transition-all hover:border-emerald-500/35 hover:shadow-lg hover:shadow-emerald-900/10 dark:hover:border-emerald-400/25"
-              onClick={() => navigate('/dashboard/admin/tertiary')}
-            >
-              <div className="text-center">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full ac-glass-icon ac-icon-teal flex items-center justify-center">
-                  <FileSpreadsheet className="w-8 h-8 [color:var(--ac-accent-teal)]" />
-                </div>
-                <h3 className="ac-text-primary text-lg font-medium mb-2">Cohort Broadsheets & UNMEB Hub</h3>
-                <p className="ac-text-muted text-sm">Master mark sheets, broadsheet exports, and UNMEB national exam records</p>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              className="ac-glass-card p-6 text-left cursor-pointer border border-[var(--ac-border)] transition-all hover:border-emerald-500/35 hover:shadow-lg hover:shadow-emerald-900/10 dark:hover:border-emerald-400/25"
-              onClick={() => navigate('/dashboard/admin/ward-postings')}
-            >
-              <div className="text-center">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full ac-glass-icon ac-icon-teal flex items-center justify-center">
-                  <Stethoscope className="w-8 h-8 [color:var(--ac-accent-teal)]" />
-                </div>
-                <h3 className="ac-text-primary text-lg font-medium mb-2">Ward Postings & Clinical</h3>
-                <p className="ac-text-muted text-sm">Review hospital rotations and council logbook verification</p>
-              </div>
-            </button>
-          </>
-        ) : (
+    <div className="admin-terminal-page space-y-5">
+      {/* ── 1. TOP HEADER ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#CCCCCC] pb-4">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-[#111111] uppercase font-mono">
+            INSTITUTIONAL RESULT SLIPS &amp; TRANSCRIPTS DESK
+          </h1>
+          <p className="text-xs text-[#555555] font-mono tracking-wider uppercase mt-0.5">
+            EXAMINATION DOCUMENT ISSUANCE, ACADEMIC TRANSCRIPTS &amp; OFFICIAL TRANSCRIPTS ARCHIVE
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            className="hidden ac-glass-card p-6 text-left cursor-pointer border border-[var(--ac-border)] transition-all hover:border-emerald-500/35 hover:shadow-lg hover:shadow-emerald-900/10 dark:hover:border-emerald-400/25"
-            onClick={() => navigate('/dashboard/admin/settings')}
+            onClick={() => navigate('/dashboard/admin')}
+            className="gov-btn gov-btn-sm flex items-center gap-1.5"
           >
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full ac-glass-icon ac-icon-teal flex items-center justify-center">
-                <Clock className="w-8 h-8 [color:var(--ac-accent-teal)]" />
-              </div>
-              <h3 className="ac-text-primary text-lg font-medium mb-2">Report Templates</h3>
-              <p className="ac-text-muted text-sm">Configure report templates and settings</p>
-            </div>
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>EXECUTIVE DASHBOARD</span>
           </button>
-        )}
+        </div>
       </div>
 
-      <div className={`${adminCardClass} mt-6`}>
-        <h3
-          className="ac-text-primary mb-4 text-xl font-normal tracking-tight sm:text-2xl"
-          style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}
-        >
-          {isTertiary ? 'Document Statistics' : 'Report Statistics'}
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="text-center">
-            <div
-              className="text-2xl font-normal text-emerald-600 dark:text-emerald-400"
-              style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}
-            >
-              {stats.today}
-            </div>
-            <div className="ac-text-muted text-sm">
-              {isTertiary ? 'Slips Generated Today' : 'Reports Generated Today'}
-            </div>
+      {/* ── 2. MONOCHROME KPI SUMMARY METRIC CARDS ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            ISSUED TODAY
           </div>
-          <div className="text-center">
-            <div
-              className="text-2xl font-normal text-teal-600 dark:text-teal-400"
-              style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}
-            >
-              {stats.term}
-            </div>
-            <div className="ac-text-muted text-sm">
-              {isTertiary ? 'Total Slips This Semester' : 'Total Reports This Term'}
-            </div>
+          <div className="text-2xl font-bold font-mono text-emerald-700 mt-1">
+            {stats.today.toLocaleString()}
           </div>
-          <div className="text-center">
-            <div
-              className="text-2xl font-normal text-slate-700 dark:text-slate-200"
-              style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}
-            >
-              {stats.pending}
-            </div>
-            <div className="ac-text-muted text-sm">
-              {isTertiary ? 'Pending Documents' : 'Pending Reports'}
-            </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            DOCUMENTS PRINTED &amp; EXPORTED
+          </div>
+        </div>
+
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            TOTAL ISSUED THIS CYCLE
+          </div>
+          <div className="text-2xl font-bold font-mono text-[#111111] mt-1">
+            {stats.term.toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            OFFICIAL SLIPS GENERATED
+          </div>
+        </div>
+
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            PENDING SNAPSHOTS
+          </div>
+          <div className="text-2xl font-bold font-mono text-amber-600 mt-1">
+            {stats.pending.toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            AWAITING FINAL COMPILATION
           </div>
         </div>
       </div>
-    </AdminPageWrapper>
+
+      {/* ── 3. OPERATIONAL DESKS GRID ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Module 1 */}
+        <button
+          type="button"
+          onClick={() => navigate('/dashboard/admin/reports/generate')}
+          className="gov-card p-5 text-left transition-all hover:border-[#111111] group bg-white border border-[#CCCCCC]"
+        >
+          <div className="flex items-start justify-between">
+            <div className="w-10 h-10 border border-[#CCCCCC] bg-[#F8F9FA] flex items-center justify-center text-[#111111]">
+              <FileText className="w-5 h-5" />
+            </div>
+            <span className="text-[10px] font-mono text-[#888888] uppercase tracking-wider flex items-center gap-1 group-hover:text-[#111111]">
+              OPEN DESK <ChevronRight className="w-3 h-3" />
+            </span>
+          </div>
+          <div className="mt-4">
+            <h3 className="font-bold text-sm font-mono text-[#111111] uppercase tracking-tight">
+              {isTertiary ? 'Generate Result Slips & Transcripts' : 'Generate Academic Reports'}
+            </h3>
+            <p className="text-xs text-[#555555] font-mono mt-1">
+              {isTertiary
+                ? 'Generate UNMEB semester result slips, official progress cards, and accredited academic transcripts.'
+                : 'Batch print and export standardized academic report cards for all enrolled cohorts.'}
+            </p>
+          </div>
+        </button>
+
+        {/* Module 2 */}
+        <button
+          type="button"
+          onClick={() => navigate('/dashboard/admin/report-records')}
+          className="gov-card p-5 text-left transition-all hover:border-[#111111] group bg-white border border-[#CCCCCC]"
+        >
+          <div className="flex items-start justify-between">
+            <div className="w-10 h-10 border border-[#CCCCCC] bg-[#F8F9FA] flex items-center justify-center text-[#111111]">
+              <Archive className="w-5 h-5" />
+            </div>
+            <span className="text-[10px] font-mono text-[#888888] uppercase tracking-wider flex items-center gap-1 group-hover:text-[#111111]">
+              OPEN ARCHIVE <ChevronRight className="w-3 h-3" />
+            </span>
+          </div>
+          <div className="mt-4">
+            <h3 className="font-bold text-sm font-mono text-[#111111] uppercase tracking-tight">
+              Historical Records &amp; Slips Archive
+            </h3>
+            <p className="text-xs text-[#555555] font-mono mt-1">
+              Audit and retrieve verified historical result slip snapshots, permanent transcript records, and past exam boards.
+            </p>
+          </div>
+        </button>
+
+        {/* Module 3 */}
+        {isTertiary && (
+          <>
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard/admin/tertiary')}
+              className="gov-card p-5 text-left transition-all hover:border-[#111111] group bg-white border border-[#CCCCCC]"
+            >
+              <div className="flex items-start justify-between">
+                <div className="w-10 h-10 border border-[#CCCCCC] bg-[#F8F9FA] flex items-center justify-center text-[#111111]">
+                  <FileSpreadsheet className="w-5 h-5" />
+                </div>
+                <span className="text-[10px] font-mono text-[#888888] uppercase tracking-wider flex items-center gap-1 group-hover:text-[#111111]">
+                  EXAMINATION DESK <ChevronRight className="w-3 h-3" />
+                </span>
+              </div>
+              <div className="mt-4">
+                <h3 className="font-bold text-sm font-mono text-[#111111] uppercase tracking-tight">
+                  Cohort Broadsheets &amp; UNMEB Hub
+                </h3>
+                <p className="text-xs text-[#555555] font-mono mt-1">
+                  Master mark sheets, official broadsheet export, national exam numbers (NSIN/UHPAB), and curriculum credit units.
+                </p>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard/admin/ward-postings')}
+              className="gov-card p-5 text-left transition-all hover:border-[#111111] group bg-white border border-[#CCCCCC]"
+            >
+              <div className="flex items-start justify-between">
+                <div className="w-10 h-10 border border-[#CCCCCC] bg-[#F8F9FA] flex items-center justify-center text-[#111111]">
+                  <Stethoscope className="w-5 h-5" />
+                </div>
+                <span className="text-[10px] font-mono text-[#888888] uppercase tracking-wider flex items-center gap-1 group-hover:text-[#111111]">
+                  CLINICAL DESK <ChevronRight className="w-3 h-3" />
+                </span>
+              </div>
+              <div className="mt-4">
+                <h3 className="font-bold text-sm font-mono text-[#111111] uppercase tracking-tight">
+                  Hospital Ward Postings &amp; Clinical Rotations
+                </h3>
+                <p className="text-xs text-[#555555] font-mono mt-1">
+                  Hospital rotation allocations, logbook sign-offs, clinical mentor assignments, and nursing council compliance.
+                </p>
+              </div>
+            </button>
+          </>
+        )}
+      </div>
+    </div>
   );
 }

@@ -22,6 +22,9 @@ import {
   Heart,
   MapPin,
   UserCircle2,
+  Users,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react';
 import ImageUpload from '@/components/ImageUpload';
 import { createMissedExamRecordsForNewStudent } from '@/lib/examResultsUtils';
@@ -118,55 +121,20 @@ function SelectField({
   disabled,
   required,
   'aria-label': ariaLabel,
-  isModal,
-  direction = 'down',
 }: {
   id?: string;
   value: string | number;
   onChange: (e: ChangeEvent<HTMLSelectElement>) => void;
   children: ReactNode;
-  className: string;
+  className?: string;
   disabled?: boolean;
   required?: boolean;
   'aria-label'?: string;
   isModal?: boolean;
   direction?: 'down' | 'up';
 }) {
-  const isFrosted = Boolean(isModal || className.includes('border-white'));
-
-  if (isFrosted) {
-    const rawOptions: GlassSelectOption[] = [];
-    let placeholder: string | undefined = undefined;
-
-    Children.toArray(children).forEach((child) => {
-      if (isValidElement(child) && child.props) {
-        const p = child.props as { value?: string | number; children?: ReactNode };
-        const optVal = String(p.value ?? '');
-        const optLabel = extractOptionLabel(p.children) || optVal;
-        if (optVal === '' && !placeholder) {
-          placeholder = optLabel;
-        } else {
-          rawOptions.push({ value: optVal, label: optLabel });
-        }
-      }
-    });
-
-    return (
-      <LiquidGlassSelect
-        value={String(value)}
-        onChange={(val) => {
-          onChange({ target: { value: val } } as unknown as ChangeEvent<HTMLSelectElement>);
-        }}
-        options={rawOptions}
-        placeholder={placeholder}
-        direction={direction}
-        disabled={disabled}
-      />
-    );
-  }
-
   return (
-    <div className="relative">
+    <div className="relative w-full">
       <select
         id={id}
         value={value}
@@ -174,94 +142,50 @@ function SelectField({
         disabled={disabled}
         required={required}
         aria-label={ariaLabel}
-        className={className}
+        className={
+          className ||
+          'w-full bg-transparent border-0 border-b border-slate-300 hover:border-slate-400 focus:border-b-2 focus:border-emerald-600 text-slate-900 text-xs py-1.5 px-0.5 rounded-none focus:outline-none cursor-pointer appearance-none pr-7 font-medium transition-colors'
+        }
       >
         {children}
       </select>
       <ChevronDown
-        className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 dark:text-slate-400"
+        className="pointer-events-none absolute right-1.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"
         aria-hidden
       />
     </div>
   );
 }
 
-const SECTION_Z_INDEX: Record<string, string> = {
-  personal: 'z-[35]',
-  academic: 'z-[30]',
-  fees: 'z-[25]',
-  contact: 'z-[20]',
-  medical: 'z-[15]',
-  photo: 'z-[10]',
-};
-
 function Section({
-  id,
   title,
   icon: Icon,
-  isOpen,
-  onToggle,
-  isModal,
+  badge,
   children,
 }: {
-  id: string;
+  id?: string;
   title: string;
-  icon: ComponentType<{ className?: string }>;
-  isOpen: boolean;
-  onToggle: (key: string) => void;
+  icon?: ComponentType<{ className?: string }>;
+  badge?: ReactNode;
+  isOpen?: boolean;
+  onToggle?: (key: string) => void;
   isModal?: boolean;
   children: ReactNode;
 }) {
-  const zClass = isModal ? (SECTION_Z_INDEX[id] || 'z-10') : '';
-
   return (
-    <div
-      className={
-        isModal
-          ? `rounded-2xl border border-white/20 bg-black/25 backdrop-blur-sm text-white transition-all shadow-[inset_0_1px_2px_rgba(255,255,255,0.08)] relative ${zClass} focus-within:z-[50]`
-          : `${adminCardClass} !p-0 overflow-hidden`
-      }
-    >
-      <button
-        type="button"
-        onClick={() => onToggle(id)}
-        className={
-          isModal
-            ? 'flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition-colors hover:bg-white/10 active:bg-white/15 sm:px-5'
-            : 'flex w-full items-center justify-between gap-3 px-4 py-4 text-left transition-colors hover:bg-emerald-500/5 dark:hover:bg-white/5 sm:px-5'
-        }
-      >
-        <span className="flex min-w-0 items-center gap-3">
-          <span
-            className={
-              isModal
-                ? 'flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/10 border border-white/25 text-emerald-300 shadow-[inset_0_1px_2px_rgba(255,255,255,0.3)]'
-                : 'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 text-emerald-600 ring-1 ring-emerald-500/20 dark:text-emerald-400'
-            }
-          >
-            <Icon className={isModal ? 'h-4 w-4' : 'h-5 w-5'} aria-hidden />
-          </span>
-          <span className={isModal ? 'text-sm font-bold text-white tracking-tight drop-shadow-sm' : 'text-base font-semibold ac-text-primary'}>
+    <div className="bg-white border border-[#CCCCCC] p-4 sm:p-5">
+      <div className="flex items-center justify-between pb-2 mb-3.5 border-b border-[#CCCCCC]">
+        <div className="flex items-center gap-2">
+          {Icon && <Icon className="h-4 w-4 text-[#111111] shrink-0" aria-hidden />}
+          <h2 className="text-[12px] font-bold text-[#111111] uppercase tracking-wider font-mono">
             {title}
-          </span>
-        </span>
-        {isOpen ? (
-          <ChevronDown className={isModal ? 'h-4 w-4 shrink-0 text-white/70' : 'h-5 w-5 shrink-0 text-[var(--ac-text-muted)]'} />
-        ) : (
-          <ChevronRight className={isModal ? 'h-4 w-4 shrink-0 text-white/70' : 'h-5 w-5 shrink-0 text-[var(--ac-text-muted)]'} />
-        )}
-      </button>
-      {isOpen && (
-        <div
-          className={
-            isModal
-              ? 'space-y-4 border-t border-white/15 px-4 py-4 sm:px-5 text-white'
-              : 'space-y-4 border-t border-[var(--ac-border)] px-4 py-5 sm:px-5'
-          }
-        >
-          {children}
+          </h2>
         </div>
-      )}
+        {badge && <div>{badge}</div>}
+      </div>
+      <div className="space-y-3">
+        {children}
+      </div>
     </div>
   );
 }
@@ -325,6 +249,8 @@ function resolveFeeForClass({
   return 0;
 }
 
+const govLabel = 'block text-[11px] font-mono font-bold text-[#444444] uppercase tracking-wider mb-1';
+
 export type AddStudentFormProps = {
   mode: 'page' | 'modal';
   onCompleted?: () => void;
@@ -341,7 +267,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
   const [lastName, setLastName] = useState('');
   const [gender, setGender] = useState('');
   const [dob, setDob] = useState('');
-  const [nationalityChoice, setNationalityChoice] = useState('');
+  const [nationalityChoice, setNationalityChoice] = useState('Ugandan');
   const [nationalityCustomText, setNationalityCustomText] = useState('');
   const [religion, setReligion] = useState('');
   const [city, setCity] = useState('');
@@ -349,11 +275,19 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
   const [studentPhone, setStudentPhone] = useState('');
   const [studentEmail, setStudentEmail] = useState('');
 
+  // Guardian & Sponsor
+  const [guardianName, setGuardianName] = useState('');
+  const [guardianRelationship, setGuardianRelationship] = useState('Mother');
+  const [guardianPhone, setGuardianPhone] = useState('');
+  const [guardianEmail, setGuardianEmail] = useState('');
+  const [guardianOccupation, setGuardianOccupation] = useState('');
+  const [guardianAddress, setGuardianAddress] = useState('');
+
   // Academic
   const [currentClass, setCurrentClass] = useState('');
   const [stream, setStream] = useState('');
   const [previousSchool, setPreviousSchool] = useState('');
-  const [admissionDate, setAdmissionDate] = useState('');
+  const [admissionDate, setAdmissionDate] = useState(() => new Date().toISOString().slice(0, 10));
   /** Tertiary identifiers */
   const [collegeRegNo, setCollegeRegNo] = useState('');
   const [uhpabIndexNo, setUhpabIndexNo] = useState('');
@@ -383,10 +317,18 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successBanner, setSuccessBanner] = useState<{ name: string; cohort: string; id: string } | null>(null);
   const toast = useToast();
 
-  // Collapsible sections: multiple can be open; user closes when they want
-  const [openSections, setOpenSections] = useState<string[]>(['personal']);
+  // Collapsible sections: multiple can be open; default to all open for paper document view
+  const [openSections, setOpenSections] = useState<string[]>([
+    'personal',
+    'academic',
+    'fees',
+    'contact',
+    'medical',
+    'photo',
+  ]);
 
   const { dobMin, dobMax } = useMemo(() => {
     const t = new Date();
@@ -516,6 +458,34 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
       }
     }
   }, [admissionFee, isTertiary, tertiaryStageCode, enrollmentFee]);
+
+  const baseFee = useMemo(() => {
+    return resolveFeeForClass({
+      currentClass,
+      isTertiary,
+      tertiaryStageCode,
+      tertiaryCourseCode,
+      stageOptions,
+      boardingType,
+      feeByClass,
+      boardingByClass,
+    });
+  }, [
+    currentClass,
+    isTertiary,
+    tertiaryStageCode,
+    tertiaryCourseCode,
+    stageOptions,
+    boardingType,
+    feeByClass,
+    boardingByClass,
+  ]);
+
+  const expectedFeeAmount = useMemo(() => {
+    if (baseFee <= 0) return expectedFee ? Number(expectedFee) : 0;
+    const pct = Math.min(100, Math.max(0, Number(discountPercent) || 0));
+    return Math.round(baseFee * (1 - pct / 100));
+  }, [baseFee, discountPercent, expectedFee]);
 
   // Auto-fill expected fee from class, tertiary programme, boarding type & discount
   useEffect(() => {
@@ -721,12 +691,12 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
         country: null,
         student_phone: studentPhone || null,
         student_email,
-        guardian_name: null,
-        guardian_relationship: null,
-        guardian_phone: null,
-        guardian_email: null,
-        guardian_occupation: null,
-        guardian_address: null,
+        guardian_name: guardianName.trim() || null,
+        guardian_relationship: guardianRelationship.trim() || null,
+        guardian_phone: guardianPhone.trim() || null,
+        guardian_email: guardianEmail.trim() || null,
+        guardian_occupation: guardianOccupation.trim() || null,
+        guardian_address: guardianAddress.trim() || null,
         medical_condition: medicalCondition || null,
         stream: stream || null,
         previous_school: previousSchool || null,
@@ -841,10 +811,13 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
       await queryClient.invalidateQueries({ queryKey: ['admin', 'students-design', user!.id] });
       await queryClient.invalidateQueries({ queryKey: ['admin', 'students', user?.id] });
 
+      setSuccessBanner({ name, cohort: currentClass, id: studentId });
       toast.success(
-        'Student saved. Link parents from Add parent when ready; invite portal users from User Management when ready.'
+        isTertiary ? 'Trainee registered successfully.' : 'Student registered successfully.'
       );
-      onCompleted?.();
+      setTimeout(() => {
+        onCompleted?.();
+      }, 1500);
     } catch (err: unknown) {
       setError(formatStudentSaveError(err));
     } finally {
@@ -860,33 +833,25 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
 
   const isModal = mode === 'modal';
 
-  /** Solid light/dark backgrounds so native selects & date pickers stay readable (not white-on-white in dark UI). */
-  const fieldBase =
-    'w-full min-h-[48px] rounded-xl border border-slate-300 px-3 py-2.5 text-base shadow-sm ' +
-    'bg-white text-slate-900 placeholder:text-slate-400 ' +
-    'dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 ' +
-    'focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/35';
+  /** Elegant Modern Document Aesthetic: subtle ink baseline, slate typography, institutional emerald accent */
+  const paperLineInput =
+    'w-full bg-transparent border-0 border-b border-slate-300 hover:border-slate-400 focus:border-b-2 focus:border-emerald-600 px-0.5 py-1.5 text-xs text-slate-900 font-medium placeholder:text-slate-400 rounded-none focus:outline-none transition-colors shadow-none';
+  const paperLineSelect =
+    'w-full bg-transparent border-0 border-b border-slate-300 hover:border-slate-400 focus:border-b-2 focus:border-emerald-600 px-0.5 py-1.5 text-xs text-slate-900 font-medium rounded-none focus:outline-none cursor-pointer appearance-none pr-7 transition-colors shadow-none';
+  const paperLineDate =
+    'w-full bg-transparent border-0 border-b border-slate-300 hover:border-slate-400 focus:border-b-2 focus:border-emerald-600 px-0.5 py-1.5 text-xs text-slate-900 font-mono rounded-none focus:outline-none transition-colors shadow-none';
+  const paperLabel =
+    'block text-[11px] font-semibold uppercase tracking-wider text-slate-600 mb-1';
+  const paperHint =
+    'mt-1 text-[10px] text-slate-400 font-mono';
+  const selectBoxClass = paperLineSelect;
 
-  const modalInputClass =
-    'w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/20 hover:border-white/35 focus:border-white/70 focus:bg-black/35 backdrop-blur-sm text-white placeholder-white/50 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition';
-
-  const inputClass = isModal ? modalInputClass : fieldBase;
-
-  const selectFieldClass = isModal
-    ? 'w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/40 hover:border-white/35 focus:border-white/70 focus:bg-black/50 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition cursor-pointer appearance-none pr-10 [color-scheme:dark]'
-    : `${fieldBase} cursor-pointer appearance-none pr-10 [color-scheme:light] dark:[color-scheme:dark]`;
-
-  const dateFieldClass = isModal
-    ? 'w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/35 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition [color-scheme:dark]'
-    : `${fieldBase} [color-scheme:light] dark:[color-scheme:dark]`;
-
-  const labelClass = isModal
-    ? 'mb-1 block text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm'
-    : 'mb-1.5 block text-sm font-medium ac-text-primary';
-
-  const hintClass = isModal
-    ? 'mt-1 text-[11px] text-white/70'
-    : 'mt-1 text-xs text-[var(--ac-text-muted)]';
+  const modalInputClass = paperLineInput;
+  const inputClass = paperLineInput;
+  const selectFieldClass = paperLineSelect;
+  const dateFieldClass = paperLineDate;
+  const labelClass = paperLabel;
+  const hintClass = paperHint;
 
   const todayIso = new Date().toISOString().slice(0, 10);
 
@@ -901,7 +866,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
       </div>
     );
     if (mode === 'modal') return spinner;
-    return <AdminPageWrapper title="Add student">{spinner}</AdminPageWrapper>;
+    return <div className="w-full p-8">{spinner}</div>;
   }
 
   if (!schoolId) {
@@ -917,645 +882,606 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
       </div>
     );
     if (mode === 'modal') return msg;
-    return <AdminPageWrapper title="Add student">{msg}</AdminPageWrapper>;
+    return <div className="w-full p-8">{msg}</div>;
   }
 
   const formBody = (
     <>
-      <div className={`mx-auto w-full max-w-3xl space-y-6 ${mode === 'page' ? 'pb-28 sm:pb-8' : 'pb-4'}`}>
+      {/* ── RIGHT-SIDE STATUS FEEDBACK CARD ── */}
+      {successBanner && (
+        <div className="fixed top-6 right-6 z-50 w-80 sm:w-96 bg-white border border-emerald-500 p-4 shadow-xl rounded-lg text-slate-900 animate-in fade-in slide-in-from-top-4">
+          <div className="flex items-start gap-3">
+            <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-mono font-bold text-emerald-700 uppercase">
+                Trainee Registered Successfully
+              </div>
+              <div className="text-sm font-bold text-slate-900 mt-1 truncate">
+                {successBanner.name}
+              </div>
+              <div className="text-xs text-slate-500 font-mono mt-0.5 truncate">
+                Cohort: {successBanner.cohort}
+              </div>
+              <div className="text-[10px] text-slate-400 mt-2 font-mono">
+                Returning to Student Registry...
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="fixed top-6 right-6 z-50 w-80 sm:w-96 bg-white border border-rose-500 p-4 shadow-xl rounded-lg text-slate-900 animate-in fade-in slide-in-from-top-4">
+          <div className="flex items-start gap-3">
+            <XCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-mono font-bold text-rose-700 uppercase">
+                Registration Failed
+              </div>
+              <div className="text-xs text-slate-800 mt-1 break-words">
+                {error}
+              </div>
+              <button
+                type="button"
+                onClick={() => setError(null)}
+                className="mt-2.5 px-3 py-1 bg-slate-900 text-white text-[11px] font-mono font-semibold rounded"
+              >
+                Dismiss &amp; Correct Fields
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className={`w-full ${mode === 'page' ? 'max-w-7xl mx-auto' : ''} space-y-4`}>
         {mode === 'page' && (
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={handleCancel}
-              className="ac-glass-btn-secondary inline-flex min-h-[44px] items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium ac-text-primary"
-            >
-              <ArrowLeft className="h-4 w-4 shrink-0" />
-              Back to Students
-            </button>
+          /* ── TOP HEADER (CLEAN & MATCHING STUDENT MANAGEMENT REGISTRY) ── */
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 mb-2 border-b border-[#CCCCCC]">
+            <div className="flex items-center gap-3">
+              <h1 className="text-[17px] font-bold tracking-tight text-[#111111] uppercase font-sans m-0">
+                The Student Register
+              </h1>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="gov-btn gov-btn-sm"
+              >
+                <span>Cancel / Back</span>
+              </button>
+              <button
+                type="submit"
+                form="add-student-form"
+                disabled={submitting}
+                className="gov-btn gov-btn-sm gov-btn-primary"
+              >
+                <span>{submitting ? 'Registering…' : (isTertiary ? 'Submit Trainee Registration' : 'Submit Student Registration')}</span>
+              </button>
+            </div>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="add-student-form space-y-5">
-          <style>{`
-            .dark .add-student-form input[type='date']::-webkit-calendar-picker-indicator {
-              filter: invert(1);
-              opacity: 0.8;
-            }
-          `}</style>
+        <form id="add-student-form" onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div
-              className={
-                isModal
-                  ? 'p-3 rounded-2xl border border-rose-500/40 bg-rose-500/15 text-xs text-rose-200 whitespace-pre-wrap'
-                  : `${adminCardClass} border-rose-500/40 bg-rose-500/10 text-sm text-rose-800 dark:text-rose-100 whitespace-pre-wrap`
-              }
-            >
+            <div className="p-3 border border-rose-400 bg-rose-50 text-xs text-rose-800 font-mono font-medium whitespace-pre-wrap">
               {error}
             </div>
           )}
 
-          <Section
-            id="personal"
-            title="Personal information"
-            icon={UserCircle2}
-            isOpen={openSections.includes('personal')}
-            onToggle={toggleSection}
-            isModal={isModal}
-          >
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div>
-                <label className={labelClass}>
-                  First name <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  className={inputClass}
-                  placeholder="e.g. John"
-                  required
-                  autoComplete="given-name"
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Middle name</label>
-                <input
-                  type="text"
-                  value={middleName}
-                  onChange={(e) => setMiddleName(e.target.value)}
-                  className={inputClass}
-                  placeholder="Optional"
-                  autoComplete="additional-name"
-                />
-              </div>
-              <div>
-                <label className={labelClass}>
-                  Last name <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  className={inputClass}
-                  placeholder="e.g. Doe"
-                  required
-                  autoComplete="family-name"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label className={labelClass}>Gender</label>
-                <SelectField value={gender} onChange={(e) => setGender(e.target.value)} className={selectFieldClass}>
-                  <option value="">Select</option>
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                </SelectField>
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="add-student-dob">
-                  <span className="inline-flex items-center gap-1.5">
-                    <CalendarDays className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden />
-                    Date of birth
-                  </span>
-                </label>
-                <input
-                  id="add-student-dob"
-                  type="date"
-                  value={dob}
-                  min={dobMin}
-                  max={dobMax}
-                  onChange={(e) => setDob(e.target.value)}
-                  className={`${dateFieldClass} mt-1`}
-                  aria-label="Date of birth"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label className={labelClass}>Nationality</label>
-                <SelectField
-                  value={nationalityChoice}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setNationalityChoice(v);
-                    if (v !== NATIONALITY_CUSTOM) setNationalityCustomText('');
-                  }}
-                  className={selectFieldClass}
-                >
-                  <option value="">Select nationality</option>
-                  {EAC_NATIONALITIES.map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                  <option value={NATIONALITY_CUSTOM}>Other — type manually</option>
-                </SelectField>
-                {nationalityChoice === NATIONALITY_CUSTOM && (
-                  <input
-                    type="text"
-                    value={nationalityCustomText}
-                    onChange={(e) => setNationalityCustomText(e.target.value)}
-                    className={`${inputClass} mt-2`}
-                    placeholder="Type nationality"
-                    autoComplete="off"
-                  />
-                )}
-              </div>
-              <div>
-                <label className={labelClass}>Religion</label>
-                <input
-                  type="text"
-                  value={religion}
-                  onChange={(e) => setReligion(e.target.value)}
-                  className={inputClass}
-                  placeholder="Optional"
-                />
-              </div>
-            </div>
-            <div>
-              <label className={labelClass}>City / District</label>
-              <input
-                type="text"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                className={inputClass}
-                placeholder="e.g. Kampala"
-              />
-            </div>
-          </Section>
-
-          <Section
-            id="academic"
-            title="Academic information"
-            icon={GraduationCap}
-            isOpen={openSections.includes('academic')}
-            onToggle={toggleSection}
-            isModal={isModal}
-          >
-            {isTertiary ? (
-              <div className="space-y-3.5">
-                <div className={isModal ? "space-y-3 p-3.5 bg-black/25 rounded-2xl border border-white/20 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)]" : "space-y-3 p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700/60"}>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {/* Course / Award */}
-                    <div>
-                      <label className={labelClass}>
-                        Course / Award <span className="text-rose-500">*</span>
-                      </label>
-                      <SelectField
-                        value={tertiaryCourseCode}
-                        onChange={(e) => setTertiaryCourseCode(e.target.value as 'CN' | 'CM' | 'DN' | 'DM')}
-                        className={selectFieldClass}
-                        required
-                      >
-                        {TERTIARY_AWARDS.map((c) => (
-                          <option key={c.code} value={c.code} className="bg-slate-900 text-white">
-                            {c.name}
-                          </option>
-                        ))}
-                      </SelectField>
-                    </div>
-
-                    {/* Intake Year */}
-                    <div>
-                      <label className={labelClass}>
-                        Intake Year <span className="text-rose-500">*</span>
-                      </label>
-                      <SelectField
-                        value={tertiaryIntakeYear}
-                        onChange={(e) => setTertiaryIntakeYear(Number(e.target.value))}
-                        className={selectFieldClass}
-                        required
-                      >
-                        {TERTIARY_INTAKE_YEARS.map((yr) => (
-                          <option key={yr} value={yr} className="bg-slate-900 text-white">
-                            {yr} Intake
-                          </option>
-                        ))}
-                      </SelectField>
-                    </div>
-
-                    {/* Intake Session */}
-                    <div>
-                      <label className={labelClass}>
-                        Intake Session
-                      </label>
-                      <SelectField
-                        value={tertiaryIntakeBatch}
-                        onChange={(e) => setTertiaryIntakeBatch(e.target.value)}
-                        className={selectFieldClass}
-                      >
-                        <option value="March Intake" className="bg-slate-900 text-white">March Intake (Set {String(tertiaryIntakeYear).slice(-2)})</option>
-                        <option value="August Intake" className="bg-slate-900 text-white">August Intake (Set {String(tertiaryIntakeYear).slice(-2)})</option>
-                      </SelectField>
-                    </div>
-
-                    {/* Academic Stage & Standing (with auto-inference) */}
-                    <div>
-                      <label className={labelClass}>
-                        Academic Stage & Standing <span className="text-rose-500">*</span>
-                      </label>
-                      <SelectField
-                        value={tertiaryStageCode}
-                        onChange={(e) => setTertiaryStageCode(e.target.value)}
-                        className={selectFieldClass}
-                        required
-                      >
-                        {stageOptions.map((st) => (
-                          <option key={st.code} value={st.code} className="bg-slate-900 text-white">
-                            {st.label}
-                          </option>
-                        ))}
-                      </SelectField>
-                    </div>
-                  </div>
-
-                  {/* Smart Cohort Summary Card */}
-                  <div className={isModal ? "flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-emerald-500/15 border border-emerald-400/30 text-xs text-white" : "flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-teal-50/60 dark:bg-teal-950/20 border border-teal-200/60 dark:border-teal-800/40 text-xs"}>
-                    <div className="flex items-center gap-2">
-                      <GraduationCap className={isModal ? "w-4 h-4 text-emerald-300 shrink-0" : "w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0"} />
-                      <span className={isModal ? "font-bold text-white" : "font-semibold text-slate-900 dark:text-slate-100"}>{currentClass}</span>
-                      <span className={isModal ? "text-white/40" : "text-slate-400 dark:text-slate-500"}>•</span>
-                      <span className={isModal ? "text-white/80" : "text-slate-600 dark:text-slate-400"}>{stream}</span>
-                    </div>
-                    <span
-                      className={`px-2 py-0.5 rounded-full font-medium text-[11px] ${
-                        tertiaryStageCode === 'GRADUATED'
-                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
-                          : isModal
-                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
-                            : 'bg-teal-500/15 text-teal-700 dark:text-teal-400 border border-teal-500/30'
-                      }`}
-                    >
-                      {tertiaryStageCode === 'GRADUATED' ? 'Graduated / Alumni' : 'Active Student'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className={labelClass}>Residency / Accommodation</label>
-                    <SelectField
-                      value={boardingType}
-                      onChange={(e) => setBoardingType(e.target.value)}
-                      className={selectFieldClass}
-                    >
-                      <option value="Non-Resident">Non-Resident</option>
-                      <option value="Resident">Resident (Hostel Accommodation)</option>
-                    </SelectField>
-                  </div>
-
-                  <div>
-                    <label className={labelClass}>
-                      <span className="inline-flex items-center gap-1.5">
-                        <CalendarDays className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden />
-                        Admission date <span className="text-rose-500">*</span>
-                      </span>
-                    </label>
-                    <input
-                      type="date"
-                      value={admissionDate}
-                      onChange={(e) => setAdmissionDate(e.target.value)}
-                      className={dateFieldClass}
-                      required
-                      min="2000-01-01"
-                      max={todayIso}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className={labelClass}>Previous school (if transfer)</label>
-                    <input
-                      type="text"
-                      value={previousSchool}
-                      onChange={(e) => setPreviousSchool(e.target.value)}
-                      className={inputClass}
-                      placeholder="e.g. O-Level School or previous Nursing College"
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass}>
-                      <span className="inline-flex items-center gap-1.5">
-                        <CalendarDays className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden />
-                        Admission date <span className="text-rose-500">*</span>
-                      </span>
-                    </label>
-                    <input
-                      type="date"
-                      value={admissionDate}
-                      onChange={(e) => setAdmissionDate(e.target.value)}
-                      className={dateFieldClass}
-                      required
-                      min="2000-01-01"
-                      max={todayIso}
-                    />
-                  </div>
-                </div>
-
+          {/* ── 2-COLUMN MAIN LEDGER LAYOUT (BALANCED 50/50 SPLIT) ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+            {/* ── LEFT COLUMN: PERSONAL BIODATA, GUARDIAN & PASSPORT PHOTO ── */}
+            <div className="space-y-4">
+              {/* 1. Personal & Demographic Information */}
+              <Section title="Personal & Demographic Information" icon={UserCircle2}>
+                {/* Row 1: Names (Tight 3-col grid) */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className={labelClass}>College Registration No.</label>
+                    <label className={govLabel}>First Name <span className="text-rose-600">*</span></label>
                     <input
                       type="text"
-                      value={collegeRegNo}
-                      onChange={(e) => setCollegeRegNo(e.target.value)}
-                      className={inputClass}
-                      placeholder="e.g. CN/2024/001"
-                    />
-                    <p className="mt-1 text-[11px] ac-text-secondary">Standard [Course]/[Year]/[Sequence] format</p>
-                  </div>
-                  <div>
-                    <label className={labelClass}>UHPAB Index Number</label>
-                    <input
-                      type="text"
-                      value={uhpabIndexNo}
-                      onChange={(e) => setUhpabIndexNo(e.target.value)}
-                      className={inputClass}
-                      placeholder="e.g. U025/004"
-                    />
-                    <p className="mt-1 text-[11px] ac-text-secondary">UHPAB (formerly UNMEB) national board index</p>
-                  </div>
-                  <div>
-                    <label className={labelClass}>NSIN Number</label>
-                    <input
-                      type="text"
-                      value={nsinNo}
-                      onChange={(e) => setNsinNo(e.target.value)}
-                      className={inputClass}
-                      placeholder="e.g. JAN24/U025/CN/004"
-                    />
-                    <p className="mt-1 text-[11px] ac-text-secondary">Nursing & Midwifery Council index</p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              /* Non-tertiary schools (Primary / Secondary) */
-              <>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className={labelClass}>
-                      Class <span className="text-rose-500">*</span>
-                    </label>
-                    <SelectField
-                      value={currentClass}
-                      onChange={(e) => setCurrentClass(e.target.value)}
-                      className={selectFieldClass}
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      className="gov-input"
+                      placeholder="e.g. Sarah"
                       required
-                      aria-label="Class"
-                    >
-                      {classOptions.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </SelectField>
+                      autoComplete="given-name"
+                    />
                   </div>
                   <div>
-                    <label className={labelClass}>Residency / Accommodation</label>
-                    <SelectField
-                      value={boardingType}
-                      onChange={(e) => setBoardingType(e.target.value)}
-                      className={selectFieldClass}
-                    >
-                      <option value="Non-Resident">Non-Resident</option>
-                      <option value="Resident">Resident</option>
-                    </SelectField>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className={labelClass}>Stream / Section</label>
+                    <label className={govLabel}>Middle Name</label>
                     <input
                       type="text"
-                      value={stream}
-                      onChange={(e) => setStream(e.target.value)}
-                      className={inputClass}
+                      value={middleName}
+                      onChange={(e) => setMiddleName(e.target.value)}
+                      className="gov-input"
+                      placeholder="Optional"
+                      autoComplete="additional-name"
+                    />
+                  </div>
+                  <div>
+                    <label className={govLabel}>Last Name / Surname <span className="text-rose-600">*</span></label>
+                    <input
+                      type="text"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      className="gov-input"
+                      placeholder="e.g. Namubiru"
+                      required
+                      autoComplete="family-name"
+                    />
+                  </div>
+                </div>
+
+                {/* Row 2: Demographics (Gender, DOB, Nationality, Religion) */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+                  <div>
+                    <label className={govLabel}>Gender <span className="text-rose-600">*</span></label>
+                    <select
+                      value={gender}
+                      onChange={(e) => setGender(e.target.value)}
+                      className="gov-select"
+                      required
+                    >
+                      <option value="">Select</option>
+                      <option value="Female">Female</option>
+                      <option value="Male">Male</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={govLabel} htmlFor="add-student-dob">Date of Birth <span className="text-rose-600">*</span></label>
+                    <input
+                      id="add-student-dob"
+                      type="date"
+                      value={dob}
+                      min={dobMin}
+                      max={dobMax}
+                      onChange={(e) => setDob(e.target.value)}
+                      className="gov-input"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className={govLabel}>Nationality</label>
+                    <select
+                      value={nationalityChoice}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setNationalityChoice(v);
+                        if (v !== NATIONALITY_CUSTOM) setNationalityCustomText('');
+                      }}
+                      className="gov-select"
+                    >
+                      <option value="Ugandan">Ugandan</option>
+                      {EAC_NATIONALITIES.filter((n) => n !== 'Ugandan').map((n) => (
+                        <option key={n} value={n}>{n}</option>
+                      ))}
+                      <option value={NATIONALITY_CUSTOM}>Other</option>
+                    </select>
+                    {nationalityChoice === NATIONALITY_CUSTOM && (
+                      <input
+                        type="text"
+                        value={nationalityCustomText}
+                        onChange={(e) => setNationalityCustomText(e.target.value)}
+                        className="gov-input mt-1.5"
+                        placeholder="Type nationality"
+                        autoComplete="off"
+                      />
+                    )}
+                  </div>
+                  <div>
+                    <label className={govLabel}>Religion</label>
+                    <input
+                      type="text"
+                      value={religion}
+                      onChange={(e) => setReligion(e.target.value)}
+                      className="gov-input"
                       placeholder="Optional"
                     />
                   </div>
+                </div>
+
+                {/* Row 3: City/District, Phone, Email */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                   <div>
-                    <label className={labelClass}>Previous school</label>
+                    <label className={govLabel}>City / District</label>
                     <input
                       type="text"
-                      value={previousSchool}
-                      onChange={(e) => setPreviousSchool(e.target.value)}
-                      className={inputClass}
-                      placeholder="If transfer"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      className="gov-input"
+                      placeholder="e.g. Rakai / Masaka"
+                    />
+                  </div>
+                  <div>
+                    <label className={govLabel}>Student Phone</label>
+                    <input
+                      type="tel"
+                      value={studentPhone}
+                      onChange={(e) => setStudentPhone(e.target.value)}
+                      className="gov-input"
+                      placeholder="e.g. 0770123456"
+                      autoComplete="tel"
+                    />
+                  </div>
+                  <div>
+                    <label className={govLabel}>Institutional Email</label>
+                    <input
+                      type="email"
+                      value={studentEmail}
+                      onChange={(e) => setStudentEmail(e.target.value)}
+                      className="gov-input"
+                      placeholder="e.g. trainee@rcsn.ac.ug"
+                      autoComplete="email"
                     />
                   </div>
                 </div>
-                <div>
-                  <label className={labelClass}>
-                    <span className="inline-flex items-center gap-1.5">
-                      <CalendarDays className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden />
-                      Admission date <span className="text-rose-500">*</span>
-                    </span>
-                  </label>
+
+                {/* Row 4: Medical & Emergency Notes */}
+                <div className="pt-1">
+                  <label className={govLabel}>Medical / Health Notes</label>
                   <input
-                    type="date"
-                    value={admissionDate}
-                    onChange={(e) => setAdmissionDate(e.target.value)}
-                    className={dateFieldClass}
-                    required
-                    min="2000-01-01"
-                    max={todayIso}
+                    type="text"
+                    value={medicalCondition}
+                    onChange={(e) => setMedicalCondition(e.target.value)}
+                    className="gov-input"
+                    placeholder="Record allergies, conditions, or medical alerts (Optional)"
                   />
                 </div>
-              </>
-            )}
-          </Section>
+              </Section>
 
-          <Section id="fees" title="Fees & finance" icon={Banknote} isOpen={openSections.includes('fees')} onToggle={toggleSection} isModal={isModal}>
-            <p className={isModal ? "mb-2 text-[11px] text-white/70" : "mb-2 text-xs ac-text-secondary"}>
-              Tuition is auto-filled from Financial Settings when class and boarding type are set. You can add a discount/bursary and optional initial payment.
-            </p>
-            <div className={isModal ? "mb-3 rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-3 text-white" : "mb-3 rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-3"}>
-              <label className={labelClass}>Student payment code (SchoolPay)</label>
-              <p className={isModal ? "mb-1.5 text-[11px] leading-relaxed text-white/70" : "mb-1.5 text-[11px] leading-relaxed ac-text-secondary"}>
-                Same code as on SchoolPay for this child. PwezaCore uses it to match tuition when SchoolPay syncs or sends webhooks—often the same as admission number if the school set it up that way.
-              </p>
-              <input
-                type="text"
-                className={inputClass}
-                value={schoolpayPaymentCode}
-                onChange={(e) => setSchoolpayPaymentCode(e.target.value)}
-                placeholder="e.g. from SchoolPay Find Student / bursar"
-                autoComplete="off"
-              />
-            </div>
-            <div className={isModal ? "rounded-xl border border-white/20 bg-black/25 p-4 text-white" : "rounded-xl border border-[var(--ac-border)] bg-white/50 p-4 dark:bg-white/5"}>
-              <label className={labelClass}>Discount / Bursary</label>
-              <div className="flex flex-wrap gap-2">
-                {[0, 10, 25, 50, 75, 100].map((p) => (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => setDiscountPercent(p)}
-                    className={
-                      discountPercent === p
-                        ? "min-h-[40px] rounded-xl px-3 py-2 text-xs font-bold bg-emerald-500/30 text-emerald-300 border border-emerald-400/40 shadow-sm transition-all"
-                        : isModal
-                          ? "min-h-[40px] rounded-xl px-3 py-2 text-xs font-medium border border-white/20 bg-white/10 text-white/80 hover:text-white hover:bg-white/15 transition-all"
-                          : "min-h-[40px] rounded-xl px-3 py-2 text-xs font-medium transition-colors border border-[var(--ac-border)] bg-white/80 ac-text-primary hover:bg-emerald-500/10 dark:bg-white/5"
-                    }
-                  >
-                    {p === 0 ? 'None' : p === 100 ? '100%' : `${p}%`}
-                  </button>
-                ))}
-              </div>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <label className={isModal ? "text-[11px] text-white/70" : "text-xs ac-text-secondary"}>Custom %:</label>
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={discountPercent}
-                  onChange={(e) => setDiscountPercent(Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
-                  className={isModal ? "w-20 rounded-xl border border-white/20 bg-black/30 px-2.5 py-1.5 text-xs text-white" : "w-20 rounded border border-[var(--ac-border)] bg-white/90 px-2 py-1.5 text-sm dark:bg-white/5"}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className={labelClass}>Enrollment / Registration fee</label>
-                <input
-                  type="number"
-                  min={0}
-                  value={enrollmentFee}
-                  onChange={(e) => setEnrollmentFee(e.target.value)}
-                  className={inputClass}
-                  placeholder={admissionFee > 0 ? String(admissionFee) : ''}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Admission fee status</label>
-                <SelectField value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)} className={selectFieldClass}>
-                  <option value="Pending">Pending</option>
-                  <option value="Paid">Paid</option>
-                </SelectField>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className={labelClass}>Tuition / Fee amount due</label>
-                <input
-                  type="number"
-                  min={0}
-                  value={expectedFee}
-                  onChange={(e) => setExpectedFee(e.target.value)}
-                  className={inputClass}
-                  placeholder="Auto from fee structure"
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Initial payment (optional)</label>
-                <input
-                  type="number"
-                  min={0}
-                  value={initialPayment}
-                  onChange={(e) => setInitialPayment(e.target.value)}
-                  className={inputClass}
-                  placeholder="0"
-                />
-              </div>
-            </div>
-          </Section>
+              {/* 2. Parent & Guardian Details */}
+              <Section title="Parent, Guardian & Sponsor Details" icon={Users}>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-2">
+                    <label className={govLabel}>Guardian Full Name</label>
+                    <input
+                      type="text"
+                      value={guardianName}
+                      onChange={(e) => setGuardianName(e.target.value)}
+                      className="gov-input"
+                      placeholder="e.g. Florence Nalubega"
+                    />
+                  </div>
+                  <div>
+                    <label className={govLabel}>Relationship</label>
+                    <select
+                      value={guardianRelationship}
+                      onChange={(e) => setGuardianRelationship(e.target.value)}
+                      className="gov-select"
+                    >
+                      <option value="Mother">Mother</option>
+                      <option value="Father">Father</option>
+                      <option value="Guardian">Guardian</option>
+                      <option value="Sponsor">Sponsor</option>
+                      <option value="Aunt">Aunt</option>
+                      <option value="Uncle">Uncle</option>
+                      <option value="Sibling">Sibling</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                </div>
 
-          <Section id="contact" title="Contact & address" icon={MapPin} isOpen={openSections.includes('contact')} onToggle={toggleSection} isModal={isModal}>
-            <p className={hintClass}>
-              Optional for now. Use these when you invite the student to the portal (login).
-            </p>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label className={labelClass}>Student email</label>
-                <input
-                  type="email"
-                  value={studentEmail}
-                  onChange={(e) => setStudentEmail(e.target.value)}
-                  className={inputClass}
-                  placeholder="Optional"
-                  autoComplete="email"
-                  inputMode="email"
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  <div>
+                    <label className={govLabel}>Guardian Phone</label>
+                    <input
+                      type="tel"
+                      value={guardianPhone}
+                      onChange={(e) => setGuardianPhone(e.target.value)}
+                      className="gov-input"
+                      placeholder="e.g. 0772123456"
+                    />
+                  </div>
+                  <div>
+                    <label className={govLabel}>Occupation</label>
+                    <input
+                      type="text"
+                      value={guardianOccupation}
+                      onChange={(e) => setGuardianOccupation(e.target.value)}
+                      className="gov-input"
+                      placeholder="e.g. Health Worker / Farmer"
+                    />
+                  </div>
+                  <div>
+                    <label className={govLabel}>Residential Location</label>
+                    <input
+                      type="text"
+                      value={guardianAddress}
+                      onChange={(e) => setGuardianAddress(e.target.value)}
+                      className="gov-input"
+                      placeholder="e.g. Kalisizo, Rakai"
+                    />
+                  </div>
+                </div>
+              </Section>
+
+              {/* 3. Trainee Passport Photo */}
+              <Section title="Trainee Passport Photo" icon={Camera}>
+                <p className="mb-2 text-[11px] text-[#666666] font-mono">
+                  Upload an official passport-size photograph (JPEG or PNG, max 100KB).
+                </p>
+                <ImageUpload
+                  onImageSelect={(file) => {
+                    setProfilePhoto(file);
+                    setUploadError(null);
+                  }}
+                  onError={(err) => {
+                    setUploadError(err);
+                    setProfilePhoto(null);
+                  }}
+                  placeholder="Upload trainee passport photo"
                 />
-              </div>
-              <div>
-                <label className={labelClass}>Student phone</label>
-                <input
-                  type="tel"
-                  value={studentPhone}
-                  onChange={(e) => setStudentPhone(e.target.value)}
-                  className={inputClass}
-                  placeholder="e.g. 0700123456"
-                  autoComplete="tel"
-                  inputMode="tel"
-                />
-              </div>
+                {uploadError && <p className="mt-1 text-xs text-rose-600 font-mono">{uploadError}</p>}
+              </Section>
             </div>
-          </Section>
 
-          <Section id="medical" title="Medical" icon={Heart} isOpen={openSections.includes('medical')} onToggle={toggleSection} isModal={isModal}>
-            <label className={labelClass}>Medical condition / allergies / notes</label>
-            <textarea
-              value={medicalCondition}
-              onChange={(e) => setMedicalCondition(e.target.value)}
-              className={`${inputClass} min-h-[120px] resize-y`}
-              rows={3}
-              placeholder="Optional"
-            />
-          </Section>
-
-          <Section id="photo" title="Student photo (passport)" icon={Camera} isOpen={openSections.includes('photo')} onToggle={toggleSection} isModal={isModal}>
-            <p className={isModal ? "mb-2 text-[11px] text-white/70" : "mb-2 text-xs ac-text-secondary"}>
-              Upload a passport-style photo. It will be compressed and stored like the old system (used in reports and profile).
-            </p>
-            <ImageUpload
-              onImageSelect={(file) => {
-                setProfilePhoto(file);
-                setUploadError(null);
-              }}
-              onError={(err) => {
-                setUploadError(err);
-                setProfilePhoto(null);
-              }}
-              placeholder="Upload student passport photo"
-            />
-            {uploadError && <p className="mt-2 text-sm text-rose-600 dark:text-rose-400">{uploadError}</p>}
-          </Section>
-
-          <div
-            className={
-              isModal
-                ? 'mt-6 border-t border-white/15 pt-4 relative z-0'
-                : 'fixed bottom-0 left-0 right-0 z-30 border-t border-white/20 dark:border-white/15 bg-white/70 dark:bg-slate-950/60 px-4 py-3 backdrop-blur-2xl backdrop-saturate-[180%] shadow-[0_-8px_32px_rgba(0,0,0,0.25),inset_0_1.5px_2px_rgba(255,255,255,0.4)] sm:static sm:z-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none sm:shadow-none'
-            }
-          >
-            <div className="mx-auto flex max-w-3xl flex-col gap-2 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={handleCancel}
-                className={
-                  isModal
-                    ? 'px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 hover:text-white bg-white/10 hover:bg-white/15 border border-white/20 backdrop-blur-md transition-all active:scale-[0.98]'
-                    : 'ac-glass-btn-secondary order-2 min-h-[48px] rounded-xl px-5 py-3 text-sm font-medium ac-text-primary sm:order-1'
+            {/* ── RIGHT COLUMN: ACADEMIC PLACEMENT & FINANCIAL SCHEDULE ── */}
+            <div className="space-y-4">
+              {/* 4. Academic Placement */}
+              <Section
+                title="Academic Placement"
+                icon={GraduationCap}
+                badge={
+                  <span className="text-[10px] font-mono font-bold bg-[#EAEAEA] text-[#222222] px-2 py-0.5 border border-[#CCCCCC]">
+                    UNMEB U028
+                  </span>
                 }
               >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={submitting}
-                className={
-                  isModal
-                    ? 'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-emerald-950 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:brightness-110 border border-emerald-300/60 shadow-[0_4px_16px_rgba(16,185,129,0.35)] transition-all active:scale-[0.98] disabled:opacity-50'
-                    : 'order-1 min-h-[48px] rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 disabled:opacity-50 sm:order-2 sm:min-w-[min(100%,200px)]'
+                {isTertiary ? (
+                  <>
+                    <div>
+                      <label className={govLabel}>Nursing / Midwifery Award <span className="text-rose-600">*</span></label>
+                      <select
+                        value={tertiaryCourseCode}
+                        onChange={(e) => setTertiaryCourseCode(e.target.value as any)}
+                        className="gov-select font-bold"
+                        required
+                      >
+                        <option value="CN">Certificate in Nursing (CN) — 2.5 Yrs</option>
+                        <option value="DN">Diploma in Nursing (DN) — 3.0 Yrs</option>
+                        <option value="CM">Certificate in Midwifery (CM) — 2.5 Yrs</option>
+                        <option value="DM">Diploma in Midwifery (DM) — 3.0 Yrs</option>
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 pt-1">
+                      <div>
+                        <label className={govLabel}>Intake Year <span className="text-rose-600">*</span></label>
+                        <select
+                          value={tertiaryIntakeYear}
+                          onChange={(e) => setTertiaryIntakeYear(Number(e.target.value))}
+                          className="gov-select"
+                          required
+                        >
+                          {TERTIARY_INTAKE_YEARS.map((yr) => (
+                            <option key={yr} value={yr}>{yr} Intake</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className={govLabel}>Intake Session</label>
+                        <select
+                          value={tertiaryIntakeBatch}
+                          onChange={(e) => setTertiaryIntakeBatch(e.target.value)}
+                          className="gov-select"
+                        >
+                          <option value="March Intake">March Intake (Set {String(tertiaryIntakeYear).slice(-2)})</option>
+                          <option value="August Intake">August Intake (Set {String(tertiaryIntakeYear).slice(-2)})</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 pt-1">
+                      <div>
+                        <label className={govLabel}>Academic Stage <span className="text-rose-600">*</span></label>
+                        <select
+                          value={tertiaryStageCode}
+                          onChange={(e) => setTertiaryStageCode(e.target.value)}
+                          className="gov-select"
+                          required
+                        >
+                          {stageOptions.map((st) => (
+                            <option key={st.code} value={st.code}>{st.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className={govLabel}>Accommodation</label>
+                        <select
+                          value={boardingType}
+                          onChange={(e) => setBoardingType(e.target.value)}
+                          className="gov-select"
+                        >
+                          <option value="Non-Resident">Day Scholar (Non-Resident)</option>
+                          <option value="Resident">Resident (Hostel Accommodation)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 pt-1">
+                      <div>
+                        <label className={govLabel}>Admission Date <span className="text-rose-600">*</span></label>
+                        <input
+                          type="date"
+                          value={admissionDate}
+                          onChange={(e) => setAdmissionDate(e.target.value)}
+                          className="gov-input"
+                          required
+                          max={todayIso}
+                        />
+                      </div>
+                      <div>
+                        <label className={govLabel}>College Reg No.</label>
+                        <input
+                          type="text"
+                          value={collegeRegNo}
+                          onChange={(e) => setCollegeRegNo(e.target.value)}
+                          className="gov-input font-bold"
+                          placeholder="e.g. CN/2026/001"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 bg-[#F9F9FB] border border-[#CCCCCC] flex items-center justify-between font-mono text-[11px] mt-1">
+                      <span className="text-[#555555]">ASSIGNED COHORT:</span>
+                      <span className="font-bold text-[#111111]">{currentClass || '—'}</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={govLabel}>Class <span className="text-rose-600">*</span></label>
+                        <select
+                          value={currentClass}
+                          onChange={(e) => setCurrentClass(e.target.value)}
+                          className="gov-select"
+                          required
+                        >
+                          {classOptions.map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className={govLabel}>Accommodation</label>
+                        <select
+                          value={boardingType}
+                          onChange={(e) => setBoardingType(e.target.value)}
+                          className="gov-select"
+                        >
+                          <option value="Non-Resident">Non-Resident</option>
+                          <option value="Resident">Resident</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 pt-1">
+                      <div>
+                        <label className={govLabel}>Admission Date <span className="text-rose-600">*</span></label>
+                        <input
+                          type="date"
+                          value={admissionDate}
+                          onChange={(e) => setAdmissionDate(e.target.value)}
+                          className="gov-input"
+                          required
+                          max={todayIso}
+                        />
+                      </div>
+                      <div>
+                        <label className={govLabel}>Stream / Section</label>
+                        <input
+                          type="text"
+                          value={stream}
+                          onChange={(e) => setStream(e.target.value)}
+                          className="gov-input"
+                          placeholder="Optional"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+              </Section>
+
+              {/* 4. Fees & Financial Schedule */}
+              <Section
+                title="Fees & Financial Schedule"
+                icon={Banknote}
+                badge={
+                  <span className="text-[10px] font-mono font-bold text-[#111111]">
+                    CENTENARY A/C: 3100035767
+                  </span>
                 }
               >
-                {submitting ? 'Adding…' : (isTertiary ? 'Add Trainee' : 'Add Student')}
-              </button>
+                {/* Overview Banner */}
+                <div className="p-3 bg-[#F4F4F6] border border-[#CCCCCC]">
+                  <div className="flex items-baseline justify-between text-xs font-mono">
+                    <span className="text-[10px] uppercase text-[#555555] font-bold">Standard Term Tuition:</span>
+                    <span className="font-bold text-[#111111]">
+                      UGX {Math.round(baseFee || 0).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex items-baseline justify-between text-xs font-mono mt-1.5 pt-1.5 border-t border-[#DDDDDD]">
+                    <span className="text-[10px] uppercase text-[#111111] font-bold">Net Invoiced:</span>
+                    <span className="font-bold text-[#065f46] text-sm">
+                      UGX {Math.round(expectedFeeAmount ?? baseFee ?? 0).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label className={govLabel}>Initial Deposit (UGX)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={initialPayment}
+                      onChange={(e) => setInitialPayment(e.target.value)}
+                      className="gov-input font-bold"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label className={govLabel}>Bursary / Discount</label>
+                    <select
+                      value={discountPercent}
+                      onChange={(e) => setDiscountPercent(Number(e.target.value))}
+                      className="gov-select font-mono"
+                    >
+                      <option value="0">0% (Standard Fee)</option>
+                      <option value="10">10% Discount</option>
+                      <option value="25">25% Discount</option>
+                      <option value="50">50% Half Bursary</option>
+                      <option value="100">100% Full Bursary</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label className={govLabel}>SchoolPay Code</label>
+                    <input
+                      type="text"
+                      value={schoolpayPaymentCode}
+                      onChange={(e) => setSchoolpayPaymentCode(e.target.value)}
+                      className="gov-input"
+                      placeholder="e.g. 10000512"
+                    />
+                  </div>
+                  <div>
+                    <label className={govLabel}>Payment Status</label>
+                    <select
+                      value={paymentStatus}
+                      onChange={(e) => setPaymentStatus(e.target.value)}
+                      className="gov-select"
+                    >
+                      <option value="Pending">Pending</option>
+                      <option value="Partial">Partial</option>
+                      <option value="Paid">Paid</option>
+                    </select>
+                  </div>
+                </div>
+              </Section>
             </div>
+          </div>
+
+          {/* ── BOTTOM ACTION BAR ── */}
+          <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-[#CCCCCC] mt-4">
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="gov-btn gov-btn-sm"
+            >
+              <span>Cancel / Back</span>
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="gov-btn gov-btn-sm gov-btn-primary"
+            >
+              <span>{submitting ? 'Registering…' : (isTertiary ? 'Submit Trainee Registration' : 'Submit Student Registration')}</span>
+            </button>
           </div>
         </form>
       </div>
@@ -1563,7 +1489,11 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
   );
 
   if (mode === 'page') {
-    return <AdminPageWrapper title="Add student">{formBody}</AdminPageWrapper>;
+    return (
+      <div className="-m-[20px] max-lg:-m-[14px] bg-[#F4F4F6] min-h-screen p-4 sm:p-6 lg:p-8">
+        {formBody}
+      </div>
+    );
   }
   return formBody;
 }

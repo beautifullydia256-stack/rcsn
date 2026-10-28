@@ -2,39 +2,33 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
-import { useUIStore } from '@/store/uiStore';
 import { usePermission } from '@/hooks/usePermission';
 import { PERMISSION_KEYS } from '@/lib/permissions';
 import { useAcademicPeriod } from '@/lib/academicPeriodTerminology';
-import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
 import NativeModal from '@/components/NativeModal';
-import PosEmptyState from '@/components/finance/pos/PosEmptyState';
 import { fetchPerformancePageData, fetchPerformanceGoals } from '@/pages/admin/workforce/workforceApi';
 import { workforceQueryKeys } from '@/pages/admin/workforce/workforceQueryKeys';
 import {
   Target,
   Award,
-  TrendingUp,
   Calendar,
-  User,
   Plus,
   CheckCircle2,
   Clock,
   Layers,
-  ChevronRight,
-  Filter,
-  Check,
   AlertCircle,
   X,
+  ArrowLeft,
+  RefreshCw,
+  FolderOpen,
 } from 'lucide-react';
-import { getTokens, cardGrad, SORA, INTER } from '@/styles/posThemeTokens';
+import { GovPageLoader, GovRollingBox } from '@/components/ui/GovLoadingIndicator';
+import { Link } from 'react-router-dom';
+import '@/styles/government-system.css';
 
 export default function PerformancePage() {
   const canHr = usePermission(PERMISSION_KEYS.hrManage);
   const user = useAuthStore((s) => s.user);
-  const theme = useUIStore((s) => s.theme);
-  const isDark = theme === 'dark';
-  const t = getTokens(isDark);
   const { labels } = useAcademicPeriod();
   const queryClient = useQueryClient();
 
@@ -187,577 +181,510 @@ export default function PerformancePage() {
     }
   };
 
+  if (!user) return null;
+
   if (perfQ.isError) {
     return (
-      <AdminPageWrapper title="Performance & Appraisals" subtitle="Review cycles and staff KPI goals">
-        <div className="w-full rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-sm text-red-200">
-          <div className="flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
-            <span>{perfQ.error instanceof Error ? perfQ.error.message : 'Failed to load performance data'}</span>
-          </div>
+      <div className="admin-terminal-page space-y-4 p-4">
+        <div className="gov-card p-4 border-l-4 border-l-rose-600 bg-rose-50 text-xs font-mono text-rose-800">
+          {perfQ.error instanceof Error ? perfQ.error.message : 'Failed to load performance data'}
         </div>
-      </AdminPageWrapper>
+      </div>
     );
   }
 
   if (loading) {
     return (
-      <AdminPageWrapper title="Performance & Appraisals" subtitle="Loading staff performance records…">
-        <div className="flex items-center justify-center py-20">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
-        </div>
-      </AdminPageWrapper>
+      <div className="admin-terminal-page space-y-4 p-4">
+        <GovPageLoader message="LOADING PERFORMANCE APPRAISAL DESK..." minHeight="min-h-[40vh]" />
+      </div>
     );
   }
 
   if (!canHr) {
     return (
-      <AdminPageWrapper title="Performance & Appraisals" subtitle="Review cycles and staff KPI goals">
-        <div className="w-full rounded-2xl border border-amber-500/30 bg-amber-500/10 p-6 text-sm text-amber-200">
-          Workforce &amp; HR permission required to manage performance cycles and staff appraisals.
+      <div className="admin-terminal-page space-y-4 p-4">
+        <div className="gov-card p-6 text-xs font-mono space-y-2 border-l-4 border-l-amber-500 bg-amber-50 text-amber-900">
+          <p className="font-bold uppercase">ACCESS RESTRICTED: WORKFORCE &amp; HR CLEARANCE REQUIRED</p>
+          <p>
+            Workforce and HR administration clearance is required to manage evaluation cycles and faculty appraisal metrics.
+          </p>
         </div>
-      </AdminPageWrapper>
+      </div>
     );
   }
 
   return (
-    <AdminPageWrapper
-      title="Performance & Appraisals"
-      subtitle={`Configure ${labels.periodNoun.toLowerCase()} review windows, manage appraisals, and track employee performance goals.`}
-    >
-      <div className="w-full space-y-6">
-        {/* Toast / Notifications */}
-        {err && (
-          <div className="flex items-center justify-between rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
-              <span>{err}</span>
-            </div>
-            <button type="button" onClick={() => setErr(null)} className="text-red-400 hover:text-red-200">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-
-        {successMsg && (
-          <div className="flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-              <span>{successMsg}</span>
-            </div>
-            <button type="button" onClick={() => setSuccessMsg(null)} className="text-emerald-400 hover:text-emerald-200">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-
-        {/* 4-Card Summary Strip */}
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
-          <div
-            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
-            style={{
-              background: cardGrad(t, 'emerald'),
-              border: `1px solid ${t.border}`,
-            }}
+    <div className="admin-terminal-page space-y-4 p-4">
+      {/* ── 1. OFFICIAL INSTITUTIONAL MASTHEAD ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#CCCCCC] pb-4">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-[#111111] uppercase font-mono">
+            INSTITUTIONAL FACULTY APPRAISAL &amp; PERFORMANCE DESK
+          </h1>
+          <p className="text-xs text-[#555555] font-mono tracking-wider uppercase mt-0.5">
+            STATUTORY EVALUATION CYCLES, OBJECTIVES &amp; FACULTY KEY PERFORMANCE INDICATORS • REPUBLIC OF UGANDA
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/dashboard/admin/workforce"
+            className="gov-btn gov-btn-secondary gov-btn-sm flex items-center gap-1.5 font-mono"
           >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
-                Active Window
-              </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
-                <Calendar className="h-4 w-4" />
-              </div>
-            </div>
-            <p className="mt-2 text-xl font-bold truncate text-slate-100" style={{ fontFamily: SORA }}>
-              {activeCycle?.name || 'None Active'}
-            </p>
-            <p className="mt-1 text-xs text-emerald-400/90 font-medium">
-              {activeCycle ? `Status: ${activeCycle.status}` : 'Create a review cycle'}
-            </p>
-          </div>
-
-          <div
-            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
-            style={{
-              background: cardGrad(t, 'blue'),
-              border: `1px solid ${t.border}`,
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>WORKFORCE HUB</span>
+          </Link>
+          <button
+            type="button"
+            onClick={() => {
+              void perfQ.refetch();
+              if (activeCycle) void goalsQ.refetch();
             }}
+            className="gov-btn gov-btn-secondary gov-btn-sm flex items-center gap-1.5"
+            title="Refresh Appraisal Ledger"
           >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
-                Total Cycles
-              </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/15 text-blue-400">
-                <Layers className="h-4 w-4" />
-              </div>
-            </div>
-            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
-              {stats.totalCycles}
-            </p>
-            <p className="mt-1 text-xs text-blue-400/90 font-medium">
-              {stats.activeCycles} currently active
-            </p>
-          </div>
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
 
-          <div
-            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
-            style={{
-              background: cardGrad(t, 'purple'),
-              border: `1px solid ${t.border}`,
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
-                Goals Set
-              </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/15 text-purple-400">
-                <Target className="h-4 w-4" />
-              </div>
-            </div>
-            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
-              {stats.totalGoals}
-            </p>
-            <p className="mt-1 text-xs text-purple-400/90 font-medium">
-              In selected cycle
-            </p>
+      {/* Notifications */}
+      {err && (
+        <div className="gov-card p-3 border-l-4 border-l-rose-600 bg-rose-50 flex items-center justify-between text-xs font-mono text-rose-800">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 text-rose-700 shrink-0" />
+            <span>{err}</span>
           </div>
+          <button type="button" onClick={() => setErr(null)} className="text-rose-700 font-bold">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
-          <div
-            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
-            style={{
-              background: cardGrad(t, 'amber'),
-              border: `1px solid ${t.border}`,
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
-                Achieved
-              </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-400">
-                <Award className="h-4 w-4" />
-              </div>
-            </div>
-            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
-              {stats.achievedGoals}
-            </p>
-            <p className="mt-1 text-xs text-amber-400/90 font-medium">
-              {stats.totalGoals > 0
-                ? `${Math.round((stats.achievedGoals / stats.totalGoals) * 100)}% completion rate`
-                : 'No goals logged'}
-            </p>
+      {successMsg && (
+        <div className="gov-card p-3 border-l-4 border-l-emerald-600 bg-emerald-50 flex items-center justify-between text-xs font-mono text-emerald-800">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-emerald-700 shrink-0" />
+            <span>{successMsg}</span>
+          </div>
+          <button type="button" onClick={() => setSuccessMsg(null)} className="text-emerald-700 font-bold">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {/* ── 2. MONOCHROME KPI SUMMARY STRIP ── */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            ACTIVE APPRAISAL WINDOW
+          </div>
+          <div className="text-lg font-bold font-mono text-[#111111] mt-1 truncate">
+            {activeCycle?.name || 'NONE ACTIVE'}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            {activeCycle ? `STATUS: ${activeCycle.status.toUpperCase()}` : 'NO ACTIVE CYCLE'}
           </div>
         </div>
 
-        {/* Action Header / Cycle Selector Toolbar */}
-        <div
-          className="flex flex-wrap items-center justify-between gap-4 rounded-2xl p-4"
-          style={{
-            backgroundColor: t.surface,
-            border: `1px solid ${t.border}`,
-          }}
-        >
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-500/15 text-teal-400">
-              <TrendingUp className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-semibold text-slate-100" style={{ fontFamily: SORA }}>
-                Review Windows &amp; Appraisals
-              </h2>
-              <p className="text-xs text-slate-400">
-                Switch cycles to manage targets or create new appraisal intervals
-              </p>
-            </div>
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            REGISTERED REVIEW CYCLES
           </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            {cycles.length > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 font-medium">Cycle:</span>
-                <select
-                  value={selCycleId}
-                  onChange={(e) => setSelCycleId(e.target.value)}
-                  className="rounded-xl border px-3 py-2 text-xs font-medium transition-colors"
-                  style={{
-                    backgroundColor: t.surfaceSubtle,
-                    borderColor: t.border,
-                    color: t.textPrimary,
-                  }}
-                >
-                  {cycles.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.status})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={() => setShowNewCycleModal(true)}
-              className="inline-flex items-center gap-2 rounded-xl border border-teal-500/30 bg-teal-500/15 px-3.5 py-2 text-xs font-semibold text-teal-300 transition-all hover:bg-teal-500/25"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              New Cycle
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setShowNewGoalModal(true)}
-              disabled={!activeCycle}
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-3.5 py-2 text-xs font-semibold text-white shadow-lg shadow-emerald-900/20 transition-all hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50"
-            >
-              <Target className="h-3.5 w-3.5" />
-              Add Staff Goal
-            </button>
+          <div className="text-2xl font-bold font-mono text-[#111111] mt-1">
+            {stats.totalCycles}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            {stats.activeCycles} CURRENTLY ACTIVE
           </div>
         </div>
 
-        {/* Goals Management Table */}
-        <div
-          className="rounded-2xl overflow-hidden"
-          style={{
-            backgroundColor: t.surface,
-            border: `1px solid ${t.border}`,
-          }}
-        >
-          {/* Table Header / Filter Bar */}
-          <div
-            className="flex flex-wrap items-center justify-between gap-3 border-b p-4"
-            style={{ borderColor: t.border }}
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-slate-200" style={{ fontFamily: SORA }}>
-                Cycle Goals: {activeCycle?.name || 'None'}
-              </span>
-              {activeCycle && (
-                <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-medium text-emerald-400 capitalize">
-                  {activeCycle.status}
-                </span>
-              )}
-            </div>
-
-            {/* Filter Tabs */}
-            <div
-              className="inline-flex rounded-xl p-1"
-              style={{ backgroundColor: t.surfaceSubtle }}
-            >
-              {(['all', 'pending', 'in_progress', 'achieved'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setStatusFilter(tab)}
-                  className={`rounded-lg px-3 py-1 text-xs font-medium capitalize transition-all ${
-                    statusFilter === tab
-                      ? 'bg-teal-500/20 text-teal-300 font-semibold shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  {tab === 'in_progress' ? 'In Progress' : tab}
-                </button>
-              ))}
-            </div>
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            GOALS LOGGED IN WINDOW
           </div>
+          <div className="text-2xl font-bold font-mono text-[#111111] mt-1">
+            {stats.totalGoals}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            FACULTY OBJECTIVES
+          </div>
+        </div>
 
-          {/* Table Body */}
-          {goalsQ.isPending ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-teal-500 border-t-transparent" />
-            </div>
-          ) : filteredGoals.length === 0 ? (
-            <div className="p-8">
-              <PosEmptyState
-                icon={<Award className="w-8 h-8 text-teal-400" />}
-                title="No Goals Found"
-                description={
-                  activeCycle
-                    ? 'No performance objectives logged for this cycle yet. Create measurable staff KPI goals to foster growth.'
-                    : 'Create a review cycle above to start setting goals.'
-                }
-                accentColor="mint"
-              />
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-slate-200">
-                <thead
-                  className="border-b text-xs font-semibold uppercase tracking-wider text-slate-400"
-                  style={{
-                    backgroundColor: t.surfaceSubtle,
-                    borderColor: t.border,
-                  }}
-                >
-                  <tr>
-                    <th className="px-4 py-3">Staff Member</th>
-                    <th className="px-4 py-3">Role</th>
-                    <th className="px-4 py-3">Performance Goal</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3 text-right">Update Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y" style={{ borderColor: t.border }}>
-                  {filteredGoals.map((g) => {
-                    const staffName = staffNameFor(g.staff_kind, g.staff_id);
-                    const isTeacher = g.staff_kind === 'teacher';
-                    const currentStatus = g.status?.toLowerCase() || 'pending';
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            ACHIEVED MILESTONES
+          </div>
+          <div className="text-2xl font-bold font-mono text-[#111111] mt-1">
+            {stats.achievedGoals}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            {stats.totalGoals > 0
+              ? `${Math.round((stats.achievedGoals / stats.totalGoals) * 100)}% COMPLETION RATE`
+              : 'NO GOALS IN CYCLE'}
+          </div>
+        </div>
+      </div>
 
-                    return (
-                      <tr
-                        key={g.id}
-                        className="transition-colors hover:bg-white/[0.02]"
-                      >
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-teal-500/10 text-xs font-bold text-teal-400">
-                              {staffName.charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                              <p className="font-medium text-slate-100">{staffName}</p>
-                              <p className="text-xs text-slate-400 font-mono">ID: {g.staff_id?.slice(0, 8) || 'N/A'}</p>
-                            </div>
-                          </div>
-                        </td>
-
-                        <td className="px-4 py-3.5">
-                          <span
-                            className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-medium ${
-                              isTeacher
-                                ? 'bg-blue-500/15 text-blue-300'
-                                : 'bg-purple-500/15 text-purple-300'
-                            }`}
-                          >
-                            {isTeacher ? 'Teacher' : 'Support Staff'}
-                          </span>
-                        </td>
-
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center gap-2">
-                            <Target className="h-4 w-4 text-teal-400 shrink-0" />
-                            <span className="font-medium text-slate-200">{g.title}</span>
-                          </div>
-                        </td>
-
-                        <td className="px-4 py-3.5">
-                          <span
-                            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
-                              currentStatus === 'achieved' || currentStatus === 'completed'
-                                ? 'bg-emerald-500/15 text-emerald-400'
-                                : currentStatus === 'in_progress'
-                                  ? 'bg-blue-500/15 text-blue-400'
-                                  : 'bg-amber-500/15 text-amber-400'
-                            }`}
-                          >
-                            {currentStatus === 'achieved' ? (
-                              <CheckCircle2 className="h-3.5 w-3.5" />
-                            ) : (
-                              <Clock className="h-3.5 w-3.5" />
-                            )}
-                            {currentStatus === 'in_progress' ? 'In Progress' : currentStatus}
-                          </span>
-                        </td>
-
-                        <td className="px-4 py-3.5 text-right">
-                          <select
-                            value={currentStatus}
-                            onChange={(e) => updateGoalStatus(g.id, e.target.value)}
-                            className="rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors"
-                            style={{
-                              backgroundColor: t.surfaceSubtle,
-                              borderColor: t.border,
-                              color: t.textPrimary,
-                            }}
-                          >
-                            <option value="pending">Pending</option>
-                            <option value="in_progress">In Progress</option>
-                            <option value="achieved">Achieved</option>
-                            <option value="deferred">Deferred</option>
-                          </select>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+      {/* ── 3. HIGH-DENSITY CONTROL TOOLBAR ── */}
+      <div className="gov-control-bar flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {cycles.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono uppercase font-bold text-[#333333]">
+                REVIEW WINDOW:
+              </span>
+              <select
+                value={selCycleId}
+                onChange={(e) => setSelCycleId(e.target.value)}
+                className="gov-select text-xs font-mono font-bold"
+              >
+                {cycles.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name.toUpperCase()} ({c.status.toUpperCase()})
+                  </option>
+                ))}
+              </select>
             </div>
           )}
+
+          <button
+            type="button"
+            onClick={() => setShowNewCycleModal(true)}
+            className="gov-btn gov-btn-secondary gov-btn-sm font-mono text-xs flex items-center gap-1.5"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>NEW REVIEW CYCLE</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowNewGoalModal(true)}
+            disabled={!activeCycle}
+            className="gov-btn gov-btn-primary gov-btn-sm font-mono text-xs flex items-center gap-1.5 disabled:opacity-50"
+          >
+            <Target className="h-3.5 w-3.5" />
+            <span>RECORD STAFF GOAL</span>
+          </button>
         </div>
 
-        {/* Modal: Add Review Cycle */}
-        <NativeModal
-          isOpen={showNewCycleModal}
-          onClose={() => setShowNewCycleModal(false)}
-          title="New Review Cycle"
-          subtitle={`Configure academic evaluation period for ${labels.periodNoun}`}
-          icon={Calendar}
-          size="md"
-        >
-          <form onSubmit={addCycle} className="space-y-4 text-white">
-            <div>
-              <label className="block text-xs font-semibold text-white/70 mb-1">Cycle Name *</label>
-              <input
-                type="text"
-                required
-                value={cname}
-                onChange={(e) => setCname(e.target.value)}
-                placeholder={`e.g. ${labels.periodNoun} 1 2026`}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-teal-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-white/70 mb-1">Start Date *</label>
-                <input
-                  type="date"
-                  required
-                  value={cstart}
-                  onChange={(e) => setCstart(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-teal-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-white/70 mb-1">End Date *</label>
-                <input
-                  type="date"
-                  required
-                  value={cend}
-                  onChange={(e) => setCend(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-teal-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-white/70 mb-1">Initial Status</label>
-              <select
-                value={cstatus}
-                onChange={(e) => setCstatus(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-slate-900/90 dark:bg-black/90 hover:border-white/35 focus:border-white/70 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-teal-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
-              >
-                <option value="active" className="bg-slate-900 text-white">Active</option>
-                <option value="draft" className="bg-slate-900 text-white">Draft</option>
-                <option value="completed" className="bg-slate-900 text-white">Completed</option>
-              </select>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-3 border-t border-white/10">
-              <button
-                type="button"
-                onClick={() => setShowNewCycleModal(false)}
-                className="rounded-xl px-4 py-2.5 text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={savingCycle}
-                className="rounded-xl bg-teal-500 hover:bg-teal-400 px-5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-teal-500/25 transition disabled:opacity-50"
-              >
-                {savingCycle ? 'Creating…' : 'Create Cycle'}
-              </button>
-            </div>
-          </form>
-        </NativeModal>
-
-        {/* Modal: Add Staff Goal */}
-        <NativeModal
-          isOpen={showNewGoalModal}
-          onClose={() => setShowNewGoalModal(false)}
-          title="Add Performance Goal"
-          subtitle="Assign objective or metric to teacher or staff"
-          icon={Target}
-          size="md"
-        >
-          <form onSubmit={addGoal} className="space-y-4 text-white">
-            <div>
-              <label className="block text-xs font-semibold text-white/70 mb-1.5">Staff Category</label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setGKind('teacher');
-                    setGStaff('');
-                  }}
-                  className={`rounded-xl border py-2.5 text-xs font-semibold transition ${
-                    gKind === 'teacher'
-                      ? 'border-emerald-400 bg-emerald-500/20 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
-                      : 'border-white/15 bg-white/5 hover:bg-white/10 text-white/70'
-                  }`}
-                >
-                  Teaching Staff
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setGKind('other_staff');
-                    setGStaff('');
-                  }}
-                  className={`rounded-xl border py-2.5 text-xs font-semibold transition ${
-                    gKind === 'other_staff'
-                      ? 'border-purple-400 bg-purple-500/20 text-purple-300 shadow-[0_0_15px_rgba(168,85,247,0.2)]'
-                      : 'border-white/15 bg-white/5 hover:bg-white/10 text-white/70'
-                  }`}
-                >
-                  Support Staff
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-white/70 mb-1">Select Staff Member *</label>
-              <select
-                required
-                value={gStaff}
-                onChange={(e) => setGStaff(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-slate-900/90 dark:bg-black/90 hover:border-white/35 focus:border-white/70 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-teal-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
-              >
-                <option value="" className="bg-slate-900 text-white">Choose a staff member…</option>
-                {gKind === 'teacher'
-                  ? teachers.map((tc) => (
-                      <option key={tc.teacher_id} value={tc.teacher_id} className="bg-slate-900 text-white">
-                        {tc.name}
-                      </option>
-                    ))
-                  : other.map((os) => (
-                      <option key={os.id} value={os.id} className="bg-slate-900 text-white">
-                        {os.full_name}
-                      </option>
-                    ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-white/70 mb-1">Goal Description / Milestone *</label>
-              <textarea
-                required
-                rows={3}
-                value={goalTitle}
-                onChange={(e) => setGoalTitle(e.target.value)}
-                placeholder="e.g. Complete curriculum milestone for Semester 1, achieve 90% attendance"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/40 backdrop-blur-sm text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-teal-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
-              />
-            </div>
-
-            <div className="flex justify-end gap-2 pt-3 border-t border-white/10">
-              <button
-                type="button"
-                onClick={() => setShowNewGoalModal(false)}
-                className="rounded-xl px-4 py-2.5 text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={savingGoal}
-                className="rounded-xl bg-emerald-500 hover:bg-emerald-400 px-5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-emerald-500/25 transition disabled:opacity-50"
-              >
-                {savingGoal ? 'Saving…' : 'Save Goal'}
-              </button>
-            </div>
-          </form>
-        </NativeModal>
+        {/* Filter Tabs */}
+        <div className="flex items-center gap-1 border border-[#CCCCCC] p-0.5 bg-[#EEEEEE]">
+          {(['all', 'pending', 'in_progress', 'achieved'] as const).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setStatusFilter(tab)}
+              className={`px-2.5 py-1 text-xs font-mono uppercase transition-colors ${
+                statusFilter === tab
+                  ? 'bg-[#111111] text-white font-bold'
+                  : 'text-[#555555] hover:text-[#111111]'
+              }`}
+            >
+              {tab === 'in_progress' ? 'IN PROGRESS' : tab.toUpperCase()}
+            </button>
+          ))}
+        </div>
       </div>
-    </AdminPageWrapper>
+
+      {/* ── 4. FACULTY PERFORMANCE GOALS TABLE ── */}
+      <div className="gov-card p-0 overflow-hidden">
+        <div className="border-b border-[#CCCCCC] p-3 flex items-center justify-between bg-[#FAFAFA]">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold font-mono uppercase text-[#111111]">
+              CYCLE OBJECTIVES: {activeCycle?.name?.toUpperCase() || 'NONE SELECTED'}
+            </span>
+            {activeCycle && (
+              <span className="inline-block border border-[#CCCCCC] bg-[#F4F4F6] px-2 py-0.5 text-[10px] font-bold font-mono uppercase text-[#111111]">
+                STATUS: {activeCycle.status.toUpperCase()}
+              </span>
+            )}
+          </div>
+          <span className="text-xs font-mono text-[#555555] uppercase">
+            {filteredGoals.length} OF {goals.length} OBJECTIVES DISPLAYED
+          </span>
+        </div>
+
+        {goalsQ.isPending ? (
+          <div className="py-12 flex justify-center">
+            <GovRollingBox size="md" />
+          </div>
+        ) : filteredGoals.length === 0 ? (
+          <div className="p-8 text-center text-xs font-mono text-[#555555] space-y-2">
+            <FolderOpen className="w-8 h-8 mx-auto text-[#888888]" />
+            <p className="font-bold uppercase text-[#111111]">NO PERFORMANCE OBJECTIVES LOGGED</p>
+            <p>
+              {activeCycle
+                ? 'No staff KPI milestones recorded for this cycle. Use "+ RECORD STAFF GOAL" to establish targets.'
+                : 'Create or select an appraisal review window above to configure staff objectives.'}
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="gov-table w-full text-left text-xs">
+              <thead>
+                <tr>
+                  <th className="font-mono uppercase">STAFF MEMBER</th>
+                  <th className="font-mono uppercase">ROLE CATEGORY</th>
+                  <th className="font-mono uppercase">PERFORMANCE OBJECTIVE / MILESTONE</th>
+                  <th className="font-mono uppercase">CURRENT PROGRESS</th>
+                  <th className="font-mono uppercase text-right">UPDATE STATUS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredGoals.map((g) => {
+                  const staffName = staffNameFor(g.staff_kind, g.staff_id);
+                  const isTeacher = g.staff_kind === 'teacher';
+                  const currentStatus = g.status?.toLowerCase() || 'pending';
+                  const isAchieved = currentStatus === 'achieved' || currentStatus === 'completed';
+
+                  return (
+                    <tr key={g.id} className="hover:bg-[#F9F9FB]">
+                      <td className="font-mono">
+                        <div className="font-bold text-[#111111]">{staffName}</div>
+                        <div className="text-[10px] text-[#777777]">
+                          ID: {g.staff_id?.slice(0, 8).toUpperCase() || 'N/A'}
+                        </div>
+                      </td>
+
+                      <td className="font-mono">
+                        <span
+                          className={`inline-block border px-2 py-0.5 text-[10px] font-bold uppercase ${
+                            isTeacher
+                              ? 'bg-blue-50 text-blue-800 border-blue-300'
+                              : 'bg-purple-50 text-purple-800 border-purple-300'
+                          }`}
+                        >
+                          {isTeacher ? 'ACADEMIC FACULTY' : 'SUPPORT STAFF'}
+                        </span>
+                      </td>
+
+                      <td className="font-mono">
+                        <div className="flex items-center gap-2 text-[#111111]">
+                          <Target className="h-3.5 w-3.5 text-[#555555] shrink-0" />
+                          <span>{g.title}</span>
+                        </div>
+                      </td>
+
+                      <td>
+                        <span
+                          className={`inline-block border px-2 py-0.5 text-[10px] font-bold font-mono uppercase ${
+                            isAchieved
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                              : currentStatus === 'in_progress'
+                                ? 'bg-sky-50 text-sky-800 border-sky-300'
+                                : 'bg-amber-50 text-amber-800 border-amber-300'
+                          }`}
+                        >
+                          {currentStatus === 'in_progress' ? 'IN PROGRESS' : currentStatus.toUpperCase()}
+                        </span>
+                      </td>
+
+                      <td className="text-right">
+                        <select
+                          value={currentStatus}
+                          onChange={(e) => updateGoalStatus(g.id, e.target.value)}
+                          className="gov-select text-xs font-mono uppercase font-bold py-1"
+                        >
+                          <option value="pending">PENDING</option>
+                          <option value="in_progress">IN PROGRESS</option>
+                          <option value="achieved">ACHIEVED</option>
+                          <option value="deferred">DEFERRED</option>
+                        </select>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ── 5. MODAL: ADD REVIEW CYCLE ── */}
+      <NativeModal
+        isOpen={showNewCycleModal}
+        onClose={() => setShowNewCycleModal(false)}
+        title="NEW APPRAISAL REVIEW CYCLE"
+        subtitle={`Configure institutional evaluation window for ${labels.periodNoun}`}
+        icon={Calendar}
+        size="md"
+      >
+        <form onSubmit={addCycle} className="space-y-4">
+          <div>
+            <label className="block text-xs font-mono uppercase font-bold text-[#333333] mb-1">
+              CYCLE DESIGNATION *
+            </label>
+            <input
+              type="text"
+              required
+              value={cname}
+              onChange={(e) => setCname(e.target.value)}
+              placeholder={`e.g. ${labels.periodNoun} 1 2026`}
+              className="gov-input w-full text-xs font-mono"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-mono uppercase font-bold text-[#333333] mb-1">
+                COMMENCEMENT DATE *
+              </label>
+              <input
+                type="date"
+                required
+                value={cstart}
+                onChange={(e) => setCstart(e.target.value)}
+                className="gov-input w-full text-xs font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-mono uppercase font-bold text-[#333333] mb-1">
+                CONCLUSION DATE *
+              </label>
+              <input
+                type="date"
+                required
+                value={cend}
+                onChange={(e) => setCend(e.target.value)}
+                className="gov-input w-full text-xs font-mono"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-mono uppercase font-bold text-[#333333] mb-1">
+              OPERATIONAL STATUS
+            </label>
+            <select
+              value={cstatus}
+              onChange={(e) => setCstatus(e.target.value)}
+              className="gov-select w-full text-xs font-mono"
+            >
+              <option value="active">ACTIVE</option>
+              <option value="draft">DRAFT</option>
+              <option value="completed">COMPLETED</option>
+            </select>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-[#CCCCCC]">
+            <button
+              type="button"
+              onClick={() => setShowNewCycleModal(false)}
+              className="gov-btn gov-btn-secondary gov-btn-sm font-mono text-xs"
+            >
+              CANCEL
+            </button>
+            <button
+              type="submit"
+              disabled={savingCycle}
+              className="gov-btn gov-btn-primary gov-btn-sm font-mono text-xs flex items-center gap-1.5 disabled:opacity-50"
+            >
+              {savingCycle ? <GovRollingBox size="sm" /> : <span>ESTABLISH CYCLE</span>}
+            </button>
+          </div>
+        </form>
+      </NativeModal>
+
+      {/* ── 6. MODAL: ADD STAFF GOAL ── */}
+      <NativeModal
+        isOpen={showNewGoalModal}
+        onClose={() => setShowNewGoalModal(false)}
+        title="RECORD STAFF PERFORMANCE GOAL"
+        subtitle="Assign statutory evaluation objective or metric"
+        icon={Target}
+        size="md"
+      >
+        <form onSubmit={addGoal} className="space-y-4">
+          <div>
+            <label className="block text-xs font-mono uppercase font-bold text-[#333333] mb-1">
+              STAFF CATEGORY *
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setGKind('teacher');
+                  setGStaff('');
+                }}
+                className={`gov-btn gov-btn-sm font-mono text-xs ${
+                  gKind === 'teacher' ? 'gov-btn-primary' : 'gov-btn-secondary'
+                }`}
+              >
+                ACADEMIC FACULTY
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setGKind('other_staff');
+                  setGStaff('');
+                }}
+                className={`gov-btn gov-btn-sm font-mono text-xs ${
+                  gKind === 'other_staff' ? 'gov-btn-primary' : 'gov-btn-secondary'
+                }`}
+              >
+                SUPPORT STAFF
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-mono uppercase font-bold text-[#333333] mb-1">
+              SELECT STAFF MEMBER *
+            </label>
+            <select
+              required
+              value={gStaff}
+              onChange={(e) => setGStaff(e.target.value)}
+              className="gov-select w-full text-xs font-mono"
+            >
+              <option value="">— CHOOSE A STAFF MEMBER —</option>
+              {gKind === 'teacher'
+                ? teachers.map((tc) => (
+                    <option key={tc.teacher_id} value={tc.teacher_id}>
+                      {tc.name}
+                    </option>
+                  ))
+                : other.map((os) => (
+                    <option key={os.id} value={os.id}>
+                      {os.full_name}
+                    </option>
+                  ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-mono uppercase font-bold text-[#333333] mb-1">
+              OBJECTIVE SPECIFICATION / MILESTONE *
+            </label>
+            <textarea
+              required
+              rows={3}
+              value={goalTitle}
+              onChange={(e) => setGoalTitle(e.target.value)}
+              placeholder="e.g. Complete clinical ward instruction syllabus, achieve minimum 90% student logbook completion"
+              className="gov-input w-full text-xs font-mono"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-[#CCCCCC]">
+            <button
+              type="button"
+              onClick={() => setShowNewGoalModal(false)}
+              className="gov-btn gov-btn-secondary gov-btn-sm font-mono text-xs"
+            >
+              CANCEL
+            </button>
+            <button
+              type="submit"
+              disabled={savingGoal}
+              className="gov-btn gov-btn-primary gov-btn-sm font-mono text-xs flex items-center gap-1.5 disabled:opacity-50"
+            >
+              {savingGoal ? <GovRollingBox size="sm" /> : <span>SAVE OBJECTIVE</span>}
+            </button>
+          </div>
+        </form>
+      </NativeModal>
+    </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
+import { GovRollingBox } from '@/components/ui/GovLoadingIndicator';
 import { useSchoolType } from '@/hooks/useSchoolType';
 import { supabase } from '@/lib/supabase';
 import { isALevelClass, isOLevelClass } from '@/components/reports/templates/helpers';
@@ -39,93 +40,59 @@ function SubjectRowsTable({
 }) {
   if (rows.length === 0) {
     return (
-      <div className="px-3 py-8 text-center text-sm ac-text-secondary sm:px-4">
-        {isTertiary ? 'No course units in this list yet.' : 'No subjects in this list yet.'}
+      <div className="px-4 py-8 text-center text-xs font-mono text-[#888888]">
+        {isTertiary ? 'NO COURSE UNITS REGISTERED IN THIS COHORT' : 'NO SUBJECTS REGISTERED IN THIS CLASS'}
       </div>
     );
   }
   return (
-    <>
-      <ul className="divide-y divide-slate-200/35 dark:divide-white/10 sm:hidden">
-        {rows.map((row) => {
-          const badge = classSubjectBadge(row, selectedClass);
-          const rem = canRemoveClassSubjectRow(selectedClass, row);
-          return (
-            <li key={row.subject} className="px-3 py-3.5">
-              <div className="ac-text-primary text-[15px] font-semibold leading-snug break-words">{row.subject}</div>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                {badge ? (
-                  <span className="rounded-md border border-[var(--pw-border)] bg-[var(--pw-s2)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--pw-muted)]">
-                    {badge}
-                  </span>
-                ) : null}
-                {!rem && (
-                  <span className="text-xs text-[var(--pw-muted)]" title="Cannot remove this slot">
-                    locked
-                  </span>
-                )}
-              </div>
-              {rem ? (
-                <button
-                  type="button"
-                  onClick={() => onRemove(row)}
-                  className="mt-3 flex min-h-[48px] w-full items-center justify-center rounded-xl bg-rose-600/90 px-4 text-sm font-semibold text-white hover:bg-rose-500 active:bg-rose-700"
-                >
-                  Remove
-                </button>
-              ) : null}
-            </li>
-          );
-        })}
-      </ul>
-      <div className="hidden overflow-x-auto sm:block">
-        <table className="min-w-full text-sm">
-          <thead>
-            <tr className="border-b border-slate-200/30 text-left dark:border-white/10">
-              <th className="px-4 py-2 ac-text-secondary">{isTertiary ? 'Course Unit / Module' : 'Subject'}</th>
-              <th className="px-4 py-2 ac-text-secondary">Notes</th>
-              <th className="px-4 py-2 ac-text-secondary w-[6.5rem]">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="[&>tr:nth-child(even)]:bg-slate-200/40 dark:[&>tr:nth-child(even)]:bg-white/5">
-            {rows.map((row) => {
-              const badge = classSubjectBadge(row, selectedClass);
-              const rem = canRemoveClassSubjectRow(selectedClass, row);
-              return (
-                <tr key={row.subject} className="border-t border-slate-200/25 dark:border-white/10">
-                  <td className="max-w-[12rem] px-4 py-2.5 ac-text-primary font-medium break-words md:max-w-none">
-                    {row.subject}
-                  </td>
-                  <td className="px-4 py-2.5">
-                    {badge ? (
-                      <span className="text-[10px] uppercase tracking-wide text-[var(--pw-muted)]">{badge}</span>
-                    ) : null}
-                    {!rem && (
-                      <span className="ml-2 text-xs text-[var(--pw-muted)]" title="Cannot remove this slot">
-                        locked
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-2.5">
-                    {rem ? (
-                      <button
-                        type="button"
-                        onClick={() => onRemove(row)}
-                        className="min-h-[40px] min-w-[5.5rem] rounded-lg bg-rose-600/90 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-500"
-                      >
-                        Remove
-                      </button>
-                    ) : (
-                      <span className="text-xs text-[var(--pw-muted)]">—</span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </>
+    <div className="gov-table-container">
+      <table className="gov-table">
+        <thead>
+          <tr>
+            <th className="font-mono">{isTertiary ? 'COURSE UNIT / MODULE TITLE' : 'SUBJECT NAME'}</th>
+            <th className="font-mono">CLASSIFICATION</th>
+            <th className="font-mono text-right w-[6.5rem]">ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => {
+            const badge = classSubjectBadge(row, selectedClass);
+            const rem = canRemoveClassSubjectRow(selectedClass, row);
+            return (
+              <tr key={row.subject}>
+                <td className="font-medium text-[#111111]">
+                  {row.subject}
+                </td>
+                <td>
+                  {badge ? (
+                    <span className="gov-tag gov-tag-approved text-[10px] font-mono uppercase">{badge}</span>
+                  ) : null}
+                  {!rem && (
+                    <span className="ml-2 text-[10px] font-mono text-[#888888] uppercase" title="Cannot remove this slot">
+                      [LOCKED]
+                    </span>
+                  )}
+                </td>
+                <td className="text-right">
+                  {rem ? (
+                    <button
+                      type="button"
+                      onClick={() => onRemove(row)}
+                      className="gov-btn gov-btn-sm text-red-600 border-[#CCCCCC] hover:bg-red-50"
+                    >
+                      REMOVE
+                    </button>
+                  ) : (
+                    <span className="text-xs font-mono text-[#888888]">—</span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -248,10 +215,12 @@ function AllSubjectsTableCard({
   isTertiary?: boolean;
 }) {
   return (
-    <div className={`${settingsInsetSurface} overflow-hidden shadow-lg shadow-black/10`}>
-      <div className="border-b border-slate-200/30 px-3 py-3 dark:border-white/10 sm:px-4 sm:py-3">
-        <div className="text-[15px] font-semibold leading-snug ac-text-primary">{title}</div>
-        <div className="mt-1 text-xs leading-relaxed ac-text-secondary">{selectedClass}</div>
+    <div className="gov-card p-0 overflow-hidden mt-4">
+      <div className="border-b border-[#E2E8F0] px-4 py-3 flex items-center justify-between bg-[#FDFDFD]">
+        <div className="text-xs font-mono uppercase font-bold text-[#111111]">{title}</div>
+        <div className="text-xs font-mono font-bold text-[#111111] bg-[#EAEAEA] px-2 py-0.5 border border-[#CCCCCC] rounded">
+          {selectedClass}
+        </div>
       </div>
       <SubjectRowsTable rows={subjectRows} selectedClass={selectedClass} onRemove={onRemove} isTertiary={isTertiary} />
     </div>
@@ -499,167 +468,130 @@ export default function SettingsSubjectsPerClass({
   };
 
   return (
-    <div>
+    <div className="space-y-6">
       <SectionHeader
         embedded={embedded}
-        title={isTertiary ? 'Course Units per Programme / Cohort' : 'Subjects per Class'}
-        desc={
-          isTertiary
-            ? 'Manage course units, clinical modules, and papers taught across programmes and cohorts.'
-            : 'Choose O-Level or A-Level to add or remove a subject for every class in that programme at once (the database keeps one class_subjects row per class, as before). Non-secondary classes still use a per-class option below.'
-        }
+        title={isTertiary ? 'COURSE UNITS & CURRICULUM REGISTRY' : 'SUBJECTS PER CLASS REGISTRY'}
+        badge="CURRICULUM SPECIFICATION"
       />
-      <div className={`${settingsInsetSurface} space-y-4 p-3 sm:p-5`}>
-      {isTertiary ? (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="sm:col-span-2">
-              <TertiaryCohortPicker
-                selectedCohort={singleClassName}
-                onChange={(cohort) =>
-                  setSelection(cohort ? { mode: 'single', className: cohort } : { mode: 'none' })
-                }
-                layout="grid"
-                showLabels
-                programmeLabel="Programme"
-                semesterLabel="Year & Semester"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-semibold ac-text-secondary">
-                Course Unit Title
-              </label>
-              <input
-                value={newSubject}
-                onChange={(e) => setNewSubject(e.target.value)}
-                placeholder="e.g. Pharmacology, Medical Nursing"
-                className="ac-input min-h-[44px] w-full"
-              />
-            </div>
-            <div className="flex items-end">
-              <button
-                type="button"
-                disabled={selection.mode === 'none' || saving || !newSubject.trim()}
-                onClick={addSubject}
-                className={`${settingsPrimaryActionClass} min-h-[44px] w-full`}
-              >
-                {saving ? 'Saving...' : 'Add Course Unit'}
-              </button>
-            </div>
-          </div>
 
-          {selection.mode === 'single' && subjectRows.length === 0 && (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-[var(--pw-border)] p-3.5 text-xs ac-text-muted">
-              <span>No course units added for {selection.className} yet.</span>
-              <button
-                type="button"
-                onClick={preloadUhpabUnits}
-                disabled={saving}
-                className="flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-950/30 px-3 py-1.5 font-bold text-emerald-300 hover:bg-emerald-900/40"
-              >
-                <Plus size={13} />
-                <span>Pre-load UHPAB Standard Units for {selection.className}</span>
-              </button>
+      <div className="gov-card p-5 space-y-4">
+        {isTertiary ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
+              <div className="sm:col-span-2">
+                <TertiaryCohortPicker
+                  selectedCohort={singleClassName}
+                  onChange={(cohort) =>
+                    setSelection(cohort ? { mode: 'single', className: cohort } : { mode: 'none' })
+                  }
+                  layout="grid"
+                  showLabels
+                  programmeLabel="PROGRAMME"
+                  semesterLabel="YEAR & SEMESTER"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-mono uppercase font-bold text-[#555555]">
+                  COURSE UNIT TITLE
+                </label>
+                <input
+                  value={newSubject}
+                  onChange={(e) => setNewSubject(e.target.value)}
+                  placeholder="e.g. Pharmacology, Medical Nursing"
+                  className="gov-input w-full"
+                />
+              </div>
+              <div>
+                <button
+                  type="button"
+                  disabled={selection.mode === 'none' || saving || !newSubject.trim()}
+                  onClick={addSubject}
+                  className="gov-btn gov-btn-sm gov-btn-primary w-full h-[38px]"
+                >
+                  {saving ? 'SAVING...' : 'ADD COURSE UNIT'}
+                </button>
+              </div>
             </div>
-          )}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
-          <select
-            value={selectionSelectValue(selection)}
-            onChange={(e) => setSelection(parseSubjectSelection(e.target.value))}
-            className="ac-input min-h-[48px] w-full lg:max-w-none"
-          >
-            <option value="">Select programme or class</option>
-            {olevelClassNames.length > 0 ? (
-              <option value="band:olevel">O-Level — all O-Level classes ({olevelClassNames.length})</option>
-            ) : null}
-            {alevelClassNames.length > 0 ? (
-              <option value="band:alevel">A-Level — all A-Level classes ({alevelClassNames.length})</option>
-            ) : null}
-            {otherClassNames.length > 0 ? (
-              <optgroup label="Other (single class)">
-                {otherClassNames.map((c) => (
-                  <option key={c} value={`single:${c}`}>
-                    {c}
-                  </option>
-                ))}
-              </optgroup>
-            ) : null}
-          </select>
-          <input
-            value={newSubject}
-            onChange={(e) => setNewSubject(e.target.value)}
-            placeholder={
-              selection.mode === 'band' && selection.band === 'alevel'
-                ? 'Add principal subject (exact UACE catalog name)'
-                : selection.mode === 'single' && isALevelClass(selection.className)
-                  ? 'Add principal subject (exact UACE catalog name)'
-                  : 'Add subject (e.g., Mathematics)'
-            }
-            className="ac-input min-h-[48px] w-full"
-          />
-          <button
-            type="button"
-            disabled={selection.mode === 'none' || saving}
-            onClick={addSubject}
-            className={`${settingsPrimaryActionClass} sm:col-span-2 lg:col-span-1`}
-          >
-            {saving ? 'Saving...' : 'Add Subject'}
-          </button>
-          {selection.mode === 'band' && selection.band === 'olevel' && (
-            <label className="flex min-h-[48px] cursor-pointer items-start gap-3 text-sm leading-snug ac-text-secondary sm:col-span-2 lg:col-span-3">
-              <input
-                type="checkbox"
-                checked={addAsCompulsory}
-                onChange={(e) => setAddAsCompulsory(e.target.checked)}
-                className="mt-1 h-5 w-5 shrink-0 rounded border-[var(--pw-border)]"
-                aria-label="Add as compulsory UCE subject"
-              />
-              <span>Add as compulsory UCE for every O-Level class (otherwise subsidiary)</span>
-            </label>
-          )}
-          {selection.mode === 'single' && isOLevelClass(singleClassName) && (
-            <label className="flex min-h-[48px] cursor-pointer items-start gap-3 text-sm leading-snug ac-text-secondary sm:col-span-2 lg:col-span-3">
-              <input
-                type="checkbox"
-                checked={addAsCompulsory}
-                onChange={(e) => setAddAsCompulsory(e.target.checked)}
-                className="mt-1 h-5 w-5 shrink-0 rounded border-[var(--pw-border)]"
-                aria-label="Add as compulsory UCE subject"
-              />
-              <span>Add as compulsory UCE (otherwise subsidiary)</span>
-            </label>
-          )}
-          {((selection.mode === 'band' && selection.band === 'alevel') ||
-            (selection.mode === 'single' && isALevelClass(singleClassName))) ? (
-            <p className="text-xs leading-relaxed ac-text-secondary sm:col-span-2 lg:col-span-3">
-              A-Level: new rows must be UACE <strong className="font-medium ac-text-primary">principal</strong> catalog
-              subjects only. Subsidiaries are seeded from the national list and cannot be added here.
-            </p>
-          ) : null}
-        </div>
-      )}
+
+            {selection.mode === 'single' && subjectRows.length === 0 && (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded border border-dashed border-[#CCCCCC] p-3 text-xs font-mono bg-[#FAFAFA]">
+                <span className="text-[#666666]">NO COURSE UNITS RECORDED FOR {selection.className}</span>
+                <button
+                  type="button"
+                  onClick={preloadUhpabUnits}
+                  disabled={saving}
+                  className="gov-btn gov-btn-sm font-mono inline-flex items-center gap-1.5"
+                >
+                  <Plus size={13} />
+                  <span>PRE-LOAD UHPAB STANDARD CURRICULUM</span>
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+            <select
+              value={selectionSelectValue(selection)}
+              onChange={(e) => setSelection(parseSubjectSelection(e.target.value))}
+              className="gov-select w-full"
+            >
+              <option value="">Select programme or class</option>
+              {olevelClassNames.length > 0 ? (
+                <option value="band:olevel">O-Level — all O-Level classes ({olevelClassNames.length})</option>
+              ) : null}
+              {alevelClassNames.length > 0 ? (
+                <option value="band:alevel">A-Level — all A-Level classes ({alevelClassNames.length})</option>
+              ) : null}
+              {otherClassNames.length > 0 ? (
+                <optgroup label="Other (single class)">
+                  {otherClassNames.map((c) => (
+                    <option key={c} value={`single:${c}`}>
+                      {c}
+                    </option>
+                  ))}
+                </optgroup>
+              ) : null}
+            </select>
+            <input
+              value={newSubject}
+              onChange={(e) => setNewSubject(e.target.value)}
+              placeholder="Add subject title"
+              className="gov-input w-full"
+            />
+            <button
+              type="button"
+              disabled={selection.mode === 'none' || saving}
+              onClick={addSubject}
+              className="gov-btn gov-btn-sm gov-btn-primary"
+            >
+              {saving ? 'SAVING...' : 'ADD SUBJECT'}
+            </button>
+          </div>
+        )}
       </div>
+
       <div>
         {error && (
-          <div className="mb-2 rounded-lg border border-red-400/40 bg-red-950/50 px-3 py-2 text-sm text-red-100">
+          <div className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-xs font-mono text-red-700">
             {error}
           </div>
         )}
         {loading ? (
-          <div className="text-sm ac-text-secondary">Loading course units...</div>
+          <div className="py-8 flex items-center justify-center">
+            <GovRollingBox size="md" />
+          </div>
         ) : selection.mode === 'none' ? (
-          <div className="text-sm ac-text-secondary">
-            Select a programme or cohort to view course units.
+          <div className="text-xs font-mono text-[#888888] py-4">
+            SELECT A PROGRAMME OR COHORT TO AUDIT CURRICULUM.
           </div>
         ) : subjectRows.length === 0 ? (
-          <div className="text-sm ac-text-secondary">
-            No course units yet for {singleClassName}. Add one above.
+          <div className="text-xs font-mono text-[#888888] py-4">
+            NO COURSE UNITS FOUND FOR {singleClassName}.
           </div>
         ) : (
           <AllSubjectsTableCard
-            title="Course units for this programme / cohort"
+            title="ACTIVE COURSE UNITS & CURRICULUM MODULES"
             selectedClass={singleClassName}
             subjectRows={subjectRows}
             onRemove={removeSubject}

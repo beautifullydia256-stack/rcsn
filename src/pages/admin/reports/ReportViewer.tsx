@@ -1,16 +1,17 @@
 import { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { useSnapshot } from '../../../hooks/useSnapshot';
-import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
-import { GlassModal } from '../../../components/Glass/GlassModal';
+import NativeModal from '../../../components/NativeModal';
 import { formatAverageWhole } from '../../../lib/reportUtils';
 import { pdfDownloadFilenameFromResponse } from '../../../lib/pdfAttachmentFilename';
 import { isElectronDesktop } from '../../../lib/desktopPdf';
 import { pdfApiHttpErrorMessage } from '../../../lib/pdfApiErrorMessage';
 import { generatePdfBlobFromCachedGeneratedReport } from '../../../lib/generatePdfFromCachedReportRow';
-import { Download, Search, Eye } from 'lucide-react';
+import { Download, Search, Eye, ArrowLeft, RefreshCw, FileText } from 'lucide-react';
+import { GovPageLoader, GovRollingBox, GovTableLoader } from '@/components/ui/GovLoadingIndicator';
+import '@/styles/government-system.css';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -26,14 +27,16 @@ async function fetchGeneratedReports(snapshotId: string) {
 
 export default function ReportViewer() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const snapshotId = searchParams.get('snapshot') || '';
   const { snapshot, loading: snapshotLoading } = useSnapshot(snapshotId);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [viewingReport, setViewingReport] = useState<any | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
-  const { data: generatedReports = [], isLoading: reportsLoading } = useQuery({
+  const { data: generatedReports = [], isLoading: reportsLoading, refetch } = useQuery({
     queryKey: ['admin', 'reportViewer', snapshotId],
     queryFn: () => fetchGeneratedReports(snapshotId),
     enabled: !!snapshotId,
@@ -51,20 +54,15 @@ export default function ReportViewer() {
     return matchesSearch && matchesClass;
   });
 
-  const handleViewReport = async (report: any) => {
-    try {
-      // Get cached report data (instant, < 1 second)
-      // Use report_data from database (already cached)
-      setViewingReport({
-        ...report,
-        reportData: report.report_data,
-      });
-    } catch (err) {
-      console.error('Error loading report:', err);
-    }
+  const handleViewReport = (report: any) => {
+    setViewingReport({
+      ...report,
+      reportData: report.report_data,
+    });
   };
 
   const handleDownloadPDF = async (report: any) => {
+    setDownloadingId(report.id);
     try {
       if (report.pdf_url) {
         window.open(report.pdf_url, '_blank');
@@ -125,188 +123,311 @@ export default function ReportViewer() {
       const message = err instanceof Error ? err.message : String(err);
       console.error('Error downloading PDF:', err);
       alert(message || 'Failed to download PDF');
+    } finally {
+      setDownloadingId(null);
     }
   };
 
   const loading = (snapshotLoading && !snapshot) || (reportsLoading && generatedReports.length === 0);
-  const showSpinner = loading && !snapshot && generatedReports.length === 0;
 
-  if (showSpinner) {
+  if (loading) {
     return (
-      <AdminPageWrapper title="Generated Reports">
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-2 border-white/30 border-t-white"></div>
-        </div>
-      </AdminPageWrapper>
+      <div className="admin-terminal-page space-y-5 p-4">
+        <GovPageLoader message="RETRIEVING OFFICIAL GENERATED REPORTS REGISTRY..." minHeight="min-h-[40vh]" />
+      </div>
     );
   }
 
   return (
-    <AdminPageWrapper
-      title="Generated Reports"
-      subtitle={snapshot ? `Term ${snapshot.term} ${snapshot.year} - ${generatedReports.length} reports` : undefined}
-    >
-      {/* Filters */}
-      <div className={`${adminCardClass}`}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-white/85 mb-2">Search</label>
-            <div className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 flex items-center gap-2">
-              <Search className="w-4 h-4 text-white/70" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by name or admission number..."
-                className="bg-transparent border-none outline-none flex-1 text-white placeholder-white/50"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-white/85 mb-2">Filter by Class</label>
-            <select
-              value={selectedClass}
-              onChange={(e) => setSelectedClass(e.target.value)}
-              className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Classes</option>
-              {classes.map((className) => (
-                <option key={className} value={className}>
-                  {className}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Reports List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredReports.map((report: any) => {
-          const student = report.students;
-          const reportData = report.report_data;
-          const summary = reportData?.students?.[0]?.summary;
-
-          return (
-            <div key={report.id} className={`${adminCardClass} space-y-3`}>
-              <h3 className="text-lg font-semibold text-white">{student?.name || 'Unknown Student'}</h3>
-              <p className="text-sm text-white/70">{student?.current_class || ''} - {student?.admission_number || ''}</p>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-white/70">Average:</span>
-                  <span className="font-semibold text-white">
-                    {summary?.average != null && summary?.average !== ''
-                      ? `${formatAverageWhole(summary.average)}%`
-                      : 'N/A'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-white/70">Position:</span>
-                  <span className="font-semibold text-white">
-                    {summary?.classPosition || 'N/A'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-white/70">Division:</span>
-                  <span className="font-semibold text-white">
-                    {summary?.division || 'N/A'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-white/70">Generated:</span>
-                  <span className="text-sm text-white/85">
-                    {new Date(report.generated_at).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
-              <div className="flex gap-2 pt-4 border-t border-white/20">
-                <button
-                  onClick={() => handleViewReport(report)}
-                  className="flex-1 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20 flex items-center justify-center gap-2 backdrop-blur-xl"
-                >
-                  <Eye className="w-4 h-4" />
-                  View
-                </button>
-                <button
-                  onClick={() => handleDownloadPDF(report)}
-                  className="flex-1 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20 flex items-center justify-center gap-2 backdrop-blur-xl"
-                >
-                  <Download className="w-4 h-4" />
-                  PDF
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {filteredReports.length === 0 && (
-        <div className={`${adminCardClass} text-center py-12`}>
-          <p className="text-white/85">
-            {generatedReports.length === 0
-              ? 'No reports generated yet. Generate reports first.'
-              : 'No reports match your filters.'}
+    <div className="admin-terminal-page space-y-5 p-4">
+      {/* ── 1. TOP HEADER ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#CCCCCC] pb-4">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-[#111111] uppercase font-mono">
+            OFFICIAL RESULT SLIPS & TRANSCRIPTS ARCHIVE
+          </h1>
+          <p className="text-xs text-[#555555] font-mono tracking-wider uppercase mt-0.5">
+            {snapshot ? `CYCLE: TERM ${snapshot.term} ${snapshot.year}` : 'ACADEMIC REPOSITORY'} • REPUBLIC OF UGANDA
           </p>
         </div>
-      )}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            className="gov-btn gov-btn-secondary gov-btn-sm flex items-center gap-1.5"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>REFRESH</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard/admin/reports/generate')}
+            className="gov-btn gov-btn-secondary gov-btn-sm flex items-center gap-1.5"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>RETURN TO HUB</span>
+          </button>
+        </div>
+      </div>
 
-      {/* Report Preview Modal */}
+      {/* ── 2. MONOCHROME KPI SUMMARY METRIC CARDS ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            TOTAL COMPILED
+          </div>
+          <div className="text-2xl font-bold font-mono text-[#111111] mt-1">
+            {generatedReports.length.toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            REPORTS IN REPOSITORY
+          </div>
+        </div>
+
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            MATCHED RECORDS
+          </div>
+          <div className="text-2xl font-bold font-mono text-[#111111] mt-1">
+            {filteredReports.length.toLocaleString()}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            ACTIVE FILTER MATCHES
+          </div>
+        </div>
+
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            CAMPUS COHORTS
+          </div>
+          <div className="text-2xl font-bold font-mono text-[#111111] mt-1">
+            {classes.length}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            CLASSES REPRESENTED
+          </div>
+        </div>
+
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            SNAPSHOT STATUS
+          </div>
+          <div className="text-2xl font-bold font-mono text-emerald-700 mt-1 uppercase">
+            {snapshot?.status || 'COMPILED'}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            ARCHIVE INTEGRITY OK
+          </div>
+        </div>
+      </div>
+
+      {/* ── 3. HIGH DENSITY CONTROL BAR ── */}
+      <div className="gov-control-bar flex flex-wrap items-center justify-between gap-3 p-3 bg-white border border-[#CCCCCC]">
+        <div className="flex items-center gap-2 flex-1 min-w-[260px]">
+          <Search className="w-4 h-4 text-[#777777]" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search candidate name or admission number…"
+            className="gov-input text-xs font-mono w-full"
+          />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-mono uppercase text-[#555555]">CLASS:</span>
+          <select
+            value={selectedClass}
+            onChange={(e) => setSelectedClass(e.target.value)}
+            className="gov-input text-xs font-mono"
+          >
+            <option value="">ALL COHORTS ({generatedReports.length})</option>
+            {classes.map((className) => (
+              <option key={className} value={className}>
+                {className}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* ── 4. HIGH DENSITY DATA GRID ── */}
+      <div className="gov-table-container border border-[#CCCCCC] bg-white">
+        <table className="gov-table w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-[#EAEAEA] border-b border-[#CCCCCC]">
+              <th className="py-2.5 px-3 text-[11px] font-mono uppercase font-bold text-[#111111]">#</th>
+              <th className="py-2.5 px-3 text-[11px] font-mono uppercase font-bold text-[#111111]">CANDIDATE NAME</th>
+              <th className="py-2.5 px-3 text-[11px] font-mono uppercase font-bold text-[#111111]">ADMISSION NO</th>
+              <th className="py-2.5 px-3 text-[11px] font-mono uppercase font-bold text-[#111111]">COHORT / CLASS</th>
+              <th className="py-2.5 px-3 text-[11px] font-mono uppercase font-bold text-[#111111] text-right">AVERAGE</th>
+              <th className="py-2.5 px-3 text-[11px] font-mono uppercase font-bold text-[#111111] text-center">POS</th>
+              <th className="py-2.5 px-3 text-[11px] font-mono uppercase font-bold text-[#111111] text-center">DIV</th>
+              <th className="py-2.5 px-3 text-[11px] font-mono uppercase font-bold text-[#111111]">GENERATED</th>
+              <th className="py-2.5 px-3 text-[11px] font-mono uppercase font-bold text-[#111111] text-right">OFFICIAL ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredReports.map((report: any, idx: number) => {
+              const student = report.students;
+              const reportData = report.report_data;
+              const summary = reportData?.students?.[0]?.summary;
+              const isDownloading = downloadingId === report.id;
+
+              return (
+                <tr
+                  key={report.id}
+                  className="border-b border-[#E5E7EB] hover:bg-[#F9F9FB] transition-colors"
+                >
+                  <td className="py-2.5 px-3 text-xs font-mono text-[#777777]">{idx + 1}</td>
+                  <td className="py-2.5 px-3 text-xs font-mono font-bold text-[#111111]">
+                    {student?.name || 'UNKNOWN CANDIDATE'}
+                  </td>
+                  <td className="py-2.5 px-3 text-xs font-mono text-[#555555]">
+                    {student?.admission_number || '—'}
+                  </td>
+                  <td className="py-2.5 px-3 text-xs font-mono text-[#111111]">
+                    {student?.current_class || '—'}
+                  </td>
+                  <td className="py-2.5 px-3 text-xs font-mono font-bold text-right text-[#111111]">
+                    {summary?.average != null && summary?.average !== ''
+                      ? `${formatAverageWhole(summary.average)}%`
+                      : '—'}
+                  </td>
+                  <td className="py-2.5 px-3 text-xs font-mono text-center text-[#555555]">
+                    {summary?.classPosition || '—'}
+                  </td>
+                  <td className="py-2.5 px-3 text-xs font-mono text-center font-bold text-[#111111]">
+                    {summary?.division || '—'}
+                  </td>
+                  <td className="py-2.5 px-3 text-[11px] font-mono text-[#555555]">
+                    {new Date(report.generated_at).toLocaleDateString()}
+                  </td>
+                  <td className="py-2.5 px-3 text-right">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleViewReport(report)}
+                        className="gov-btn gov-btn-secondary gov-btn-xs flex items-center gap-1 font-mono"
+                      >
+                        <Eye className="w-3 h-3" />
+                        <span>VIEW</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadPDF(report)}
+                        disabled={isDownloading}
+                        className="gov-btn gov-btn-primary gov-btn-xs flex items-center gap-1 font-mono"
+                      >
+                        {isDownloading ? (
+                          <GovRollingBox size="xs" />
+                        ) : (
+                          <Download className="w-3 h-3" />
+                        )}
+                        <span>PDF</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+
+        {filteredReports.length === 0 && (
+          <div className="p-8 text-center text-xs font-mono text-[#777777]">
+            {generatedReports.length === 0
+              ? 'NO OFFICIAL REPORTS RECORDED IN THIS SNAPSHOT ARCHIVE.'
+              : 'NO RECORDS MATCHED THE CURRENT SEARCH CRITERIA.'}
+          </div>
+        )}
+      </div>
+
+      {/* ── 5. CLEAN GOVERNMENT PREVIEW MODAL ── */}
       {viewingReport && (
-        <GlassModal
+        <NativeModal
           isOpen={!!viewingReport}
           onClose={() => setViewingReport(null)}
-          title={`Report: ${viewingReport.students?.name || 'Student'}`}
-          size="xl"
+          title={`OFFICIAL REPORT RECORD: ${viewingReport.students?.name || 'STUDENT'}`}
+          size="lg"
         >
-          <div className="space-y-4">
-            <div className="rounded-2xl border border-white/20 bg-white/10 backdrop-blur-xl p-4">
-              <h3 className="font-semibold text-white mb-2">Summary</h3>
-              <div className="grid grid-cols-2 gap-2 text-sm text-white/85">
+          <div className="space-y-4 font-mono text-xs text-[#111111]">
+            <div className="gov-card p-3 bg-[#F9F9FB] border border-[#CCCCCC]">
+              <div className="text-[11px] font-bold uppercase text-[#555555] mb-2 border-b border-[#CCCCCC] pb-1">
+                ACADEMIC PERFORMANCE SUMMARY
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 <div>
-                  <span className="text-white/70">Average:</span>{' '}
-                  {(() => {
-                    const a = viewingReport.reportData?.students?.[0]?.summary?.average;
-                    if (a == null || a === '') return 'N/A';
-                    return `${formatAverageWhole(a)}%`;
-                  })()}
+                  <span className="text-[#555555]">AVERAGE:</span>{' '}
+                  <span className="font-bold">
+                    {(() => {
+                      const a = viewingReport.reportData?.students?.[0]?.summary?.average;
+                      if (a == null || a === '') return 'N/A';
+                      return `${formatAverageWhole(a)}%`;
+                    })()}
+                  </span>
                 </div>
-                <div><span className="text-white/70">Position:</span> {viewingReport.reportData?.students?.[0]?.summary?.classPosition || 'N/A'}</div>
-                <div><span className="text-white/70">Division:</span> {viewingReport.reportData?.students?.[0]?.summary?.division || 'N/A'}</div>
-                <div><span className="text-white/70">Aggregate:</span> {viewingReport.reportData?.students?.[0]?.summary?.aggregate?.toFixed(2) || 'N/A'}</div>
+                <div>
+                  <span className="text-[#555555]">POSITION:</span>{' '}
+                  <span className="font-bold">{viewingReport.reportData?.students?.[0]?.summary?.classPosition || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-[#555555]">DIVISION:</span>{' '}
+                  <span className="font-bold">{viewingReport.reportData?.students?.[0]?.summary?.division || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-[#555555]">AGGREGATE:</span>{' '}
+                  <span className="font-bold">{viewingReport.reportData?.students?.[0]?.summary?.aggregate?.toFixed(2) || 'N/A'}</span>
+                </div>
               </div>
             </div>
-            <div className="rounded-2xl border border-white/20 bg-white/10 backdrop-blur-xl p-4">
-              <h3 className="font-semibold text-white mb-2">Subjects</h3>
-              <div className="space-y-2">
-                {viewingReport.reportData?.students?.[0]?.results?.map((result: any, idx: number) => (
-                  <div key={idx} className="flex items-center justify-between text-sm text-white/85">
-                    <span>{result.subject}</span>
-                    <span className="font-semibold text-white">{result.marks_obtained} / {result.total_marks} ({result.grade})</span>
-                  </div>
-                ))}
+
+            <div className="gov-card p-3 border border-[#CCCCCC]">
+              <div className="text-[11px] font-bold uppercase text-[#555555] mb-2 border-b border-[#CCCCCC] pb-1">
+                COURSE UNITS &amp; SUBJECT RESULTS
               </div>
+              <table className="gov-table w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-[#EAEAEA] border-b border-[#CCCCCC]">
+                    <th className="py-1.5 px-2 text-[10px] uppercase font-bold">SUBJECT</th>
+                    <th className="py-1.5 px-2 text-[10px] uppercase font-bold text-right">MARKS</th>
+                    <th className="py-1.5 px-2 text-[10px] uppercase font-bold text-center">GRADE</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {viewingReport.reportData?.students?.[0]?.results?.map((result: any, idx: number) => (
+                    <tr key={idx} className="border-b border-[#E5E7EB]">
+                      <td className="py-1.5 px-2 font-medium">{result.subject}</td>
+                      <td className="py-1.5 px-2 text-right font-bold">
+                        {result.marks_obtained} / {result.total_marks}
+                      </td>
+                      <td className="py-1.5 px-2 text-center font-bold">{result.grade}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <div className="flex gap-4 pt-2">
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#CCCCCC]">
               <button
                 type="button"
                 onClick={() => handleDownloadPDF(viewingReport)}
-                className="flex-1 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 px-4 py-3 font-semibold text-white shadow-lg shadow-emerald-500/25 border border-emerald-400/30 flex items-center justify-center gap-2 transition-all"
+                className="gov-btn gov-btn-primary gov-btn-sm flex items-center gap-1.5"
               >
-                <Download className="w-5 h-5" />
-                Download PDF
+                <Download className="w-3.5 h-3.5" />
+                <span>DOWNLOAD OFFICIAL PDF</span>
               </button>
               <button
                 type="button"
                 onClick={() => setViewingReport(null)}
-                className="flex-1 rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 px-4 py-3 font-semibold text-white transition-all"
+                className="gov-btn gov-btn-secondary gov-btn-sm"
               >
-                Close
+                CLOSE
               </button>
             </div>
           </div>
-        </GlassModal>
+        </NativeModal>
       )}
-    </AdminPageWrapper>
+    </div>
   );
 }
-

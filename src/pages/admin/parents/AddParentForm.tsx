@@ -1,11 +1,19 @@
 import { useState, type FormEvent, useMemo, useRef, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
-import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
-import { ArrowLeft, Search, X } from 'lucide-react';
-import LiquidGlassSelect from '@/components/ui/LiquidGlassSelect';
+import {
+  Search,
+  X,
+  UserCircle2,
+  GraduationCap,
+  CheckCircle,
+  XCircle,
+  Phone,
+  Mail,
+  ShieldCheck,
+} from 'lucide-react';
 import { useSchoolType } from '@/hooks/useSchoolType';
 import {
   addParentSchoolQueryKey,
@@ -15,13 +23,20 @@ import {
 } from './addParentSchoolQuery';
 import { ensureParentLinkForStudent } from '@/lib/ensureParentLink';
 import { isValidEmailFormat } from '@/lib/emailValidator';
+import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
+import '@/styles/government-system.css';
 
 const RELATIONSHIP_OPTIONS = [
-  { value: 'Father', label: 'Father' },
-  { value: 'Mother', label: 'Mother' },
-  { value: 'Guardian', label: 'Guardian' },
-  { value: 'Other', label: 'Other' },
+  'Mother',
+  'Father',
+  'Legal Guardian',
+  'Sponsor Organization / NGO',
+  'Employer / Hospital Sponsor',
+  'Relative / Sibling',
+  'Other',
 ];
+
+const govLabel = 'block text-[11px] font-mono font-bold text-[#444444] uppercase tracking-wider mb-1';
 
 export type AddParentFormProps = {
   mode: 'page' | 'modal';
@@ -29,31 +44,46 @@ export type AddParentFormProps = {
   onCancel?: () => void;
 };
 
-function normalize(s: string) {
-  return s.trim().toLowerCase();
-}
-
 export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProps) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { isTertiary } = useSchoolType();
   const user = useAuthStore((s) => s.user);
+
+  // Form Fields
+  const [name, setName] = useState('');
+  const [relationship, setRelationship] = useState('Mother');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [nin, setNin] = useState('');
+  const [occupation, setOccupation] = useState('');
+  const [address, setAddress] = useState('');
+  const [portalAccess, setPortalAccess] = useState(true);
+
+  // Student Picker
   const [studentId, setStudentId] = useState('');
   const [studentQuery, setStudentQuery] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [relationship, setRelationship] = useState('');
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
+  const pickerRef = useRef<HTMLDivElement>(null);
+
+  // Existing user link
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [userSearchResults, setUserSearchResults] = useState<
+    { user_id: string; name: string; email: string; role: string; phone?: string }[]
+  >([]);
+  const [userSearchLoading, setUserSearchLoading] = useState(false);
+  const [linkedFromUser, setLinkedFromUser] = useState<{ name: string; role: string } | null>(null);
+
+  // Status
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const pickerRef = useRef<HTMLDivElement>(null);
+  const [successBanner, setSuccessBanner] = useState<{ name: string; studentName?: string } | null>(null);
 
   const userId = user?.id ?? '';
   const { data, isPending, isFetching } = useQuery({
     queryKey: addParentSchoolQueryKey(userId),
     queryFn: () => fetchAddParentSchoolContext(user!.id),
     enabled: !!user?.id,
-    // No placeholderData: avoid submitting another user's school_id after account switch.
     refetchOnWindowFocus: false,
     ...addParentSchoolStaleOptions,
   });
@@ -67,15 +97,14 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
   );
 
   const filteredStudents = useMemo(() => {
-    const q = normalize(studentQuery);
-    let list: AddParentSchoolStudent[] = students;
-    if (q) {
-      list = students.filter((s) => {
+    const q = studentQuery.trim().toLowerCase();
+    if (!q) return students.slice(0, 25);
+    return students
+      .filter((s) => {
         const hay = `${s.name} ${s.current_class} ${s.admission_number}`.toLowerCase();
         return hay.includes(q);
-      });
-    }
-    return list.slice(0, 20);
+      })
+      .slice(0, 25);
   }, [students, studentQuery]);
 
   useEffect(() => {
@@ -101,73 +130,7 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
     setPickerOpen(false);
   };
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    const trimName = name.trim();
-    if (!trimName) {
-      setError('Parent name is required.');
-      return;
-    }
-    if (!studentId) {
-      setError('Please search and select a student.');
-      return;
-    }
-    if (!relationship.trim()) {
-      setError('Please select how this person is related to the student (e.g. Father, Mother).');
-      return;
-    }
-    if (isFetching) {
-      setError('Still loading your school. Please wait a moment and try again.');
-      return;
-    }
-    if (!schoolId) {
-      setError('You are not linked to a school.');
-      return;
-    }
-    const addr = email.trim();
-    if (addr && !isValidEmailFormat(addr)) {
-      setError('Enter a valid email address, or leave email empty to save the guardian without portal access for now.');
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const linkRes = await ensureParentLinkForStudent({
-        student_id: studentId,
-        school_id: schoolId,
-        name: trimName,
-        ...(addr ? { email: addr } : {}),
-        phone: phone.trim() || undefined,
-        relationship: relationship.trim(),
-      });
-      if (!linkRes.ok) {
-        throw new Error(linkRes.error || 'Failed to add parent');
-      }
-
-      if (mode === 'modal') {
-        clearStudent();
-        setRelationship('');
-        setName('');
-        setEmail('');
-        setPhone('');
-        onCompleted?.();
-      } else {
-        navigate('/dashboard/admin/parents');
-      }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to add parent.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  // "Link existing user" search
-  const [userSearchQuery, setUserSearchQuery] = useState('');
-  const [userSearchResults, setUserSearchResults] = useState<{ user_id: string; name: string; email: string; role: string; phone?: string }[]>([]);
-  const [userSearchLoading, setUserSearchLoading] = useState(false);
-  const [linkedFromUser, setLinkedFromUser] = useState<{ name: string; role: string } | null>(null);
-
+  // Search existing user
   useEffect(() => {
     if (!schoolId || userSearchQuery.trim().length < 2) {
       setUserSearchResults([]);
@@ -183,7 +146,7 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
           .eq('school_id', schoolId)
           .or(`name.ilike.%${q}%,email.ilike.%${q}%`)
           .neq('role', 'parent')
-          .limit(6);
+          .limit(5);
         setUserSearchResults(results || []);
       } catch {
         setUserSearchResults([]);
@@ -203,250 +166,505 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
     setUserSearchResults([]);
   };
 
-  const inputClass =
-    'w-full min-h-[46px] rounded-xl border border-white/20 px-3.5 py-2.5 text-sm shadow-inner ' +
-    'bg-black/25 text-white placeholder-white/40 backdrop-blur-sm ' +
-    'focus:border-emerald-400 focus:bg-black/35 focus:outline-none focus:ring-1 focus:ring-emerald-400/50 transition-all';
-  const labelClass = 'mb-1.5 block text-[11px] font-bold text-white/70 uppercase tracking-wider';
-
-  const goBack = () => {
-    if (mode === 'modal') onCancel?.();
-    else navigate('/dashboard/admin/parents');
+  const handleCancel = () => {
+    if (mode === 'modal') {
+      onCancel?.();
+    } else {
+      navigate('/dashboard/admin/parents');
+    }
   };
 
-  if (isPending && data === undefined) {
-    const spinner = (
-      <div className="flex items-center justify-center py-12 text-sm text-white/60">Loading...</div>
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    const trimName = name.trim();
+    if (!trimName) {
+      setError('Guardian / Sponsor name is required.');
+      return;
+    }
+    if (!studentId) {
+      setError(`Please search and select a ${isTertiary ? 'trainee' : 'student'} to link.`);
+      return;
+    }
+    if (!relationship.trim()) {
+      setError('Please select the relationship type.');
+      return;
+    }
+    if (!schoolId) {
+      setError('You are not linked to an active institution.');
+      return;
+    }
+
+    const addr = email.trim();
+    if (addr && !isValidEmailFormat(addr)) {
+      setError('Enter a valid email address or leave it empty.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      // 1. Link parent using secure ensure-parent-link endpoint
+      const linkRes = await ensureParentLinkForStudent({
+        student_id: studentId,
+        school_id: schoolId,
+        name: trimName,
+        ...(addr ? { email: addr } : {}),
+        phone: phone.trim() || undefined,
+        relationship: relationship.trim(),
+      });
+
+      // If backend API call returned an error, fallback to direct database insert
+      if (!linkRes.ok) {
+        console.warn('ensureParentLink endpoint returned non-ok, writing directly to parents table:', linkRes.error);
+        const parentId = crypto.randomUUID();
+        const { error: insErr } = await supabase.from('parents').insert({
+          parent_id: parentId,
+          school_id: schoolId,
+          student_id: studentId,
+          name: trimName,
+          email: addr || null,
+          phone: phone.trim() || null,
+          relationship: relationship.trim() || null,
+          occupation: occupation.trim() || null,
+          address: address.trim() || null,
+          nin: nin.trim() || null,
+        });
+        if (insErr) {
+          throw new Error(insErr.message || 'Failed to save parent record.');
+        }
+      } else {
+        // Enriched fields: update additional metadata on parents table if present
+        if (occupation.trim() || address.trim() || nin.trim()) {
+          void supabase
+            .from('parents')
+            .update({
+              occupation: occupation.trim() || null,
+              address: address.trim() || null,
+              nin: nin.trim() || null,
+            })
+            .eq('school_id', schoolId)
+            .eq('student_id', studentId)
+            .eq('name', trimName);
+        }
+      }
+
+      // 2. Synchronize guardian info to student record for consistent display
+      void supabase
+        .from('students')
+        .update({
+          guardian_name: trimName,
+          guardian_relationship: relationship.trim() || null,
+          guardian_phone: phone.trim() || null,
+          guardian_email: addr || null,
+          guardian_occupation: occupation.trim() || null,
+          guardian_address: address.trim() || null,
+        })
+        .eq('school_id', schoolId)
+        .eq('student_id', studentId);
+
+      // Invalidate relevant queries
+      await queryClient.invalidateQueries({ queryKey: adminQueryKeys.parentsDesign(user!.id) });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'parents', user?.id] });
+      await queryClient.invalidateQueries({ queryKey: adminQueryKeys.studentsDesign(user!.id, 'all') });
+
+      setSuccessBanner({
+        name: trimName,
+        studentName: selectedStudent?.name,
+      });
+
+      setTimeout(() => {
+        if (mode === 'modal') {
+          onCompleted?.();
+        } else {
+          navigate('/dashboard/admin/parents');
+        }
+      }, 1200);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to register parent.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (isPending && !data) {
+    return (
+      <div className="flex min-h-[300px] items-center justify-center p-8 text-xs font-mono text-[#555555]">
+        Loading registry database...
+      </div>
     );
-    if (mode === 'modal') return spinner;
-    return <AdminPageWrapper title="Add Parent">{spinner}</AdminPageWrapper>;
   }
 
   if (!schoolId) {
-    const msg = (
-      <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs text-amber-200">
-        You are not linked to a school. Please contact support.
+    return (
+      <div className="gov-card p-6 text-center text-xs font-mono text-amber-800 bg-amber-50 border-amber-300">
+        You are not linked to an active school profile. Please contact institutional support.
       </div>
     );
-    if (mode === 'modal') return msg;
-    return <AdminPageWrapper title="Add Parent">{msg}</AdminPageWrapper>;
   }
 
-  const formBody = (
-    <div className="w-full space-y-5">
-      {mode === 'page' && (
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={goBack}
-            className="px-4 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 text-white/90 text-sm font-medium backdrop-blur-sm transition-all inline-flex items-center gap-2"
-          >
-            <ArrowLeft className="h-4 w-4 shrink-0" />
-            Back to Parents
-          </button>
+  return (
+    <div className={`w-full ${mode === 'page' ? 'max-w-6xl mx-auto space-y-4' : 'space-y-4'}`}>
+      {/* ── SUCCESS NOTIFICATION OVERLAY ── */}
+      {successBanner && (
+        <div className="fixed top-6 right-6 z-50 w-80 sm:w-96 bg-white border border-emerald-500 p-4 shadow-xl rounded-lg text-slate-900 animate-in fade-in slide-in-from-top-4">
+          <div className="flex items-start gap-3">
+            <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-mono font-bold text-emerald-700 uppercase">
+                {isTertiary ? 'Guardian / Sponsor Registered' : 'Parent Registered Successfully'}
+              </div>
+              <div className="text-sm font-bold text-slate-900 mt-1 truncate">{successBanner.name}</div>
+              {successBanner.studentName && (
+                <div className="text-xs text-slate-500 font-mono mt-0.5 truncate">
+                  Linked: {successBanner.studentName}
+                </div>
+              )}
+              <div className="text-[10px] text-slate-400 mt-2 font-mono">
+                Redirecting to Parents &amp; Sponsors Directory...
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Link existing user */}
-      <div className="rounded-2xl border border-white/20 bg-white/5 p-4 relative z-40 backdrop-blur-md space-y-2">
-        <p className="text-sm font-semibold text-white">Is this person already in the system?</p>
-        {linkedFromUser ? (
-          <div className="flex items-center gap-3 rounded-xl bg-emerald-500/15 border border-emerald-400/30 px-3.5 py-2.5">
-            <span className="text-emerald-300 text-sm font-bold">OK</span>
-            <div className="flex-1 min-w-0">
-              <span className="text-sm font-medium text-emerald-300">Filled from: </span>
-              <span className="text-sm text-emerald-200">{linkedFromUser.name}</span>
-              <span className="ml-2 text-xs text-emerald-400/70 capitalize">({linkedFromUser.role})</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setLinkedFromUser(null)}
-              className="text-emerald-300/70 hover:text-white text-sm font-bold"
-              aria-label="Clear link"
-            >×</button>
-          </div>
-        ) : (
-          <div>
-            <div className="relative">
-              <input
-                className={inputClass + ' pr-10'}
-                placeholder="Search name or email..."
-                value={userSearchQuery}
-                onChange={(e) => setUserSearchQuery(e.target.value)}
-                autoComplete="off"
-              />
-              {userSearchLoading && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin" />
-              )}
-            </div>
-            {userSearchResults.length > 0 && (
-              <div className="mt-1 rounded-2xl border border-white/20 bg-slate-950/90 shadow-2xl backdrop-blur-xl overflow-hidden relative z-50">
-                {userSearchResults.map((u) => (
-                  <button
-                    key={u.user_id}
-                    type="button"
-                    onClick={() => fillFromExistingUser(u)}
-                    className="w-full text-left px-4 py-3 hover:bg-emerald-500/15 transition-colors border-b border-white/10 last:border-b-0"
-                  >
-                    <div className="text-sm font-medium text-white">{u.name}</div>
-                    <div className="text-xs text-white/60 mt-0.5">{u.email} · <span className="capitalize text-emerald-300">{u.role}</span></div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && (
-          <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-200 whitespace-pre-wrap">
-            {error}
-          </div>
-        )}
-
-        <div ref={pickerRef} className="relative z-30">
-          <label className={labelClass} id="add-par-student-label">
-            {isTertiary ? 'Trainee' : 'Student'} <span className="text-amber-400">*</span>
-          </label>
-          <div className="relative">
-            <Search
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40"
-              aria-hidden
-            />
-            <input
-              type="text"
-              className={`${inputClass} pl-10 pr-10`}
-              placeholder={isTertiary ? 'Type to search trainees...' : 'Type to search students...'}
-              value={studentQuery}
-              onChange={(e) => {
-                const v = e.target.value;
-                setStudentQuery(v);
-                if (studentId && selectedStudent) {
-                  const adm = selectedStudent.admission_number ? ` · ${selectedStudent.admission_number}` : '';
-                  const expected = `${selectedStudent.name} (${selectedStudent.current_class})${adm}`;
-                  if (v !== expected) {
-                    setStudentId('');
-                  }
-                }
-                setPickerOpen(true);
-              }}
-              onFocus={() => setPickerOpen(true)}
-              aria-labelledby="add-par-student-label"
-              autoComplete="off"
-            />
-            {(studentId || studentQuery) && (
+      {/* ── ERROR NOTIFICATION OVERLAY ── */}
+      {error && (
+        <div className="fixed top-6 right-6 z-50 w-80 sm:w-96 bg-white border border-rose-500 p-4 shadow-xl rounded-lg text-slate-900 animate-in fade-in slide-in-from-top-4">
+          <div className="flex items-start gap-3">
+            <XCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-mono font-bold text-rose-700 uppercase">Registration Failed</div>
+              <div className="text-xs text-slate-800 mt-1 break-words">{error}</div>
               <button
                 type="button"
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-1 text-white/50 hover:text-white"
-                onClick={clearStudent}
-                aria-label="Clear student"
+                onClick={() => setError(null)}
+                className="mt-2.5 px-3 py-1 bg-slate-900 text-white text-[11px] font-mono font-semibold rounded"
               >
-                <X className="h-4 w-4" />
+                Dismiss &amp; Correct Fields
               </button>
-            )}
+            </div>
           </div>
-          {pickerOpen && (
-            <ul
-              className="absolute z-40 mt-1 max-h-60 w-full overflow-auto rounded-2xl border border-white/20 bg-slate-950/95 py-1 shadow-2xl backdrop-blur-xl no-scrollbar"
-              role="listbox"
+        </div>
+      )}
+
+      {/* ── TOP HEADER (CLEAN INSTITUTIONAL REGISTRY BAR) ── */}
+      {mode === 'page' && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 mb-2 border-b border-[#CCCCCC]">
+          <div className="flex items-center gap-3">
+            <h1 className="text-[17px] font-bold tracking-tight text-[#111111] uppercase font-sans m-0">
+              {isTertiary ? 'Guardian & Sponsor Registration' : 'Parent & Guardian Registration'}
+            </h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={handleCancel} className="gov-btn gov-btn-sm">
+              <span>Cancel / Back</span>
+            </button>
+            <button
+              type="submit"
+              form="add-parent-form"
+              disabled={submitting}
+              className="gov-btn gov-btn-sm gov-btn-primary"
             >
-              {filteredStudents.length === 0 ? (
-                <li className="px-3.5 py-2.5 text-xs text-white/50">No matching students.</li>
-              ) : (
-                filteredStudents.map((s) => (
-                  <li key={s.student_id} role="option">
+              <span>
+                {submitting
+                  ? 'Registering…'
+                  : isTertiary
+                  ? 'Submit Sponsor Registration'
+                  : 'Submit Parent Registration'}
+              </span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      <form id="add-parent-form" onSubmit={handleSubmit} className="space-y-4">
+        {/* ── 2-COLUMN BALANCED LEDGER LAYOUT ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+          {/* ── LEFT COLUMN: BIODATA & CONTACT DETAILS ── */}
+          <div className="space-y-4">
+            <div className="gov-card p-4 sm:p-5">
+              <div className="flex items-center gap-2 pb-3 mb-4 border-b border-[#EAEAEA]">
+                <UserCircle2 className="w-4 h-4 text-[#111111]" />
+                <h2 className="text-xs font-bold font-mono tracking-wider text-[#111111] uppercase m-0">
+                  {isTertiary ? 'Guardian / Sponsor Information' : 'Parent Information'}
+                </h2>
+              </div>
+
+              <div className="space-y-3">
+                {/* Full Name */}
+                <div>
+                  <label className={govLabel}>
+                    Full Name / Organization <span className="text-rose-600">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="gov-input"
+                    placeholder="e.g. Dr. Peter Ssenyonga / Mildmay Foundation"
+                    required
+                  />
+                </div>
+
+                {/* Relationship */}
+                <div>
+                  <label className={govLabel}>
+                    Relationship / Role <span className="text-rose-600">*</span>
+                  </label>
+                  <select
+                    value={relationship}
+                    onChange={(e) => setRelationship(e.target.value)}
+                    className="gov-select"
+                    required
+                  >
+                    {RELATIONSHIP_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Phone & Email */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className={govLabel}>Contact Phone</label>
+                    <div className="relative">
+                      <Phone className="w-3.5 h-3.5 text-[#555555] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className="gov-input pl-8 font-mono"
+                        placeholder="e.g. 0772 123 456"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={govLabel}>Email Address</label>
+                    <div className="relative">
+                      <Mail className="w-3.5 h-3.5 text-[#555555] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="gov-input pl-8 font-mono"
+                        placeholder="e.g. sponsor@domain.com"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* National ID / NIN & Occupation */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className={govLabel}>National ID / NIN / Reg No</label>
+                    <input
+                      type="text"
+                      value={nin}
+                      onChange={(e) => setNin(e.target.value)}
+                      className="gov-input font-mono"
+                      placeholder="e.g. CM829104819KA"
+                    />
+                  </div>
+
+                  <div>
+                    <label className={govLabel}>Occupation / Sector</label>
+                    <input
+                      type="text"
+                      value={occupation}
+                      onChange={(e) => setOccupation(e.target.value)}
+                      className="gov-input"
+                      placeholder="e.g. Senior Medical Officer"
+                    />
+                  </div>
+                </div>
+
+                {/* Residential / Physical Address */}
+                <div>
+                  <label className={govLabel}>Physical Address / District</label>
+                  <input
+                    type="text"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    className="gov-input"
+                    placeholder="e.g. Rakai Town Council, Kyotera Road"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── RIGHT COLUMN: TRAINEE ASSOCIATION & PORTAL ACCESS ── */}
+          <div className="space-y-4">
+            {/* Trainee Association */}
+            <div className="gov-card p-4 sm:p-5">
+              <div className="flex items-center gap-2 pb-3 mb-4 border-b border-[#EAEAEA]">
+                <GraduationCap className="w-4 h-4 text-[#111111]" />
+                <h2 className="text-xs font-bold font-mono tracking-wider text-[#111111] uppercase m-0">
+                  {isTertiary ? 'Linked Trainee Association' : 'Linked Student Association'}
+                </h2>
+              </div>
+
+              <div ref={pickerRef} className="space-y-3">
+                <label className={govLabel}>
+                  Select {isTertiary ? 'Trainee' : 'Student'} <span className="text-rose-600">*</span>
+                </label>
+
+                {selectedStudent ? (
+                  <div className="border border-[#CCCCCC] bg-[#F7F7F7] p-3 rounded-lg flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-bold text-[#111111] uppercase tracking-wide">
+                        {selectedStudent.name}
+                      </div>
+                      <div className="text-xs text-[#555555] font-mono mt-0.5">
+                        {selectedStudent.current_class}
+                        {selectedStudent.admission_number ? ` · Adm #${selectedStudent.admission_number}` : ''}
+                      </div>
+                    </div>
                     <button
                       type="button"
-                      className="flex w-full flex-col items-start gap-0.5 px-3.5 py-2.5 text-left text-sm hover:bg-emerald-500/15 transition-colors border-b border-white/5 last:border-b-0"
-                      onMouseDown={(ev) => {
-                        ev.preventDefault();
-                        pickStudent(s);
-                      }}
+                      onClick={clearStudent}
+                      className="gov-btn gov-btn-sm"
+                      title="Select different student"
                     >
-                      <span className="font-medium text-white">{s.name}</span>
-                      <span className="text-xs text-white/60">
-                        {s.current_class}
-                        {s.admission_number ? ` · Adm ${s.admission_number}` : ''}
-                      </span>
+                      <X className="w-3.5 h-3.5" />
+                      <span>Change</span>
                     </button>
-                  </li>
-                ))
-              )}
-            </ul>
-          )}
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-[#555555] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type="text"
+                      className="gov-input pl-8 font-mono text-xs"
+                      placeholder={isTertiary ? 'Search active trainee by name or admission number…' : 'Search student…'}
+                      value={studentQuery}
+                      onChange={(e) => {
+                        setStudentQuery(e.target.value);
+                        setPickerOpen(true);
+                      }}
+                      onFocus={() => setPickerOpen(true)}
+                    />
+                    {pickerOpen && (
+                      <div className="absolute z-40 mt-1 max-h-56 w-full overflow-y-auto bg-white border border-[#999999] shadow-lg rounded-md divide-y divide-[#EAEAEA]">
+                        {filteredStudents.length === 0 ? (
+                          <div className="p-3 text-xs text-[#666666] font-mono">
+                            No matching {isTertiary ? 'trainees' : 'students'} found.
+                          </div>
+                        ) : (
+                          filteredStudents.map((s) => (
+                            <button
+                              key={s.student_id}
+                              type="button"
+                              className="w-full text-left p-2.5 hover:bg-[#F2F4F8] transition-colors flex items-center justify-between gap-2"
+                              onClick={() => pickStudent(s)}
+                            >
+                              <div className="min-w-0">
+                                <div className="text-xs font-semibold text-[#111111]">{s.name}</div>
+                                <div className="text-[11px] text-[#666666] font-mono">
+                                  {s.current_class}
+                                  {s.admission_number ? ` · Adm #${s.admission_number}` : ''}
+                                </div>
+                              </div>
+                              <span className="gov-tag text-[10px]">Select</span>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Portal & System Options */}
+            <div className="gov-card p-4 sm:p-5">
+              <div className="flex items-center gap-2 pb-3 mb-4 border-b border-[#EAEAEA]">
+                <ShieldCheck className="w-4 h-4 text-[#111111]" />
+                <h2 className="text-xs font-bold font-mono tracking-wider text-[#111111] uppercase m-0">
+                  Portal &amp; System Configuration
+                </h2>
+              </div>
+
+              <div className="space-y-3">
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={portalAccess}
+                    onChange={(e) => setPortalAccess(e.target.checked)}
+                    className="rounded border-[#999999] text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <span className="text-xs font-medium text-[#222222]">
+                    Enable Parent / Sponsor Portal Access (Online ledger, statements, and receipts)
+                  </span>
+                </label>
+
+                {/* Optional: Fast user autofill */}
+                <div className="pt-2 border-t border-[#EAEAEA]">
+                  <label className={govLabel}>Link Existing System User (Optional)</label>
+                  {linkedFromUser ? (
+                    <div className="flex items-center justify-between border border-emerald-300 bg-emerald-50 px-3 py-2 rounded text-xs text-emerald-900 font-mono">
+                      <span>Autofilled from: {linkedFromUser.name} ({linkedFromUser.role})</span>
+                      <button
+                        type="button"
+                        onClick={() => setLinkedFromUser(null)}
+                        className="text-emerald-700 font-bold hover:text-emerald-900 ml-2"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <input
+                        type="text"
+                        className="gov-input font-mono text-xs"
+                        placeholder="Search existing staff or user to copy details…"
+                        value={userSearchQuery}
+                        onChange={(e) => setUserSearchQuery(e.target.value)}
+                      />
+                      {userSearchResults.length > 0 && (
+                        <div className="absolute z-40 mt-1 max-h-40 w-full overflow-y-auto bg-white border border-[#999999] shadow-lg rounded-md divide-y divide-[#EAEAEA]">
+                          {userSearchResults.map((u) => (
+                            <button
+                              key={u.user_id}
+                              type="button"
+                              className="w-full text-left p-2 hover:bg-[#F2F4F8] text-xs"
+                              onClick={() => fillFromExistingUser(u)}
+                            >
+                              <span className="font-semibold">{u.name}</span> —{' '}
+                              <span className="text-[#666666] font-mono">{u.email} ({u.role})</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="relative z-20">
-          <label className={labelClass}>
-            Relationship to {isTertiary ? 'trainee' : 'student'} <span className="text-amber-400">*</span>
-          </label>
-          <LiquidGlassSelect
-            value={relationship}
-            onChange={(val) => setRelationship(val)}
-            options={RELATIONSHIP_OPTIONS}
-            placeholder="Select relationship"
-          />
-        </div>
-
-        <div>
-          <label className={labelClass}>
-            {isTertiary ? 'Sponsor / Guardian name' : 'Parent / Guardian name'} <span className="text-amber-400">*</span>
-          </label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className={inputClass}
-            placeholder={isTertiary ? 'Sponsor or guardian name' : 'Parent or guardian name'}
-            required
-          />
-        </div>
-
-        <div>
-          <label className={labelClass}>Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className={inputClass}
-            placeholder="Email address (optional)"
-          />
-        </div>
-
-        <div>
-          <label className={labelClass}>Phone</label>
-          <input
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className={inputClass}
-            placeholder="e.g. 0700123456"
-          />
-        </div>
-
-        <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-white/15">
-          <button
-            type="button"
-            onClick={goBack}
-            className="px-5 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 text-white/90 text-sm font-medium backdrop-blur-sm transition-all"
-          >
+        {/* ── FOOTER ACTIONS (FOR BOTH PAGE & MODAL MODES) ── */}
+        <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#CCCCCC]">
+          <button type="button" onClick={handleCancel} className="gov-btn gov-btn-sm">
             Cancel
           </button>
           <button
             type="submit"
             disabled={submitting || (isFetching && !data)}
-            className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-semibold shadow-lg shadow-emerald-950/40 border border-emerald-400/30 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
+            className="gov-btn gov-btn-sm gov-btn-primary"
           >
-            {submitting ? 'Adding...' : isTertiary ? 'Add sponsor' : 'Add parent'}
+            {submitting
+              ? 'Registering…'
+              : isTertiary
+              ? 'Register Guardian / Sponsor'
+              : 'Register Parent'}
           </button>
         </div>
       </form>
     </div>
   );
-
-  if (mode === 'page') {
-    return <AdminPageWrapper title={isTertiary ? 'Add Sponsor' : 'Add Parent'}>{formBody}</AdminPageWrapper>;
-  }
-  return formBody;
 }

@@ -30,6 +30,7 @@ import { useUIStore } from '../../../store/uiStore';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
 import { fetchMyConversations, schoolChatConversationsQueryKey } from '@/lib/schoolChatApi';
 import '@/assets/pwezacore-students-scoped.css';
+import '@/styles/government-system.css';
 import './notificationsCenter.css';
 
 const FONT_HREF =
@@ -787,135 +788,168 @@ export default function NotificationsPage() {
 
   return (
     <AdminPageWrapper>
-      <div
-        className={`pw-students pw-notif-center print:bg-[#07090f] ${isDark ? 'dark' : 'light'}`}
-        data-theme={isDark ? 'dark' : 'light'}
-      >
-        <div className="page space-y-5">
-          {/* Header Row */}
-          <div className="page-header fade-up">
-            <div className="page-title-block">
-              <h1 className="page-title text-slate-900 dark:text-white">Alerts &amp; Notifications</h1>
-            </div>
+      <div className="space-y-4">
+        {/* ── 1. TOP HEADER (GOVERNMENT DESIGN SYSTEM STANDARD) ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-[17px] font-bold tracking-tight text-[#111111] uppercase font-sans m-0">
+              Alerts &amp; System Notifications
+            </h1>
+            <span className="inline-flex items-center px-2 py-0.5 text-[11px] font-mono font-bold bg-[#EAEAEA] text-[#222222] border border-[#CCCCCC]">
+              {counts.unread === 0 ? 'ALL CAUGHT UP' : `${counts.unread} UNREAD`}
+            </span>
+          </div>
 
-            <div className="page-actions print:hidden !flex-wrap gap-2 sm:gap-3">
-              {/* Live Count Pill */}
-              <div
-                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs"
-              >
-                <Bell className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
-                <span className="text-xs sm:text-sm font-bold tabular-nums text-slate-900 dark:text-white">
-                  {counts.unread === 0 ? 'All alerts caught up' : `${counts.unread} pending alerts`}
-                </span>
-              </div>
-
+          {/* Action Button Group */}
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            {/* View Tabs */}
+            <div className="inline-flex p-0.5 bg-[#EAEAEA] border border-[#CCCCCC] rounded gap-0.5">
               <button
                 type="button"
-                onClick={() => void refetchNotifications()}
-                disabled={fetchingNotifications}
-                className="btn btn-ghost !px-3 !min-w-[42px] min-h-[42px] justify-center rounded-xl border border-slate-200 dark:border-slate-800"
-                title="Refresh alerts"
+                onClick={() => setTab('inbox')}
+                className={`px-2.5 py-1 text-xs font-semibold rounded transition-colors ${
+                  tab === 'inbox'
+                    ? 'bg-white text-[#111111] shadow-xs'
+                    : 'text-[#555555] hover:text-[#111111]'
+                }`}
               >
-                <RefreshCw className={`h-4 w-4 text-slate-700 dark:text-slate-300 ${fetchingNotifications ? 'animate-spin' : ''}`} />
+                Alerts Inbox ({counts.total})
               </button>
+              <button
+                type="button"
+                onClick={() => setTab('tools')}
+                className={`px-2.5 py-1 text-xs font-semibold rounded transition-colors ${
+                  tab === 'tools'
+                    ? 'bg-white text-[#111111] shadow-xs'
+                    : 'text-[#555555] hover:text-[#111111]'
+                }`}
+              >
+                Broadcast
+              </button>
+              <button
+                type="button"
+                onClick={() => setTab('history')}
+                className={`px-2.5 py-1 text-xs font-semibold rounded transition-colors ${
+                  tab === 'history'
+                    ? 'bg-white text-[#111111] shadow-xs'
+                    : 'text-[#555555] hover:text-[#111111]'
+                }`}
+              >
+                Delivery History
+              </button>
+            </div>
 
-              {/* Segmented Top Tabs */}
-              <div className="pw-notif-segment w-full basis-full min-[900px]:basis-auto min-[900px]:w-[min(100%,24rem)] sm:max-w-lg">
-                {tabSegmentBtn('inbox', 'Alerts Inbox', <Inbox className="h-4 w-4 shrink-0 opacity-90" />, 'Alerts Feed')}
-                {tabSegmentBtn('tools', 'Broadcast', <Send className="h-4 w-4 shrink-0 opacity-90" />, 'Send Broadcast')}
-                {tabSegmentBtn('history', 'History', <History className="h-4 w-4 shrink-0 opacity-90" />, 'Delivery History')}
-              </div>
+            {counts.unread > 0 && (
+              <button
+                type="button"
+                onClick={() => void markAllRead()}
+                disabled={markingAll}
+                className="gov-btn gov-btn-sm"
+                title="Mark all alerts as read"
+              >
+                <CheckCheck className="w-3.5 h-3.5 text-emerald-600" />
+                <span>{markingAll ? 'Updating...' : 'Mark All Read'}</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => void refetchNotifications()}
+              disabled={fetchingNotifications}
+              className="gov-btn gov-btn-sm"
+              title="Refresh alerts"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${fetchingNotifications ? 'animate-spin' : ''}`} />
+              <span>Refresh</span>
+            </button>
+          </div>
+        </div>
+
+        {/* ── 2. METRIC SUMMARY BOXES (PLAIN, HIGH-DENSITY, NO FLUFF) ── */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="gov-card p-3 rounded-lg text-center border border-[#CCCCCC]">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-[#555555]">
+              Active Alerts Feed
+            </div>
+            <div className="text-2xl font-mono font-bold text-[#111111] mt-1">
+              {counts.total}
             </div>
           </div>
 
-          {/* TAB 1: Unified Alerts Inbox */}
-          {tab === 'inbox' && (
-            <div className="flex flex-col gap-5 lg:grid lg:grid-cols-12 lg:gap-6 items-start">
-              {/* Sidebar Filters on Desktop / Top Controls on Mobile */}
-              <aside className="w-full lg:col-span-4 xl:col-span-3 space-y-3.5 lg:sticky lg:top-4">
-                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs space-y-3.5">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                      Filter Alerts
-                    </h2>
-                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
-                      {filteredNotifications.length} shown
-                    </span>
-                  </div>
+          <div className="gov-card p-3 rounded-lg text-center border border-[#CCCCCC]">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-[#555555]">
+              Unread Notifications
+            </div>
+            <div className="text-2xl font-mono font-bold text-[#111111] mt-1">
+              {counts.unread}
+            </div>
+          </div>
 
-                  {/* Search input */}
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                    <input
-                      type="text"
-                      placeholder="Search alerts..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/70 pl-8.5 pr-3 py-1.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
+          <div className="gov-card p-3 rounded-lg text-center border border-[#CCCCCC]">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-[#555555]">
+              Job Applications
+            </div>
+            <div className="text-2xl font-mono font-bold text-[#111111] mt-1">
+              {counts.job}
+            </div>
+          </div>
 
-                  {/* Category Pills */}
-                  <div className="flex flex-wrap gap-1.5">
-                    {[
-                      { id: 'all' as const, label: showSeen ? 'All Alerts' : 'New Alerts', count: counts.total },
-                      { id: 'email' as const, label: 'Official Emails', count: counts.email },
-                      { id: 'job' as const, label: 'Job Applications', count: counts.job },
-                      { id: 'chat' as const, label: 'Chat Messages', count: counts.chat },
-                      { id: 'admission' as const, label: 'Admissions', count: counts.admission },
-                      { id: 'approval' as const, label: 'Staff Leaves', count: counts.approval },
-                      { id: 'system' as const, label: 'System', count: counts.system },
-                    ].map((pill) => {
-                      const isActive = categoryFilter === pill.id;
-                      return (
-                        <button
-                          key={pill.id}
-                          type="button"
-                          onClick={() => setCategoryFilter(pill.id)}
-                          className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                            isActive
-                              ? 'bg-emerald-600 text-white shadow-xs dark:bg-emerald-500/25 dark:text-emerald-300 dark:border dark:border-emerald-500/40'
-                              : 'bg-slate-100 text-slate-700 hover:text-slate-900 hover:bg-slate-200 dark:bg-slate-800/80 dark:text-slate-400 dark:hover:text-white'
-                          }`}
-                        >
-                          <span>{pill.label}</span>
-                          <span className={`text-[10.5px] tabular-nums font-bold ${isActive ? 'text-emerald-100' : 'text-slate-500'}`}>
-                            ({pill.count})
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
+          <div className="gov-card p-3 rounded-lg text-center border border-[#CCCCCC]">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-[#555555]">
+              Official Inbound Emails
+            </div>
+            <div className="text-2xl font-mono font-bold text-[#111111] mt-1">
+              {counts.email}
+            </div>
+          </div>
+        </div>
 
-                  {/* Actions & Show Seen Toggle */}
-                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
-                    <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-700 dark:text-slate-300">
-                      <input
-                        type="checkbox"
-                        checked={showSeen}
-                        onChange={(e) => setShowSeen(e.target.checked)}
-                        className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
-                      />
-                      <span>Show opened alerts</span>
-                    </label>
-
-                    {counts.unread > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => void markAllRead()}
-                        disabled={markingAll}
-                        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-300 dark:hover:bg-emerald-500/25 border border-emerald-300 dark:border-emerald-500/30 px-3.5 py-2 text-xs font-bold transition-all disabled:opacity-50"
-                      >
-                        <CheckCheck className="h-4 w-4" />
-                        <span>{markingAll ? 'Updating...' : 'Clear all'}</span>
-                      </button>
-                    )}
-                  </div>
+        {/* TAB 1: Unified Alerts Inbox */}
+        {tab === 'inbox' && (
+          <div className="space-y-4">
+            {/* Control Bar */}
+            <div className="gov-control-bar">
+              <div className="gov-control-bar-left flex-wrap">
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="w-3.5 h-3.5 text-[#555555] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Search alerts by title, body, sender, or reference..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="gov-input pl-8 font-mono text-xs"
+                  />
                 </div>
-              </aside>
 
-              {/* Main Notification Stream */}
-              <div className="w-full lg:col-span-8 xl:col-span-9 min-w-0 space-y-3">
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value as any)}
+                  className="gov-select w-auto text-xs"
+                  aria-label="Filter Category"
+                >
+                  <option value="all">Category: All ({counts.total})</option>
+                  <option value="email">Official Emails ({counts.email})</option>
+                  <option value="job">Job Applications ({counts.job})</option>
+                  <option value="chat">Chat Messages ({counts.chat})</option>
+                  <option value="admission">Admissions ({counts.admission})</option>
+                  <option value="approval">Staff Leaves ({counts.approval})</option>
+                  <option value="system">System ({counts.system})</option>
+                </select>
+
+                <label className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-[#333333] px-2 py-1 bg-white border border-[#CCCCCC] rounded">
+                  <input
+                    type="checkbox"
+                    checked={showSeen}
+                    onChange={(e) => setShowSeen(e.target.checked)}
+                    className="rounded border-[#CCCCCC] text-[#111111]"
+                  />
+                  <span>Show Opened Alerts</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Main Notification Stream */}
+            <div className="w-full min-w-0 space-y-3">
                 {loadingNotifications ? (
                   <div className="space-y-3 animate-pulse">
                     {[1, 2, 3, 4].map((i) => (
@@ -952,86 +986,71 @@ export default function NotificationsPage() {
                           <button
                             type="button"
                             onClick={() => void handleNotificationClick(notif)}
-                            className={`w-full text-left rounded-2xl p-3.5 sm:p-4.5 transition-all flex items-start gap-3 sm:gap-4 shadow-xs border ${
+                            className={`gov-card w-full text-left p-3.5 transition-colors flex items-start gap-3 border ${
                               !notif.isRead
-                                ? 'bg-white dark:bg-slate-900 border-emerald-400/60 dark:border-emerald-500/40 hover:border-emerald-500 hover:shadow-md'
-                                : 'bg-slate-50/80 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800/80 hover:bg-white dark:hover:bg-slate-900 hover:border-slate-300'
+                                ? 'border-[#111111] bg-white shadow-xs'
+                                : 'border-[#CCCCCC] bg-[#F9F9FB] hover:bg-white'
                             }`}
                           >
-                            {/* Color-coded Category Icon */}
-                            <div
-                              className={`h-9 w-9 sm:h-10 sm:w-10 rounded-xl border flex items-center justify-center shrink-0 mt-0.5 ${style.bgLight} ${style.bgDark}`}
-                            >
-                              <IconComponent className="h-4 w-4 sm:h-5 sm:w-5" />
+                            {/* Category Icon */}
+                            <div className="w-8 h-8 rounded border border-[#CCCCCC] bg-[#EAEAEA] flex items-center justify-center shrink-0 mt-0.5">
+                              <IconComponent className="w-4 h-4 text-[#111111]" />
                             </div>
 
                             {/* Content Block */}
                             <div className="min-w-0 flex-1 space-y-1">
                               <div className="flex flex-wrap items-center justify-between gap-1.5">
                                 <div className="flex flex-wrap items-center gap-2">
-                                  <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white leading-tight">
+                                  <span className={`text-xs font-bold leading-tight ${!notif.isRead ? 'text-[#111111]' : 'text-[#555555]'}`}>
                                     {notif.title}
                                   </span>
 
-                                  {/* Reference Number Badge if present */}
+                                  {/* Reference Number Badge */}
                                   {notif.referenceNo && (
-                                    <span className="font-mono text-[10.5px] font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30">
+                                    <span className="gov-tag font-mono text-[10px]">
                                       REF: {notif.referenceNo}
                                     </span>
                                   )}
 
                                   {/* Category Tag */}
-                                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 dark:bg-white/10 dark:text-slate-300 dark:border-white/10">
+                                  <span className="gov-tag text-[10px]">
                                     {notif.category}
                                   </span>
                                 </div>
 
                                 <div className="flex items-center gap-2 shrink-0">
-                                  <span className="text-[11px] tabular-nums font-medium text-slate-500 dark:text-slate-400">
+                                  <span className="font-mono text-[11px] text-[#777777]">
                                     {formatTimeAgo(notif.createdAt)}
                                   </span>
                                   {!notif.isRead && (
-                                    <span
-                                      className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] shrink-0"
-                                      title="Pending / Unread"
-                                    />
+                                    <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0" title="Unread" />
                                   )}
                                 </div>
                               </div>
 
-                              {/* Notification Content Layout */}
+                              {/* Notification Details */}
                               {notif.source === 'email' && notif.metadata?.from_display ? (
-                                <div className="space-y-1.5 pt-0.5">
-                                  {/* Dedicated columns/pills for From and To */}
-                                  <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs">
-                                    <div className="inline-flex items-center gap-1.5">
-                                      <span className="font-semibold text-slate-500 dark:text-slate-400">From:</span>
-                                      <span className="font-medium text-slate-900 dark:text-slate-200">
-                                        {String(notif.metadata.from_display)}
+                                <div className="text-xs text-[#555555] space-y-0.5 pt-0.5">
+                                  <div>
+                                    <span className="font-semibold text-[#111111]">From:</span> {String(notif.metadata.from_display)}
+                                    {Boolean(notif.metadata.to_email) && (
+                                      <span className="ml-2 font-mono text-[11px] text-[#555555]">
+                                        To: {String(notif.metadata.to_email)}
                                       </span>
-                                    </div>
-                                    <div className="inline-flex items-center gap-1.5">
-                                      <span className="font-semibold text-slate-500 dark:text-slate-400">To:</span>
-                                      <span className="font-mono text-[11px] text-emerald-700 dark:text-emerald-400 font-medium bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-200/80 dark:border-emerald-500/20">
-                                        {String(notif.metadata.to_email || '')}
-                                      </span>
-                                    </div>
+                                    )}
                                   </div>
-
-                                  {/* Message preview on its own distinct line */}
                                   {notif.body && (
-                                    <p className="text-xs sm:text-[13px] text-slate-600 dark:text-slate-300 line-clamp-2 leading-relaxed pt-0.5 border-t border-slate-100 dark:border-slate-800/60 mt-1">
+                                    <p className="line-clamp-2 text-[#333333] pt-0.5 border-t border-[#EAEAEA]">
                                       {notif.body}
                                     </p>
                                   )}
                                 </div>
                               ) : notif.body ? (
-                                <p className="text-xs sm:text-[13px] text-slate-700 dark:text-slate-300 line-clamp-2 leading-relaxed">
+                                <p className="text-xs text-[#555555] line-clamp-2">
                                   {notif.body}
                                 </p>
                               ) : null}
-
-                              </div>
+                            </div>
                           </button>
                         </li>
                       );
@@ -1044,156 +1063,109 @@ export default function NotificationsPage() {
 
           {/* TAB 2: SMS & WhatsApp Broadcast */}
           {tab === 'tools' && (
-            <div className="max-w-2xl space-y-4">
-              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs">
-                <div className="flex items-center gap-3 px-4 py-4 sm:px-5 border-b border-slate-200 dark:border-slate-800">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                    <Megaphone className="h-5 w-5" />
-                  </span>
-                  <div>
-                    <p className="font-bold text-slate-900 dark:text-white">Broadcast Announcement</p>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">Send SMS or WhatsApp communications to parents, tutors, and students.</p>
-                  </div>
-                </div>
+            <div className="gov-card p-5 max-w-2xl space-y-4">
+              <div className="text-xs font-bold uppercase tracking-wider text-[#111111] pb-2 border-b border-[#CCCCCC]">
+                Multi-Channel Broadcast Dispatch
+              </div>
 
-                <div className="space-y-4 px-4 pb-6 pt-5 sm:px-5">
-                  {/* Type selection */}
-                  <div>
-                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">Campaign Type</p>
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                      {[
-                        {
-                          id: 'finance' as BroadcastType,
-                          title: 'Outstanding Balance Reminder',
-                          desc: 'Notify sponsors/parents whose students have pending tuition fees.',
-                        },
-                        {
-                          id: 'general' as BroadcastType,
-                          title: 'General School Notice',
-                          desc: 'Send customized institutional memos and announcements.',
-                        },
-                      ].map((opt) => (
+              {/* Broadcast Type */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#555555]">
+                  Campaign Type
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBroadcastType('finance')}
+                    className={`gov-btn gov-btn-sm flex-1 ${broadcastType === 'finance' ? 'gov-btn-primary' : ''}`}
+                  >
+                    <CreditCard className="w-3.5 h-3.5" />
+                    <span>Outstanding Balances</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBroadcastType('general')}
+                    className={`gov-btn gov-btn-sm flex-1 ${broadcastType === 'general' ? 'gov-btn-primary' : ''}`}
+                  >
+                    <Megaphone className="w-3.5 h-3.5" />
+                    <span>General School Notice</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Delivery Channels */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#555555]">
+                  Dispatch Channels
+                </label>
+                <div className="flex gap-2">
+                  {(['sms', 'whatsapp'] as Channel[]).map((ch) => (
+                    <button
+                      key={ch}
+                      type="button"
+                      onClick={() => toggleChannel(ch)}
+                      className={`gov-btn gov-btn-sm ${channels.has(ch) ? 'gov-btn-primary' : ''}`}
+                    >
+                      <span>{ch === 'sms' ? 'SMS Messages' : 'WhatsApp Messages'}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* General Message */}
+              {broadcastType === 'general' && (
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-[#555555]">
+                      Target Audience
+                    </label>
+                    <div className="flex gap-1.5 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={toggleAll}
+                        className={`gov-btn gov-btn-sm ${sendToAll ? 'gov-btn-primary' : ''}`}
+                      >
+                        All Audiences
+                      </button>
+                      {AUDIENCE_OPTIONS.map((opt) => (
                         <button
                           key={opt.id}
                           type="button"
-                          onClick={() => setBroadcastType(opt.id)}
-                          className={`rounded-xl border p-3 text-left transition-colors ${
-                            broadcastType === opt.id
-                              ? 'border-emerald-500 bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200'
-                              : 'border-slate-200 bg-slate-50 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-950/50'
-                          }`}
+                          onClick={() => toggleGroup(opt.id)}
+                          className={`gov-btn gov-btn-sm ${!sendToAll && selectedGroups.has(opt.id) ? 'gov-btn-primary' : ''}`}
                         >
-                          <span className="flex items-center gap-2 mb-1">
-                            <span
-                              className={`h-4 w-4 rounded-full border-2 shrink-0 flex items-center justify-center ${
-                                broadcastType === opt.id ? 'border-emerald-600' : 'border-slate-300'
-                              }`}
-                            >
-                              {broadcastType === opt.id && <span className="h-2 w-2 rounded-full bg-emerald-600" />}
-                            </span>
-                            <span className="text-xs font-bold text-slate-900 dark:text-white">{opt.title}</span>
-                          </span>
-                          <p className="text-[11px] text-slate-600 dark:text-slate-400 pl-6">{opt.desc}</p>
+                          {opt.label}
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  {/* General broadcast recipient selection */}
-                  {broadcastType === 'general' && (
-                    <>
-                      <div>
-                        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">Target Audience</p>
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            onClick={toggleAll}
-                            className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold ${
-                              sendToAll
-                                ? 'border-emerald-500 bg-emerald-50 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-300'
-                                : 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-950'
-                            }`}
-                          >
-                            <span className={`h-3.5 w-3.5 rounded border flex items-center justify-center ${sendToAll ? 'bg-emerald-600 border-emerald-600' : 'border-slate-300'}`}>
-                              {sendToAll && <Check className="h-2.5 w-2.5 text-white" />}
-                            </span>
-                            All Audiences
-                          </button>
-
-                          {AUDIENCE_OPTIONS.map((opt) => {
-                            const on = selectedGroups.has(opt.id);
-                            return (
-                              <button
-                                key={opt.id}
-                                type="button"
-                                onClick={() => toggleGroup(opt.id)}
-                                className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold ${
-                                  on
-                                    ? 'border-emerald-500 bg-emerald-50 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-300'
-                                    : 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-950'
-                                }`}
-                              >
-                                <span className={`h-3.5 w-3.5 rounded border flex items-center justify-center ${on ? 'bg-emerald-600 border-emerald-600' : 'border-slate-300'}`}>
-                                  {on && <Check className="h-2.5 w-2.5 text-white" />}
-                                </span>
-                                {opt.label}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
-                          Message Body
-                        </label>
-                        <textarea
-                          className={inputClass + ' min-h-[100px] resize-y'}
-                          placeholder="Type your official announcement here..."
-                          value={broadcastMessage}
-                          onChange={(e) => setBroadcastMessage(e.target.value)}
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {/* Channel selection */}
-                  <div>
-                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">Dispatch Channels</p>
-                    <div className="flex flex-wrap gap-2.5">
-                      {(['sms', 'whatsapp'] as Channel[]).map((ch) => (
-                        <button
-                          key={ch}
-                          type="button"
-                          onClick={() => toggleChannel(ch)}
-                          className={`flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-bold transition-colors ${
-                            channels.has(ch)
-                              ? 'border-emerald-500 bg-emerald-50 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-300'
-                              : 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-950'
-                          }`}
-                        >
-                          <span className={`h-3.5 w-3.5 rounded border flex items-center justify-center ${channels.has(ch) ? 'bg-emerald-600 border-emerald-600' : 'border-slate-300'}`}>
-                            {channels.has(ch) && <Check className="h-2.5 w-2.5 text-white" />}
-                          </span>
-                          {ch === 'sms' ? 'SMS Messages' : 'WhatsApp Messages'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Submit Button */}
-                  <div className="pt-2">
-                    <button
-                      type="button"
-                      disabled={broadcasting}
-                      onClick={() => void sendBroadcast()}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#00873E] hover:bg-[#007033] text-white text-xs font-bold shadow-md transition-all disabled:opacity-50"
-                    >
-                      <Send className="h-3.5 w-3.5" />
-                      <span>{broadcasting ? 'Dispatching...' : 'Dispatch Broadcast'}</span>
-                    </button>
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-[#555555]">
+                      Message Body
+                    </label>
+                    <textarea
+                      rows={4}
+                      value={broadcastMessage}
+                      onChange={(e) => setBroadcastMessage(e.target.value)}
+                      placeholder="Type your official announcement here..."
+                      className="gov-textarea text-xs w-full"
+                    />
                   </div>
                 </div>
+              )}
+
+              {/* Submit */}
+              <div className="pt-2">
+                <button
+                  type="button"
+                  disabled={broadcasting}
+                  onClick={() => void sendBroadcast()}
+                  className="gov-btn gov-btn-sm gov-btn-primary"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>{broadcasting ? 'Dispatching...' : 'Dispatch Broadcast'}</span>
+                </button>
               </div>
             </div>
           )}
@@ -1201,17 +1173,13 @@ export default function NotificationsPage() {
           {/* TAB 3: Delivery History */}
           {tab === 'history' && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 {(['all', 'sent', 'pending', 'failed'] as HistoryFilter[]).map((f) => (
                   <button
                     key={f}
                     type="button"
                     onClick={() => setHistoryFilter(f)}
-                    className={`rounded-lg px-3 py-1 text-xs font-semibold capitalize ${
-                      historyFilter === f
-                        ? 'bg-emerald-600 text-white shadow-xs'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400'
-                    }`}
+                    className={`gov-btn gov-btn-sm capitalize ${historyFilter === f ? 'gov-btn-primary' : ''}`}
                   >
                     {f}
                   </button>
@@ -1219,59 +1187,58 @@ export default function NotificationsPage() {
               </div>
 
               {historyLoading ? (
-                <div className="p-8 text-center text-xs text-slate-500">Loading delivery logs...</div>
+                <div className="gov-card p-8 text-center text-xs text-[#555555]">
+                  Loading delivery logs...
+                </div>
               ) : historyLogs.length === 0 ? (
-                <div className="p-12 text-center rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-500">
+                <div className="gov-card p-12 text-center text-xs text-[#555555]">
                   No delivery logs recorded for this filter.
                 </div>
               ) : (
-                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-50 dark:bg-slate-950/60 border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase">
-                        <tr>
-                          <th className="p-3">Recipient</th>
-                          <th className="p-3">Channel</th>
-                          <th className="p-3">Status</th>
-                          <th className="p-3">Time</th>
+                <div className="gov-table-container">
+                  <table className="gov-table">
+                    <thead>
+                      <tr>
+                        <th>Recipient</th>
+                        <th>Channel</th>
+                        <th>Status</th>
+                        <th>Time</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {historyLogs.map((log) => (
+                        <tr key={log.log_id}>
+                          <td className="font-semibold">
+                            {log.recipient_name || log.recipient}
+                          </td>
+                          <td className="font-mono uppercase text-xs">
+                            {log.notification_type}
+                          </td>
+                          <td>
+                            <span
+                              className={`gov-tag ${
+                                log.status === 'sent'
+                                  ? 'gov-tag-approved'
+                                  : log.status === 'failed'
+                                  ? 'gov-tag-rejected'
+                                  : 'gov-tag-warned'
+                              }`}
+                            >
+                              {log.status}
+                            </span>
+                          </td>
+                          <td className="font-mono text-xs">
+                            {new Date(log.created_at).toLocaleDateString()}
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
-                        {historyLogs.map((log) => (
-                          <tr key={log.log_id} className="hover:bg-slate-50 dark:hover:bg-white/5">
-                            <td className="p-3 font-medium text-slate-900 dark:text-white">
-                              {log.recipient_name || log.recipient}
-                            </td>
-                            <td className="p-3 text-slate-600 dark:text-slate-400 uppercase font-semibold">
-                              {log.notification_type}
-                            </td>
-                            <td className="p-3">
-                              <span
-                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                                  log.status === 'sent'
-                                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300'
-                                    : log.status === 'failed'
-                                    ? 'bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-500/20 dark:text-rose-300'
-                                    : 'bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-500/20 dark:text-amber-300'
-                                }`}
-                              >
-                                {log.status}
-                              </span>
-                            </td>
-                            <td className="p-3 tabular-nums text-slate-500 dark:text-slate-400">
-                              {new Date(log.created_at).toLocaleDateString()}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
           )}
         </div>
-      </div>
-    </AdminPageWrapper>
+      </AdminPageWrapper>
   );
 }

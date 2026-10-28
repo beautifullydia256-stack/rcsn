@@ -5,6 +5,7 @@ import { supabase } from '../../../lib/supabase';
 import { loadOutstandingBalanceAggByStudentAllTerms } from '../../../lib/adminFinanceTerm';
 import { useAuthStore } from '../../../store/authStore';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
+import { GovTableLoader } from '@/components/ui/GovLoadingIndicator';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -126,11 +127,7 @@ export default function OutstandingPage() {
             </thead>
             <tbody>
               {loading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={`sk-${i}`} className="border-b border-[var(--ac-border)]">
-                    <td colSpan={7} className="px-4 py-3"><div className="h-5 rounded ac-skeleton-block animate-pulse" /></td>
-                  </tr>
-                ))
+                <GovTableLoader colSpan={7} />
               ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-6 text-center ac-text-muted">

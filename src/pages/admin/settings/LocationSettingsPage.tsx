@@ -3,7 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
-import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
+import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
+import { ArrowLeft, MapPin, Navigation, Save, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { GovRollingBox } from '@/components/ui/GovLoadingIndicator';
+import '@/styles/government-system.css';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -54,13 +57,14 @@ export default function LocationSettingsPage() {
   useEffect(() => {
     if (data) setLocation(data);
   }, [data]);
+
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
-      setError('Geolocation is not supported by this browser');
+      setError('GEOLOCATION IS NOT SUPPORTED BY THIS BROWSER ENVIRONMENT');
       return;
     }
     setError(null);
-    setSuccess('Getting your current location...');
+    setSuccess('DETECTING HARDWARE GPS COORDINATES…');
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setLocation((prev) => ({
@@ -69,11 +73,11 @@ export default function LocationSettingsPage() {
           longitude: position.coords.longitude,
         }));
         setSuccess(
-          `✅ Current location: ${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`
+          `COORDINATES CAPTURED: ${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`
         );
       },
       (err) => {
-        setError(err.message || 'Unable to get current location.');
+        setError(err.message ? err.message.toUpperCase() : 'UNABLE TO RETRIEVE HARDWARE GEOLOCATION');
         setSuccess(null);
       },
       { enableHighAccuracy: false, timeout: 30000, maximumAge: 60000 }
@@ -96,12 +100,12 @@ export default function LocationSettingsPage() {
         })
         .eq('school_id', schoolId);
       if (err) throw err;
-      setSuccess('School location updated successfully!');
+      setSuccess('INSTITUTIONAL GEOFENCE BOUNDARIES SYNCHRONIZED SUCCESSFULLY');
       setTimeout(() => setSuccess(null), 3000);
       await queryClient.invalidateQueries({ queryKey: ['admin', 'locationSettings', schoolId] });
     } catch (err) {
       console.error('Error saving school location:', err);
-      setError('Failed to save school location');
+      setError('FAILED TO COMMIT GEOFENCE COORDINATES TO REGISTRY');
     } finally {
       setSaving(false);
     }
@@ -109,105 +113,164 @@ export default function LocationSettingsPage() {
 
   if (isLoading) {
     return (
-      <AdminPageWrapper title="School Location Settings">
-        <div className="ac-text-muted">Loading...</div>
+      <AdminPageWrapper>
+        <div className="gov-card p-16 flex items-center justify-center border border-[#CCCCCC]">
+          <GovRollingBox size="lg" />
+        </div>
       </AdminPageWrapper>
     );
   }
 
   return (
-    <AdminPageWrapper title="School Location Settings" subtitle="GPS coordinates for teacher attendance">
-      <div className="mb-4 flex items-center justify-end">
-        <button
-          type="button"
-          onClick={() => navigate('/dashboard/admin/settings')}
-          className="ac-glass-btn-secondary min-h-[44px] rounded-xl px-4 py-2 text-sm font-medium ac-text-primary"
-        >
-          Back to Settings
-        </button>
+    <AdminPageWrapper>
+      {/* INSTITUTIONAL GOVERNMENT HEADER */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#CCCCCC] pb-4">
+        <div className="flex items-center gap-3">
+          <h1 className="text-[17px] font-bold tracking-tight text-[#111111] uppercase font-sans">
+            CAMPUS GEOLOCATION & GEOFENCE REGISTRY
+          </h1>
+          <span className="inline-flex items-center px-2 py-0.5 text-[11px] font-mono font-bold bg-[#EAEAEA] text-[#222222] border border-[#CCCCCC]">
+            GPS VALIDATION
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard/admin/settings')}
+            className="gov-btn gov-btn-sm"
+          >
+            <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+            BACK TO SETTINGS
+          </button>
+        </div>
       </div>
 
-      <div className={`${adminCardClass} space-y-4`}>
-        {error && (
-          <div className="rounded-lg border border-red-400/40 bg-red-950/50 px-3 py-2 text-sm text-red-100">
-            {error}
+      {/* METRIC STRIP */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="gov-card p-3 rounded-lg text-center border border-[#CCCCCC]">
+          <div className="text-[10px] font-mono uppercase text-[#666666] tracking-wider">LATITUDE</div>
+          <div className="text-sm font-bold font-mono text-[#111111] mt-0.5">
+            {location.latitude.toFixed(6)}
           </div>
-        )}
-        {success && (
-          <div className="rounded-lg border border-emerald-400/35 bg-emerald-950/45 px-3 py-2 text-sm text-emerald-100">
-            {success}
-          </div>
-        )}
-
-        <div>
-          <label className="mb-1 block text-sm font-medium ac-text-secondary">Location Name</label>
-          <input
-            type="text"
-            value={location.name}
-            onChange={(e) => setLocation((prev) => ({ ...prev, name: e.target.value }))}
-            className="ac-input min-h-[44px] w-full"
-            placeholder="School Location"
-          />
         </div>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="gov-card p-3 rounded-lg text-center border border-[#CCCCCC]">
+          <div className="text-[10px] font-mono uppercase text-[#666666] tracking-wider">LONGITUDE</div>
+          <div className="text-sm font-bold font-mono text-[#111111] mt-0.5">
+            {location.longitude.toFixed(6)}
+          </div>
+        </div>
+        <div className="gov-card p-3 rounded-lg text-center border border-[#CCCCCC]">
+          <div className="text-[10px] font-mono uppercase text-[#666666] tracking-wider">GEOFENCE RADIUS</div>
+          <div className="text-sm font-bold font-mono text-[#111111] mt-0.5">
+            {location.radius} METERS
+          </div>
+        </div>
+        <div className="gov-card p-3 rounded-lg text-center border border-[#CCCCCC]">
+          <div className="text-[10px] font-mono uppercase text-[#666666] tracking-wider">HARDWARE DISPATCH</div>
+          <div className="text-sm font-bold font-mono text-[#15803D] mt-0.5">
+            ACTIVE
+          </div>
+        </div>
+      </div>
+
+      {/* GEOFENCE CONFIGURATION DESK */}
+      <div className="max-w-2xl">
+        <div className="gov-card p-6 rounded-lg border border-[#CCCCCC] bg-white space-y-4">
+          {error && (
+            <div className="p-3 rounded-md bg-[#FEF2F2] border border-[#EF4444] text-xs font-mono font-bold text-[#B91C1C] flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+          {success && (
+            <div className="p-3 rounded-md bg-[#F0FDF4] border border-[#22C55E] text-xs font-mono font-bold text-[#15803D] flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>{success}</span>
+            </div>
+          )}
+
           <div>
-            <label className="mb-1 block text-sm font-medium ac-text-secondary">Latitude</label>
+            <label className="block text-[11px] font-mono font-bold uppercase text-[#555555] mb-1">
+              DESIGNATED CAMPUS SITE NAME
+            </label>
             <input
-              type="number"
-              step="any"
-              value={location.latitude}
-              onChange={(e) =>
-                setLocation((prev) => ({ ...prev, latitude: parseFloat(e.target.value) || 0 }))
-              }
-              className="ac-input min-h-[44px] w-full"
+              type="text"
+              value={location.name}
+              onChange={(e) => setLocation((prev) => ({ ...prev, name: e.target.value }))}
+              className="gov-input w-full text-xs"
+              placeholder="e.g. Main Health Sciences Complex"
             />
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[11px] font-mono font-bold uppercase text-[#555555] mb-1">
+                LATITUDE (DECIMAL DEGREES)
+              </label>
+              <input
+                type="number"
+                step="any"
+                value={location.latitude}
+                onChange={(e) =>
+                  setLocation((prev) => ({ ...prev, latitude: parseFloat(e.target.value) || 0 }))
+                }
+                className="gov-input w-full text-xs font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-mono font-bold uppercase text-[#555555] mb-1">
+                LONGITUDE (DECIMAL DEGREES)
+              </label>
+              <input
+                type="number"
+                step="any"
+                value={location.longitude}
+                onChange={(e) =>
+                  setLocation((prev) => ({ ...prev, longitude: parseFloat(e.target.value) || 0 }))
+                }
+                className="gov-input w-full text-xs font-mono"
+              />
+            </div>
+          </div>
+
           <div>
-            <label className="mb-1 block text-sm font-medium ac-text-secondary">Longitude</label>
+            <label className="block text-[11px] font-mono font-bold uppercase text-[#555555] mb-1">
+              PERMISSIBLE GEOFENCE RADIUS (METERS)
+            </label>
             <input
               type="number"
-              step="any"
-              value={location.longitude}
+              min={50}
+              max={2000}
+              value={location.radius}
               onChange={(e) =>
-                setLocation((prev) => ({ ...prev, longitude: parseFloat(e.target.value) || 0 }))
+                setLocation((prev) => ({ ...prev, radius: parseInt(e.target.value, 10) || 100 }))
               }
-              className="ac-input min-h-[44px] w-full"
+              className="gov-input w-full text-xs font-mono"
             />
+            <p className="mt-1 text-[11px] font-mono text-[#777777]">
+              Clinical instructors and faculty must be situated within this perimeter for biometric punch verification.
+            </p>
           </div>
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium ac-text-secondary">Radius (meters)</label>
-          <input
-            type="number"
-            min={50}
-            max={2000}
-            value={location.radius}
-            onChange={(e) =>
-              setLocation((prev) => ({ ...prev, radius: parseInt(e.target.value, 10) || 100 }))
-            }
-            className="ac-input min-h-[44px] w-full"
-          />
-          <p className="mt-1 text-xs ac-text-muted">
-            Teachers must be within this radius to punch in/out.
-          </p>
-        </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-          <button
-            type="button"
-            onClick={getCurrentLocation}
-            className="ac-glass-btn-secondary min-h-[44px] rounded-lg px-4 py-2 text-sm font-medium ac-text-primary"
-          >
-            Use Current Location
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="min-h-[44px] rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-500 disabled:opacity-50"
-          >
-            {saving ? 'Saving...' : 'Save Location'}
-          </button>
+          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[#CCCCCC]">
+            <button
+              type="button"
+              onClick={getCurrentLocation}
+              className="gov-btn gov-btn-sm"
+            >
+              <Navigation className="w-3.5 h-3.5 mr-1 text-[#555555]" />
+              DETECT HARDWARE GPS
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="gov-btn gov-btn-sm gov-btn-primary"
+            >
+              <Save className="w-3.5 h-3.5 mr-1" />
+              {saving ? 'COMMITTING…' : 'SAVE GEOFENCE PROFILE'}
+            </button>
+          </div>
         </div>
       </div>
     </AdminPageWrapper>

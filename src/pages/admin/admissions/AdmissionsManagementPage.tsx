@@ -61,6 +61,7 @@ import type { AdmissionApplication } from '@/services/schoolPublicService';
 import { AVAILABLE_PROGRAMS } from '@/components/website/AdmissionsModal';
 import NativeModal from '@/components/NativeModal';
 import LiquidGlassSelect from '@/components/ui/LiquidGlassSelect';
+import '@/styles/government-system.css';
 
 export default function AdmissionsManagementPage() {
   const [applications, setApplications] = useState<AdmissionApplicationRecord[]>([]);
@@ -581,27 +582,27 @@ export default function AdmissionsManagementPage() {
   const getStatusBadge = (status: ApplicationStatus) => {
     switch (status) {
       case 'submitted':
-        return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">Submitted</span>;
+        return <span className="gov-tag">SUBMITTED</span>;
       case 'under_review':
-        return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">Under Vetting</span>;
+        return <span className="gov-tag gov-tag-warned">UNDER VETTING</span>;
       case 'shortlisted':
-        return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-900 dark:bg-purple-900/60 dark:text-purple-200 border border-purple-300 dark:border-purple-700">Approved • To Be Invited</span>;
+        return <span className="gov-tag gov-tag-warned">SHORTLISTED</span>;
       case 'interview_scheduled':
-        return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-900 dark:bg-indigo-900/60 dark:text-indigo-200 border border-indigo-300 dark:border-indigo-700">Interview Scheduled</span>;
+        return <span className="gov-tag">INTERVIEW SET</span>;
       case 'interview_passed':
-        return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">Interview Passed</span>;
+        return <span className="gov-tag gov-tag-approved">PASSED</span>;
       case 'admitted':
       case 'offer_accepted':
-        return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-600 text-white whitespace-nowrap">Admitted</span>;
+        return <span className="gov-tag gov-tag-approved">ADMITTED</span>;
       case 'enrolled':
-        return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-900 text-emerald-400 dark:bg-emerald-950 dark:text-emerald-300">Active Student</span>;
+        return <span className="gov-tag gov-tag-approved">ENROLLED</span>;
       case 'waitlisted':
-        return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300">Waitlisted</span>;
+        return <span className="gov-tag gov-tag-warned">WAITLISTED</span>;
       case 'interview_failed':
       case 'rejected':
-        return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300">Unsuccessful</span>;
+        return <span className="gov-tag gov-tag-rejected">UNSUCCESSFUL</span>;
       default:
-        return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300">{status}</span>;
+        return <span className="gov-tag">{String(status).toUpperCase()}</span>;
     }
   };
 
@@ -751,96 +752,69 @@ export default function AdmissionsManagementPage() {
   };
 
   return (
-    <AdminPageWrapper
-      eyebrow="ADMISSIONS & INTAKE"
-      title="Candidate Admissions & Matriculation Desk"
-    >
-      <div className="space-y-6">
+    <AdminPageWrapper>
+      <div className="space-y-4">
         {/* Toast Notification */}
         {feedback && (
           <div
-            className={`p-4 rounded-2xl text-sm font-semibold flex items-center justify-between shadow-lg transition-all ${
+            className={`px-3 py-2 text-xs font-semibold flex items-center justify-between border ${
               feedback.type === 'success'
-                ? 'bg-emerald-600 text-white'
-                : 'bg-rose-600 text-white'
+                ? 'bg-[#EBF8F2] text-[#00873E] border-[#00873E]'
+                : 'bg-[#FEECEB] text-[#D9383A] border-[#D9383A]'
             }`}
           >
-            <div className="flex items-center gap-3">
-              {feedback.type === 'success' ? <CheckCircle2 className="w-5 h-5 shrink-0" /> : <AlertCircle className="w-5 h-5 shrink-0" />}
+            <div className="flex items-center gap-2">
+              {feedback.type === 'success' ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
               <span>{feedback.message}</span>
             </div>
             <button type="button" onClick={() => setFeedback(null)} className="p-1 hover:opacity-75">
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
         )}
 
-        {/* Page Selection: Two Distinct Buttons */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2.5 sm:p-3 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 shadow-sm">
-          {/* Two Page Buttons */}
-          <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto">
-            {/* Button 1: Applications Pipeline */}
+        {/* ── 1. TOP HEADER (CLEAN, UNBOXED & RESPONSIVE) ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-[17px] font-bold tracking-tight text-[#111111] uppercase font-sans m-0">
+              ADMISSIONS & INTAKE REGISTRY
+            </h1>
+            <span className="inline-flex items-center px-2 py-0.5 text-[11px] font-mono font-bold bg-[#EAEAEA] text-[#222222] border border-[#CCCCCC]">
+              {filteredApplications.length} {filteredApplications.length === 1 ? 'APPLICATION' : 'APPLICATIONS'}
+            </span>
+          </div>
+
+          {/* Action Button Group */}
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
             <button
               type="button"
               onClick={() => setViewMode('pipeline')}
-              className={`flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm active:scale-95 ${
-                viewMode === 'pipeline'
-                  ? 'bg-[#00873E] hover:bg-[#007033] text-white shadow-md ring-2 ring-emerald-500/25'
-                  : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
-              }`}
+              className={`gov-btn gov-btn-sm ${viewMode === 'pipeline' ? 'gov-btn-primary' : ''}`}
             >
-              <Users className="w-4 h-4 shrink-0" />
-              <span className="truncate">Applications Pipeline</span>
-              <span
-                className={`ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-black ${
-                  viewMode === 'pipeline'
-                    ? 'bg-white/20 text-white'
-                    : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200'
-                }`}
-              >
-                {filteredApplications.length}
-              </span>
+              <Users className="w-3.5 h-3.5" />
+              <span>Applications Pipeline</span>
+              <span className="ml-1 font-mono text-[10px]">({applications.length})</span>
             </button>
 
-            {/* Button 2: Interview Results */}
             <button
               type="button"
               onClick={() => setViewMode('scoring')}
-              className={`flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm active:scale-95 ${
-                viewMode === 'scoring'
-                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:brightness-105 text-white shadow-md ring-2 ring-emerald-500/25'
-                  : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
-              }`}
+              className={`gov-btn gov-btn-sm ${viewMode === 'scoring' ? 'gov-btn-primary' : ''}`}
             >
-              <Award className="w-4 h-4 shrink-0 text-amber-500 dark:text-amber-300" />
-              <span className="truncate">Interview Results</span>
-              <span
-                className={`ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-black ${
-                  viewMode === 'scoring'
-                    ? 'bg-white/20 text-white'
-                    : 'bg-amber-500/20 text-amber-800 dark:text-amber-300'
-                }`}
-              >
-                {scoringCandidates.length}
-              </span>
+              <Award className="w-3.5 h-3.5" />
+              <span>Interview Results</span>
+              <span className="ml-1 font-mono text-[10px]">({scoringCandidates.length})</span>
             </button>
-          </div>
 
-          {/* Right Status Indicator & Refresh */}
-          <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
-            <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold truncate hidden md:inline">
-              {viewMode === 'pipeline'
-                ? `${filteredApplications.length} candidate(s) listed`
-                : `${scoringCandidates.length} awaiting evaluation`}
-            </span>
             <button
               type="button"
               onClick={loadData}
               disabled={loading}
-              className="p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 shadow-sm transition-colors shrink-0"
+              className="gov-btn gov-btn-sm"
               title="Refresh application records"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              <span>Refresh</span>
             </button>
           </div>
         </div>
@@ -848,93 +822,39 @@ export default function AdmissionsManagementPage() {
         {/* VIEW 1: APPLICATIONS PIPELINE */}
         {viewMode === 'pipeline' && (
           <>
-            {/* Top Metric Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
-              <div className={`${adminCardClass} flex flex-col justify-between`}>
-                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-                  <span className="text-xs font-bold uppercase tracking-wider">Total Received</span>
-                  <Users className="w-4 h-4 text-blue-500" />
-                </div>
-                <div className="mt-3">
-                  <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
-                    {stats.total}
-                  </div>
-                  <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Online & Walk-in</div>
-                </div>
+            {/* Top Metric Strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              <div className="gov-card p-3 rounded-lg text-center">
+                <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#666666]">Total Received</div>
+                <div className="text-xl font-bold font-mono text-[#111111] mt-1">{stats.total}</div>
               </div>
-
-              <div className={`${adminCardClass} flex flex-col justify-between`}>
-                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-                  <span className="text-xs font-bold uppercase tracking-wider">Pending Vetting</span>
-                  <Clock className="w-4 h-4 text-amber-500" />
-                </div>
-                <div className="mt-3">
-                  <div className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400">
-                    {stats.pending}
-                  </div>
-                  <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Awaiting Review</div>
-                </div>
+              <div className="gov-card p-3 rounded-lg text-center">
+                <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#666666]">Pending Vetting</div>
+                <div className="text-xl font-bold font-mono text-[#B45309] mt-1">{stats.pending}</div>
               </div>
-
-              <div className={`${adminCardClass} flex flex-col justify-between`}>
-                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-                  <span className="text-xs font-bold uppercase tracking-wider">Interviews</span>
-                  <Calendar className="w-4 h-4 text-indigo-500" />
-                </div>
-                <div className="mt-3">
-                  <div className="text-2xl sm:text-3xl font-black text-indigo-600 dark:text-indigo-400">
-                    {stats.interviews}
-                  </div>
-                  <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Slips Generated</div>
-                </div>
+              <div className="gov-card p-3 rounded-lg text-center">
+                <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#666666]">Interviews</div>
+                <div className="text-xl font-bold font-mono text-[#111111] mt-1">{stats.interviews}</div>
               </div>
-
-              <div className={`${adminCardClass} flex flex-col justify-between`}>
-                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-                  <span className="text-xs font-bold uppercase tracking-wider">Admitted</span>
-                  <GraduationCap className="w-4 h-4 text-emerald-500" />
-                </div>
-                <div className="mt-3">
-                  <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400">
-                    {stats.admitted}
-                  </div>
-                  <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Offer Letters Issued</div>
-                </div>
+              <div className="gov-card p-3 rounded-lg text-center">
+                <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#666666]">Admitted</div>
+                <div className="text-xl font-bold font-mono text-[#00873E] mt-1">{stats.admitted}</div>
               </div>
-
-              <div className={`${adminCardClass} flex flex-col justify-between col-span-2 sm:col-span-1`}>
-                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-                  <span className="text-xs font-bold uppercase tracking-wider">Enrolled</span>
-                  <CheckCircle2 className="w-4 h-4 text-teal-500" />
-                </div>
-                <div className="mt-3">
-                  <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
-                    {stats.enrolled}
-                  </div>
-                  <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Active in System</div>
-                </div>
+              <div className="gov-card p-3 rounded-lg text-center">
+                <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#666666]">Enrolled</div>
+                <div className="text-xl font-bold font-mono text-[#111111] mt-1">{stats.enrolled}</div>
               </div>
             </div>
 
-            {/* Floating / Pinned Batch Selection Action Bar */}
+            {/* Batch Selection Action Bar */}
             {selectedAppIds.size > 0 && (
-              <div className="sticky top-4 z-20 flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white border border-indigo-500/30 shadow-2xl backdrop-blur-md">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center font-bold text-emerald-300 text-sm">
-                    {selectedAppIds.size}
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                      <span>{selectedAppIds.size} Candidate{selectedAppIds.size > 1 ? 's' : ''} Selected</span>
-                    </div>
-                    <div className="text-[11px] text-white/60">
-                      Apply bulk interview invitation, enrollment, or status updates
-                    </div>
-                  </div>
+              <div className="gov-control-bar justify-between bg-[#F0F4F8] border-[#000000]">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs font-bold px-2 py-0.5 bg-[#111111] text-white">
+                    {selectedAppIds.size} SELECTED
+                  </span>
                 </div>
-
                 <div className="flex items-center gap-2 flex-wrap">
-                  {/* Enroll Admitted Candidates (when selected candidates are admitted) */}
                   {admittedSelectedCandidates.length > 0 && (
                     <button
                       type="button"
@@ -946,46 +866,42 @@ export default function AdmissionsManagementPage() {
                         }
                       }}
                       disabled={actionLoading}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:brightness-110 text-emerald-950 font-bold text-xs shadow-md transition-all active:scale-95"
+                      className="gov-btn gov-btn-sm gov-btn-primary"
                     >
                       <GraduationCap className="w-3.5 h-3.5" />
-                      <span>Enroll Candidate{admittedSelectedCandidates.length > 1 ? `s (${admittedSelectedCandidates.length})` : ''}</span>
+                      <span>Enroll ({admittedSelectedCandidates.length})</span>
                     </button>
                   )}
-
                   <button
                     type="button"
                     onClick={handleOpenBatchScheduleModal}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 hover:brightness-110 text-emerald-950 font-bold text-xs shadow-md transition-all active:scale-95"
+                    className="gov-btn gov-btn-sm"
                   >
                     <Calendar className="w-3.5 h-3.5" />
-                    <span>Invite to Interview ({selectedAppIds.size})</span>
+                    <span>Invite to Interview</span>
                   </button>
-
                   <button
                     type="button"
                     onClick={handleBatchShortlist}
                     disabled={actionLoading}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-600/80 hover:bg-purple-600 text-white font-semibold text-xs border border-purple-400/30 transition-all"
+                    className="gov-btn gov-btn-sm"
                   >
                     <Check className="w-3.5 h-3.5" />
-                    <span>Shortlist ({selectedAppIds.size})</span>
+                    <span>Shortlist</span>
                   </button>
-
                   <button
                     type="button"
                     onClick={handleBatchReject}
                     disabled={actionLoading}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-600/80 hover:bg-rose-600 text-white font-semibold text-xs border border-rose-400/30 transition-all"
+                    className="gov-btn gov-btn-sm"
                   >
-                    <XCircle className="w-3.5 h-3.5" />
-                    <span>Reject ({selectedAppIds.size})</span>
+                    <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                    <span>Reject</span>
                   </button>
-
                   <button
                     type="button"
                     onClick={() => setSelectedAppIds(new Set())}
-                    className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-xs font-medium transition-all"
+                    className="gov-btn gov-btn-sm"
                   >
                     Clear
                   </button>
@@ -993,114 +909,47 @@ export default function AdmissionsManagementPage() {
               </div>
             )}
 
-            {/* Filters & Search Toolbar */}
-            <div className={`${adminCardClass} space-y-4`}>
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                {/* Mobile Stage Filter Dropdown */}
-                <div className="sm:hidden w-full space-y-1">
-                  <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
-                    Filter by Stage:
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={activeTab}
-                      onChange={(e) => setActiveTab(e.target.value as typeof activeTab)}
-                      className="w-full pl-3 pr-10 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer"
-                    >
-                      <option value="all">All Applications ({stats.total})</option>
-                      <option value="pending">Pending Vetting ({stats.pending})</option>
-                      <option value="to_be_invited">To Be Invited ({stats.toBeInvited})</option>
-                      <option value="interview_scheduled">Interview Scheduled ({stats.interviews})</option>
-                      <option value="admitted">Admitted / Ready to Enroll ({stats.admitted})</option>
-                      <option value="enrolled">Enrolled Active ({stats.enrolled})</option>
-                    </select>
-                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  </div>
-                </div>
-
-                {/* Desktop Sub-tabs */}
-                <div className="hidden sm:flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
-                  {[
-                    { id: 'all', label: 'All Applications', count: stats.total },
-                    { id: 'pending', label: 'Pending Vetting', count: stats.pending },
-                    { id: 'to_be_invited', label: 'To Be Invited', count: stats.toBeInvited },
-                    { id: 'interview_scheduled', label: 'Interview Scheduled', count: stats.interviews },
-                    { id: 'admitted', label: 'Admitted / Ready to Enroll', count: stats.admitted },
-                    { id: 'enrolled', label: 'Enrolled Active', count: stats.enrolled },
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                      className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 ${
-                        activeTab === tab.id
-                          ? 'bg-emerald-600 text-white shadow'
-                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                      }`}
-                    >
-                      <span>{tab.label}</span>
-                      <span
-                        className={`px-1.5 py-0.2 rounded-md text-[10px] ${
-                          activeTab === tab.id
-                            ? 'bg-white/20 text-white'
-                            : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                        }`}
-                      >
-                        {tab.count}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Search and Program Selector */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 pt-2 border-t border-slate-200/80 dark:border-slate-800/80">
-                <div className="md:col-span-8 relative">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            {/* Control Bar: Search and Filters */}
+            <div className="gov-control-bar">
+              <div className="gov-control-bar-left">
+                <div className="relative flex-1 sm:w-64">
+                  <Search className="w-3.5 h-3.5 text-[#666666] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search candidate name, Application ID, phone number, or UNEB index..."
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    placeholder="SEARCH APPLICANT / REF / PHONE..."
+                    className="gov-input pl-8 font-mono text-xs w-full"
                   />
                 </div>
 
-                <div className="md:col-span-4">
-                  <select
-                    value={selectedProgram}
-                    onChange={(e) => setSelectedProgram(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="all" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">All Academic Programs</option>
-                    {AVAILABLE_PROGRAMS.map((p) => (
-                      <option key={p.name} value={p.name} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <select
+                  value={activeTab}
+                  onChange={(e) => setActiveTab(e.target.value as any)}
+                  className="gov-select w-auto text-xs font-mono uppercase"
+                >
+                  <option value="all">ALL STAGES ({stats.total})</option>
+                  <option value="pending">PENDING VETTING ({stats.pending})</option>
+                  <option value="to_be_invited">TO BE INVITED ({stats.toBeInvited})</option>
+                  <option value="interview_scheduled">INTERVIEW SCHEDULED ({stats.interviews})</option>
+                  <option value="admitted">ADMITTED ({stats.admitted})</option>
+                  <option value="enrolled">ENROLLED ({stats.enrolled})</option>
+                </select>
+
+                <select
+                  value={selectedProgram}
+                  onChange={(e) => setSelectedProgram(e.target.value)}
+                  className="gov-select w-auto text-xs font-mono uppercase"
+                >
+                  <option value="all">ALL PROGRAMMES</option>
+                  {AVAILABLE_PROGRAMS.map((p) => (
+                    <option key={p.name} value={p.name}>{p.name.toUpperCase()}</option>
+                  ))}
+                </select>
               </div>
-            </div>
 
-            {/* To Be Invited Call-to-Action Action Banner */}
-            {activeTab === 'to_be_invited' && stats.toBeInvited > 0 && (
-              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-purple-500/15 via-indigo-500/10 to-purple-500/15 border-2 border-purple-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-12 h-12 rounded-2xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-md">
-                    <CalendarCheck className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h4 className="font-black text-sm sm:text-base text-slate-900 dark:text-white">
-                      {stats.toBeInvited} Candidate{stats.toBeInvited === 1 ? '' : 's'} Approved &amp; Waiting to be Invited
-                    </h4>
-                    <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
-                      The admissions committee has approved these candidates. Set the official interview day and campus venue to dispatch invitation letters and slips.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 w-full sm:w-auto justify-end shrink-0">
+              {activeTab === 'to_be_invited' && stats.toBeInvited > 0 && (
+                <div className="gov-control-bar-right">
                   <button
                     type="button"
                     onClick={() => {
@@ -1111,634 +960,334 @@ export default function AdmissionsManagementPage() {
                       setSchedPanel('Senior Nursing & Midwifery Faculty Panel');
                       setScheduleCandidates(allShortlisted);
                     }}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-xs shadow-lg transition-all active:scale-95"
+                    className="gov-btn gov-btn-sm gov-btn-primary"
                   >
-                    <Send className="w-4 h-4" />
-                    <span>Set Interview Day &amp; Invite All ({stats.toBeInvited})</span>
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Invite All Shortlisted ({stats.toBeInvited})</span>
                   </button>
                 </div>
-              </div>
-            )}
-
-            {/* Mobile Card View (Screens < 768px) */}
-            <div className="md:hidden space-y-3">
-              {loading ? (
-                <div className="p-8 text-center text-slate-500 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
-                  <div className="flex flex-col items-center justify-center gap-2">
-                    <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
-                    <span className="text-xs font-bold">Loading applications pipeline...</span>
-                  </div>
-                </div>
-              ) : filteredApplications.length === 0 ? (
-                <div className="p-8 text-center text-slate-500 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
-                  <div className="flex flex-col items-center justify-center gap-2">
-                    <AlertCircle className="w-6 h-6 text-slate-400" />
-                    <span className="text-xs font-semibold">No applications found matching the selected criteria.</span>
-                  </div>
-                </div>
-              ) : (
-                filteredApplications.map((app) => (
-                  <div
-                    key={app.id}
-                    className={`p-4 rounded-2xl bg-white dark:bg-slate-900 border-2 transition-all space-y-3 shadow-sm ${
-                      selectedAppIds.has(app.id)
-                        ? 'border-emerald-500 bg-emerald-50/20 dark:bg-emerald-950/20'
-                        : 'border-slate-200 dark:border-slate-800'
-                    }`}
-                  >
-                    {/* Top Row: Select Checkbox, Photo, Candidate Name & Status */}
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-2.5 min-w-0">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleSelectApp(app.id);
-                          }}
-                          className="mt-0.5 p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400"
-                        >
-                          {selectedAppIds.has(app.id) ? (
-                            <CheckSquare className="w-5 h-5 text-emerald-500" />
-                          ) : (
-                            <Square className="w-5 h-5 text-slate-400" />
-                          )}
-                        </button>
-                        {app.passport_photo_url ? (
-                          <img
-                            src={app.passport_photo_url}
-                            alt={app.full_name}
-                            className="w-10 h-12 object-cover rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm shrink-0"
-                          />
-                        ) : (
-                          <div className="w-10 h-12 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 text-slate-400">
-                            <Users className="w-4 h-4" />
-                          </div>
-                        )}
-                        <div className="min-w-0">
-                          <button
-                            type="button"
-                            onClick={() => setInspectApp(app)}
-                            className="text-left font-bold text-slate-900 dark:text-white text-sm hover:text-emerald-600 block truncate"
-                          >
-                            {app.full_name}
-                          </button>
-                          <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400">
-                            {app.application_number}
-                          </div>
-                          <div className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold truncate">
-                            {app.admitted_program || app.programs[0]}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="shrink-0">{getStatusBadge(app.status)}</div>
-                    </div>
-
-                    {/* Meta Info: Phone, UNEB Index, Interview Date */}
-                    <div className="grid grid-cols-2 gap-2 text-[11px] pt-2 border-t border-slate-100 dark:border-slate-800">
-                      <div>
-                        <span className="text-slate-400 block text-[10px] uppercase font-bold">Contact</span>
-                        <span className="text-slate-700 dark:text-slate-300 font-semibold">{app.phone || 'No phone'}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 block text-[10px] uppercase font-bold">UNEB Index</span>
-                        <span className="text-slate-700 dark:text-slate-300 font-mono font-semibold">{app.index_number || 'N/A'}</span>
-                      </div>
-                      {app.interview_date && (
-                        <div className="col-span-2 flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 font-mono text-[11px]">
-                          <Calendar className="w-3.5 h-3.5 shrink-0" />
-                          <span>Interview: {app.interview_date} ({app.interview_time || '09:00 AM'})</span>
-                        </div>
-                      )}
-                      {app.interview_score !== null && app.interview_score !== undefined && (
-                        <div className="col-span-2 text-emerald-700 dark:text-emerald-400 font-bold">
-                          Interview Score: {app.interview_score}/100
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Actions Row */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setInspectApp(app)}
-                          className="px-3 py-1.5 rounded-lg bg-slate-900 dark:bg-slate-700 text-white font-bold text-xs hover:bg-black transition-colors"
-                        >
-                          Dossier
-                        </button>
-                        {getCandidateDocuments(app).length > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => handleOpenCandidateDocs(app)}
-                            className="px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-bold text-xs flex items-center gap-1"
-                          >
-                            <FileText className="w-3.5 h-3.5" />
-                            <span>Docs ({getCandidateDocuments(app).length})</span>
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-1.5">
-                        {['submitted', 'under_review'].includes(app.status) && (
-                          <button
-                            type="button"
-                            onClick={() => handleVettingApproval(app)}
-                            className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-500 shadow-sm"
-                          >
-                            Approve
-                          </button>
-                        )}
-                        {app.status === 'shortlisted' && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSchedDate(new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]);
-                              setSchedTime('09:00 AM');
-                              setSchedVenue('RCSN Main Campus, Kalisizo / Rakai District');
-                              setSchedPanel('Senior Nursing & Midwifery Faculty Panel');
-                              setScheduleCandidates([app]);
-                            }}
-                            className="px-3 py-1.5 rounded-lg bg-purple-600 text-white font-bold text-xs hover:bg-purple-500 shadow-sm flex items-center gap-1"
-                          >
-                            <CalendarCheck className="w-3.5 h-3.5" />
-                            <span>Invite</span>
-                          </button>
-                        )}
-                        {app.status === 'interview_scheduled' && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setScoreApp(app);
-                              setInterviewScore(app.interview_score ?? 75);
-                              setInterviewNotes(app.interview_notes ?? '');
-                            }}
-                            className="px-3 py-1.5 rounded-lg bg-amber-600 text-white font-bold text-xs hover:bg-amber-500 shadow-sm"
-                          >
-                            Score
-                          </button>
-                        )}
-                        {app.status === 'admitted' && (
-                          <button
-                            type="button"
-                            onClick={() => setMatriculateApp(app)}
-                            className="px-3 py-1.5 rounded-lg bg-teal-600 text-white font-bold text-xs hover:bg-teal-500 shadow-sm"
-                          >
-                            Enroll
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))
               )}
             </div>
 
-            {/* Desktop Datagrid Table (Screens >= 768px) */}
-            <div className={`hidden md:block ${adminCardClass} !p-0 overflow-hidden border border-slate-200/80 dark:border-slate-800`}>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-300 font-bold uppercase tracking-wider text-[11px]">
+            {/* High-Density Government Table */}
+            <div className="gov-table-container">
+              <table className="gov-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: 36, textAlign: 'center' }}>
+                      <button
+                        type="button"
+                        onClick={toggleSelectAll}
+                        className="inline-flex items-center justify-center"
+                        title={isAllSelected ? 'Deselect all' : 'Select all'}
+                      >
+                        {isAllSelected ? (
+                          <CheckSquare className="w-3.5 h-3.5 text-[#111111]" />
+                        ) : (
+                          <Square className="w-3.5 h-3.5 text-[#666666]" />
+                        )}
+                      </button>
+                    </th>
+                    <th>Ref #</th>
+                    <th>Applicant Name</th>
+                    <th>Gender</th>
+                    <th>Phone</th>
+                    <th>Programme</th>
+                    <th>UNEB Index</th>
+                    <th>Status</th>
+                    <th>Interview</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
                     <tr>
-                      <th className="py-3.5 px-3 w-10 text-center">
-                        <button
-                          type="button"
-                          onClick={toggleSelectAll}
-                          className="p-1 hover:text-emerald-500 transition-colors"
-                          title={isAllSelected ? 'Deselect all' : 'Select all'}
-                        >
-                          {isAllSelected ? (
-                            <CheckSquare className="w-4 h-4 text-emerald-500" />
-                          ) : (
-                            <Square className="w-4 h-4 text-slate-400" />
-                          )}
-                        </button>
-                      </th>
-                      <th className="py-3.5 px-4">Application ID</th>
-                      <th className="py-3.5 px-4">Candidate Details</th>
-                      <th className="py-3.5 px-4">Program & Intake</th>
-                      <th className="py-3.5 px-4">UNEB Background</th>
-                      <th className="py-3.5 px-4 whitespace-nowrap min-w-[190px]">Status & Interview</th>
-                      <th className="py-3.5 px-4 text-right whitespace-nowrap w-36">Workflow Actions</th>
+                      <td colSpan={10} className="py-8 text-center text-[#666666] font-mono text-xs">
+                        <Loader2 className="w-4 h-4 animate-spin inline-block mr-2" />
+                        LOADING APPLICATIONS...
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                    {loading ? (
-                      <tr>
-                        <td colSpan={7} className="py-12 text-center text-slate-500">
-                          <div className="flex flex-col items-center justify-center gap-2">
-                            <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
-                            <span>Loading applications pipeline...</span>
-                          </div>
+                  ) : filteredApplications.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} className="py-8 text-center text-[#666666] font-mono text-xs">
+                        NO APPLICATIONS MATCHING QUERY
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredApplications.map((app) => (
+                      <tr
+                        key={app.id}
+                        className={`hover:bg-[#F9F9FB] transition-colors ${
+                          selectedAppIds.has(app.id) ? 'bg-[#F0F4F8]' : ''
+                        }`}
+                      >
+                        <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            onClick={() => toggleSelectApp(app.id)}
+                            className="inline-flex items-center justify-center"
+                          >
+                            {selectedAppIds.has(app.id) ? (
+                              <CheckSquare className="w-3.5 h-3.5 text-[#111111]" />
+                            ) : (
+                              <Square className="w-3.5 h-3.5 text-[#888888]" />
+                            )}
+                          </button>
                         </td>
-                      </tr>
-                    ) : filteredApplications.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="py-12 text-center text-slate-500">
-                          <div className="flex flex-col items-center justify-center gap-2">
-                            <AlertCircle className="w-6 h-6 text-slate-400" />
-                            <span>No applications found matching the selected criteria.</span>
-                          </div>
+                        <td className="font-mono font-bold text-xs whitespace-nowrap">
+                          <button
+                            type="button"
+                            onClick={() => setInspectApp(app)}
+                            className="hover:underline text-[#111111]"
+                          >
+                            {app.application_number}
+                          </button>
                         </td>
-                      </tr>
-                    ) : (
-                      filteredApplications.map((app) => (
-                        <tr
-                          key={app.id}
-                          onClick={() => setInspectApp(app)}
-                          className={`cursor-pointer hover:bg-emerald-50/70 dark:hover:bg-slate-800/60 transition-colors ${
-                            selectedAppIds.has(app.id) ? 'bg-emerald-500/10 dark:bg-emerald-500/15' : ''
-                          }`}
-                        >
-                          {/* Row Multi-Select Checkbox */}
-                          <td className="py-3.5 px-3 text-center" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              type="button"
-                              onClick={() => toggleSelectApp(app.id)}
-                              className="p-1 hover:text-emerald-500 transition-colors"
-                            >
-                              {selectedAppIds.has(app.id) ? (
-                                <CheckSquare className="w-4 h-4 text-emerald-500" />
-                              ) : (
-                                <Square className="w-4 h-4 text-slate-400" />
-                              )}
-                            </button>
-                          </td>
-
-                          {/* Application ID */}
-                          <td className="py-3.5 px-4 font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">
+                        <td className="font-bold text-[#111111] whitespace-nowrap">
+                          {app.full_name}
+                        </td>
+                        <td className="text-xs text-[#555555] whitespace-nowrap">
+                          {app.gender || '—'}
+                        </td>
+                        <td className="font-mono text-xs text-[#555555] whitespace-nowrap">
+                          {app.phone || '—'}
+                        </td>
+                        <td className="text-xs font-semibold text-[#111111] whitespace-nowrap">
+                          {app.admitted_program || app.programs[0]}
+                        </td>
+                        <td className="font-mono text-xs text-[#555555] whitespace-nowrap">
+                          {app.index_number || '—'}
+                        </td>
+                        <td className="whitespace-nowrap">
+                          {getStatusBadge(app.status)}
+                        </td>
+                        <td className="font-mono text-xs text-[#555555] whitespace-nowrap">
+                          {app.interview_date ? (
+                            <span>{app.interview_date} {app.interview_score !== null && app.interview_score !== undefined ? `(${app.interview_score}%)` : ''}</span>
+                          ) : '—'}
+                        </td>
+                        <td style={{ textAlign: 'right' }} className="whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-1.5">
+                            {['submitted', 'under_review'].includes(app.status) && (
+                              <button
+                                type="button"
+                                onClick={() => handleVettingApproval(app)}
+                                className="gov-btn gov-btn-sm gov-btn-primary"
+                                title="Approve candidate qualifications"
+                              >
+                                <Check className="w-3 h-3" />
+                                <span>Approve</span>
+                              </button>
+                            )}
+                            {app.status === 'shortlisted' && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSchedDate(new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]);
+                                  setSchedTime('09:00 AM');
+                                  setSchedVenue('RCSN Main Campus, Kalisizo / Rakai District');
+                                  setSchedPanel('Senior Nursing & Midwifery Faculty Panel');
+                                  setScheduleCandidates([app]);
+                                }}
+                                className="gov-btn gov-btn-sm gov-btn-primary"
+                                title="Set Interview Day & Invite"
+                              >
+                                <CalendarCheck className="w-3 h-3" />
+                                <span>Invite</span>
+                              </button>
+                            )}
+                            {app.status === 'interview_scheduled' && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setScoreApp(app);
+                                  setInterviewScore(app.interview_score ?? 75);
+                                  setInterviewNotes(app.interview_notes ?? '');
+                                }}
+                                className="gov-btn gov-btn-sm"
+                                title="Score Candidate"
+                              >
+                                <Award className="w-3 h-3 text-amber-600" />
+                                <span>Score</span>
+                              </button>
+                            )}
+                            {['admitted', 'offer_accepted'].includes(app.status) && (
+                              <button
+                                type="button"
+                                onClick={() => setMatriculateApp(app)}
+                                className="gov-btn gov-btn-sm gov-btn-primary"
+                                title="Enroll into Student Registry"
+                              >
+                                <GraduationCap className="w-3 h-3" />
+                                <span>Enroll</span>
+                              </button>
+                            )}
+                            {getCandidateDocuments(app).length > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenCandidateDocs(app)}
+                                className="gov-btn gov-btn-sm"
+                                title="View Documents"
+                              >
+                                <FileText className="w-3 h-3" />
+                              </button>
+                            )}
+                            {app.interview_date && (
+                              <button
+                                type="button"
+                                onClick={() => generateInterviewSlipPdf(app)}
+                                className="gov-btn gov-btn-sm"
+                                title="Interview Slip PDF"
+                              >
+                                <Calendar className="w-3 h-3" />
+                              </button>
+                            )}
+                            {['admitted', 'offer_accepted', 'enrolled'].includes(app.status) && (
+                              <button
+                                type="button"
+                                onClick={() => generateAdmissionInvoicePdf(app)}
+                                className="gov-btn gov-btn-sm"
+                                title="Admission Invoice PDF"
+                              >
+                                <Receipt className="w-3 h-3" />
+                              </button>
+                            )}
                             <button
                               type="button"
                               onClick={() => setInspectApp(app)}
-                              className="hover:text-emerald-600 transition-colors inline-flex items-center gap-1.5"
+                              className="gov-btn gov-btn-sm"
+                              title="Inspect Dossier"
                             >
-                              <span>{app.application_number}</span>
-                              <Eye className="w-3.5 h-3.5 opacity-60" />
+                              <Eye className="w-3 h-3" />
                             </button>
-                            <div className="text-[10px] text-slate-400 font-sans font-normal mt-0.5">
-                              {new Date(app.created_at).toLocaleDateString()}
-                            </div>
-                          </td>
-
-                          {/* Candidate Name & Contact with Passport Thumbnail */}
-                          <td className="py-3.5 px-4">
-                            <div className="flex items-center gap-3">
-                              {app.passport_photo_url ? (
-                                <img
-                                  src={app.passport_photo_url}
-                                  alt={app.full_name}
-                                  className="w-10 h-11 object-cover rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm shrink-0 bg-slate-100 dark:bg-slate-800"
-                                />
-                              ) : (
-                                <div className="w-10 h-11 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/60 flex items-center justify-center shrink-0 text-slate-400">
-                                  <Users className="w-4 h-4" />
-                                </div>
-                              )}
-                              <div>
-                                <div className="font-bold text-slate-900 dark:text-white text-[13px]">
-                                  {app.full_name}
-                                </div>
-                                <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
-                                  <span>{app.gender}</span>
-                                  <span>•</span>
-                                  <span>{app.phone}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* Program & Intake */}
-                          <td className="py-3.5 px-4">
-                            <div className="font-semibold text-emerald-700 dark:text-emerald-400">
-                              {app.admitted_program || app.programs[0]}
-                            </div>
-                            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                              {app.intake} • <span className="font-medium text-slate-600 dark:text-slate-300">{app.residential_preference || 'Resident'}</span>
-                            </div>
-                          </td>
-
-                          {/* UNEB Credentials */}
-                          <td className="py-3.5 px-4">
-                            <div className="font-mono text-slate-800 dark:text-slate-200">
-                              {app.index_number || 'N/A'}
-                            </div>
-                            <div className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
-                              {app.previous_school || 'Secondary School'}
-                            </div>
-                          </td>
-
-                          {/* Status & Interview Details */}
-                          <td className="py-3.5 px-4 whitespace-nowrap min-w-[190px]">
-                            <div className="space-y-1">
-                              <div>{getStatusBadge(app.status)}</div>
-                              {app.interview_date && (
-                                <div className="text-[11px] text-slate-600 dark:text-slate-400 flex items-center gap-1 font-mono">
-                                  <Calendar className="w-3 h-3 text-emerald-600 shrink-0" />
-                                  <span>{app.interview_date} ({app.interview_time || '09:00 AM'})</span>
-                                </div>
-                              )}
-                              {app.interview_score !== null && app.interview_score !== undefined && (
-                                <div className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
-                                  Score: {app.interview_score}/100
-                                </div>
-                              )}
-                            </div>
-                          </td>
-
-                          {/* Workflow Actions */}
-                          <td className="py-3.5 px-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                            <div className="inline-flex items-center justify-end gap-1.5">
-                              {/* Approve Button for Pending Candidates (Adds to To Be Invited) */}
-                              {['submitted', 'under_review'].includes(app.status) && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleVettingApproval(app)}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow transition-all active:scale-95"
-                                  title="Approve candidate qualifications for interview (adds to To Be Invited pool)"
-                                >
-                                  <Check className="w-3.5 h-3.5" />
-                                  <span>Approve</span>
-                                </button>
-                              )}
-
-                              {/* Set Day & Invite Button for Shortlisted Candidates */}
-                              {app.status === 'shortlisted' && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSchedDate(new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]);
-                                    setSchedTime('09:00 AM');
-                                    setSchedVenue('RCSN Main Campus, Kalisizo / Rakai District');
-                                    setSchedPanel('Senior Nursing & Midwifery Faculty Panel');
-                                    setScheduleCandidates([app]);
-                                  }}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow transition-all active:scale-95"
-                                  title="Set Interview Day and Send Official Invitation"
-                                >
-                                  <CalendarCheck className="w-3.5 h-3.5" />
-                                  <span>Set Day &amp; Invite</span>
-                                </button>
-                              )}
-
-                              {/* Direct Score Candidate Button for Scheduled Candidates */}
-                              {app.status === 'interview_scheduled' && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setScoreApp(app);
-                                    setInterviewScore(app.interview_score ?? 75);
-                                    setInterviewNotes(app.interview_notes ?? '');
-                                  }}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow transition-all active:scale-95"
-                                  title="Record Interview Score & Panel Evaluation"
-                                >
-                                  <Award className="w-3.5 h-3.5" />
-                                  <span>Score Candidate</span>
-                                </button>
-                              )}
-
-                              {/* Quick Document Viewer Button */}
-                              {getCandidateDocuments(app).length > 0 && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenCandidateDocs(app)}
-                                  className="p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all"
-                                  title={`View Candidate Documents (${getCandidateDocuments(app).length} uploaded)`}
-                                >
-                                  <FileText className="w-3.5 h-3.5" />
-                                </button>
-                              )}
-
-                              {/* Download Interview Slip */}
-                              {app.interview_date && (
-                                <button
-                                  type="button"
-                                  onClick={() => generateInterviewSlipPdf(app)}
-                                  className="p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-all"
-                                  title="Download Interview Slip PDF"
-                                >
-                                  <Calendar className="w-3.5 h-3.5 text-indigo-500" />
-                                </button>
-                              )}
-
-                              {/* Download Admission Letter */}
-                              {['admitted', 'offer_accepted', 'enrolled'].includes(app.status) && (
-                                <button
-                                  type="button"
-                                  onClick={() => generateAdmissionLetterPdf(app)}
-                                  className="p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-all"
-                                  title="Download Official Admission Letter PDF"
-                                >
-                                  <Download className="w-3.5 h-3.5" />
-                                </button>
-                              )}
-
-                              {/* Download Official Tuition & Fees Invoice */}
-                              {['admitted', 'offer_accepted', 'enrolled'].includes(app.status) && (
-                                <button
-                                  type="button"
-                                  onClick={() => generateAdmissionInvoicePdf(app)}
-                                  className="p-1.5 rounded-lg border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 transition-all"
-                                  title="Download Official Tuition & Requirements Fee Invoice (PDF)"
-                                >
-                                  <Receipt className="w-3.5 h-3.5" />
-                                </button>
-                              )}
-
-                              {/* Detail Inspector */}
-                              <button
-                                type="button"
-                                onClick={() => setInspectApp(app)}
-                                className="p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-all"
-                                title="Inspect Candidate Dossier"
-                              >
-                                <Eye className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </>
         )}
 
         {/* VIEW 2: INTERVIEW RESULTS SHEET */}
         {viewMode === 'scoring' && (
-          <div className="space-y-6">
-            {/* Header Card */}
-            <div className={`${adminCardClass} border border-slate-200/80 dark:border-slate-800`}>
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-                    <Award className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                    <span>Interview Results & Scoring Desk</span>
-                  </h3>
-                </div>
-
-                {/* Configuration Controls */}
-                <div className="flex flex-wrap items-center gap-4">
-                  {/* Pass Mark Threshold Input */}
-                  <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800/80 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700">
-                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      Pass Threshold:
-                    </label>
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="number"
-                        min="1"
-                        max="100"
-                        value={passMarkThreshold}
-                        onChange={(e) => setPassMarkThreshold(Math.max(1, Math.min(100, Number(e.target.value))))}
-                        className="w-14 px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-emerald-600 dark:text-emerald-400 font-black text-sm text-center outline-none focus:border-emerald-500 shadow-sm"
-                      />
-                      <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">%</span>
-                    </div>
-                  </div>
-
-                  {/* Auto-Admit Toggle */}
-                  <div className="flex items-center gap-2.5 bg-slate-100 dark:bg-slate-800/80 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700">
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={autoAdmitOnPass}
-                        onChange={(e) => setAutoAdmitOnPass(e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-10 h-5 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
-                    </label>
-                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Auto-Admit on Pass</span>
-                  </div>
-
-                  {/* Batch Process All Button */}
-                  <button
-                    type="button"
-                    onClick={handleBatchProcessAllScored}
-                    disabled={scoringBatchLoading}
-                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow transition-all active:scale-95 disabled:opacity-50"
-                  >
-                    {scoringBatchLoading ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Send className="w-3.5 h-3.5" />
-                    )}
-                    <span>Process All Scored</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Scoring Desk Search Bar */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mt-4 pt-4 border-t border-slate-200/80 dark:border-white/10">
-                <div className="md:col-span-8 relative">
-                  <Search className="w-4 h-4 text-slate-400 dark:text-white/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <div className="space-y-4">
+            <div className="gov-control-bar justify-between">
+              <div className="gov-control-bar-left">
+                <div className="relative flex-1 sm:w-64">
+                  <Search className="w-3.5 h-3.5 text-[#666666] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search candidate name, Application ID, phone number, or index number..."
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    placeholder="SEARCH CANDIDATE..."
+                    className="gov-input pl-8 font-mono text-xs w-full"
                   />
                 </div>
-
-                <div className="md:col-span-4">
-                  <select
-                    value={selectedProgram}
-                    onChange={(e) => setSelectedProgram(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="all">All Academic Programs</option>
-                    {AVAILABLE_PROGRAMS.map((p) => (
-                      <option key={p.name} value={p.name} className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
+                <select
+                  value={selectedProgram}
+                  onChange={(e) => setSelectedProgram(e.target.value)}
+                  className="gov-select w-auto text-xs font-mono uppercase"
+                >
+                  <option value="all">ALL PROGRAMMES</option>
+                  {AVAILABLE_PROGRAMS.map((p) => (
+                    <option key={p.name} value={p.name}>{p.name.toUpperCase()}</option>
+                  ))}
+                </select>
+                <div className="flex items-center gap-1.5 font-mono text-xs text-[#222222]">
+                  <span className="text-[#666666] uppercase">Pass:</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={passMarkThreshold}
+                    onChange={(e) => setPassMarkThreshold(Math.max(1, Math.min(100, Number(e.target.value))))}
+                    className="gov-input w-14 px-2 py-1 text-center font-bold font-mono text-xs"
+                  />
+                  <span>%</span>
                 </div>
+                <label className="flex items-center gap-1.5 font-mono text-xs text-[#222222] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={autoAdmitOnPass}
+                    onChange={(e) => setAutoAdmitOnPass(e.target.checked)}
+                    className="accent-[#111111]"
+                  />
+                  <span>Auto-Admit</span>
+                </label>
+              </div>
+
+              <div className="gov-control-bar-right">
+                <button
+                  type="button"
+                  onClick={handleBatchProcessAllScored}
+                  disabled={scoringBatchLoading}
+                  className="gov-btn gov-btn-sm gov-btn-primary"
+                >
+                  {scoringBatchLoading ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Send className="w-3.5 h-3.5" />
+                  )}
+                  <span>Process All Scored</span>
+                </button>
               </div>
             </div>
 
-            {/* Mobile Candidate Scoring Cards (Screens < 768px) */}
-            <div className="md:hidden space-y-3.5">
-              {scoringCandidates.length === 0 ? (
-                <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
-                  <div className="flex flex-col items-center justify-center gap-2.5">
-                    <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400">
-                      <ClipboardList className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">No candidates found awaiting interview scoring.</span>
-                    <span className="text-xs text-slate-500 dark:text-slate-400 max-w-sm">
-                      Shortlist candidates and schedule interviews in the Applications Pipeline first.
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                scoringCandidates.map((app) => {
-                  const entry = candidateScores[app.id];
-                  const currentScore = entry?.score !== undefined ? entry.score : (app.interview_score ?? '');
-                  const currentNotes = entry?.notes !== undefined ? entry.notes : (app.interview_notes ?? '');
-                  const isNumeric = currentScore !== '' && !isNaN(Number(currentScore));
-                  const numScore = Number(currentScore);
-                  const isPassed = isNumeric && numScore >= passMarkThreshold;
-                  const isProcessing = !!rowProcessing[app.id];
+            <div className="gov-table-container">
+              <table className="gov-table">
+                <thead>
+                  <tr>
+                    <th>Ref #</th>
+                    <th>Candidate Name</th>
+                    <th>Programme</th>
+                    <th>Interview Appointment</th>
+                    <th style={{ width: 100, textAlign: 'center' }}>Score (0-100)</th>
+                    <th style={{ width: 130 }}>Computed Verdict</th>
+                    <th>Panel Remarks</th>
+                    <th style={{ textAlign: 'right' }}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {scoringCandidates.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="py-8 text-center text-[#666666] font-mono text-xs">
+                        NO CANDIDATES AWAITING INTERVIEW SCORING
+                      </td>
+                    </tr>
+                  ) : (
+                    scoringCandidates.map((app) => {
+                      const entry = candidateScores[app.id];
+                      const currentScore = entry?.score !== undefined ? entry.score : (app.interview_score ?? '');
+                      const currentNotes = entry?.notes !== undefined ? entry.notes : (app.interview_notes ?? '');
+                      const isNumeric = currentScore !== '' && !isNaN(Number(currentScore));
+                      const numScore = Number(currentScore);
+                      const isPassed = isNumeric && numScore >= passMarkThreshold;
+                      const isProcessing = !!rowProcessing[app.id];
 
-                  return (
-                    <div
-                      key={app.id}
-                      className="p-4 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 space-y-3 shadow-sm hover:border-emerald-500/40 transition-all"
-                    >
-                      {/* Top: Candidate info and Photo */}
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-start gap-3 min-w-0">
-                          {app.passport_photo_url ? (
-                            <img
-                              src={app.passport_photo_url}
-                              alt={app.full_name}
-                              className="w-12 h-14 object-cover rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm shrink-0"
-                            />
-                          ) : (
-                            <div className="w-12 h-14 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 text-slate-400">
-                              <Users className="w-5 h-5" />
-                            </div>
-                          )}
-                          <div className="min-w-0">
+                      return (
+                        <tr key={app.id} className="hover:bg-[#F9F9FB] transition-colors">
+                          <td className="font-mono font-bold text-xs whitespace-nowrap">
                             <button
                               type="button"
                               onClick={() => setInspectApp(app)}
-                              className="text-left font-bold text-slate-900 dark:text-white text-sm hover:text-emerald-600 block truncate"
+                              className="hover:underline text-[#111111]"
                             >
-                              {app.full_name}
-                            </button>
-                            <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400">
                               {app.application_number}
-                            </div>
-                            <div className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold truncate">
-                              {app.admitted_program || app.programs[0]}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="shrink-0">{getStatusBadge(app.status)}</div>
-                      </div>
-
-                      {/* Interview Schedule Banner */}
-                      <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-1.5 font-semibold text-slate-900 dark:text-white">
-                          <Calendar className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                          <span>{app.interview_date || 'Date not set'} ({app.interview_time || '09:00 AM'})</span>
-                        </div>
-                        <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                          {app.phone}
-                        </span>
-                      </div>
-
-                      {/* Score Input & Live Computed Verdict */}
-                      <div className="grid grid-cols-2 gap-2.5 items-center p-3 rounded-xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/60">
-                        <div>
-                          <label className="text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
-                            Oral Score (0-100)
-                          </label>
-                          <div className="flex items-center gap-1.5">
+                            </button>
+                          </td>
+                          <td className="font-bold text-[#111111] whitespace-nowrap">
+                            {app.full_name}
+                          </td>
+                          <td className="text-xs font-semibold text-[#111111] whitespace-nowrap">
+                            {app.admitted_program || app.programs[0]}
+                          </td>
+                          <td className="font-mono text-xs text-[#555555] whitespace-nowrap">
+                            {app.interview_date ? `${app.interview_date} (${app.interview_time || '09:00 AM'})` : 'Date not set'}
+                          </td>
+                          <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
                             <input
                               type="number"
                               min="0"
@@ -1749,316 +1298,59 @@ export default function AdmissionsManagementPage() {
                                 const val = e.target.value === '' ? '' : Number(e.target.value);
                                 handleScoreInputChange(app.id, val, currentNotes);
                               }}
-                              className={`w-full px-3 py-2 rounded-xl text-center font-black text-base border outline-none transition-all ${
-                                isNumeric
-                                  ? isPassed
-                                    ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-700 dark:text-emerald-300 ring-2 ring-emerald-500/20'
-                                    : 'bg-rose-50 dark:bg-rose-950/40 border-rose-500 text-rose-700 dark:text-rose-300 ring-2 ring-rose-500/20'
-                                  : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white'
-                              }`}
+                              className="gov-input w-16 px-1.5 py-1 text-center font-mono font-bold text-xs"
                             />
-                            <span className="text-xs font-bold text-slate-400">/100</span>
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
-                            Computed Verdict
-                          </label>
-                          {!isNumeric ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-bold bg-slate-200/80 text-slate-600 dark:bg-slate-800 dark:text-slate-400 w-full justify-center">
-                              <Clock className="w-3 h-3" />
-                              <span>Awaiting Score</span>
-                            </span>
-                          ) : isPassed ? (
-                            <div className="p-1.5 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 border border-emerald-500/30 text-center">
-                              <span className="inline-flex items-center gap-1 text-[11px] font-black text-emerald-800 dark:text-emerald-300">
-                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                                <span>PASS (≥{passMarkThreshold}%)</span>
-                              </span>
-                              <div className="text-[9px] font-bold text-emerald-700 dark:text-emerald-400">
-                                {autoAdmitOnPass ? 'Auto-Admit Active' : 'Pass Recorded'}
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="p-1.5 rounded-xl bg-rose-100 dark:bg-rose-900/50 border border-rose-500/30 text-center">
-                              <span className="inline-flex items-center gap-1 text-[11px] font-black text-rose-800 dark:text-rose-300">
-                                <XCircle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
-                                <span>FAIL (&lt;{passMarkThreshold}%)</span>
-                              </span>
-                              <div className="text-[9px] font-bold text-rose-700 dark:text-rose-400">
-                                Regret Notice
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Remarks Input */}
-                      <div>
-                        <label className="text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
-                          Panel Remarks / Notes
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="e.g. Confirmed science passes, good attitude..."
-                          value={currentNotes}
-                          onChange={(e) => handleScoreInputChange(app.id, currentScore, e.target.value)}
-                          className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-200 outline-none focus:border-emerald-500"
-                        />
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                        <button
-                          type="button"
-                          onClick={() => setInspectApp(app)}
-                          className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-200"
-                        >
-                          Dossier
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleSingleCandidateEvaluate(app)}
-                          disabled={isProcessing || !isNumeric}
-                          className={`flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl font-bold text-xs shadow-md transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
-                            isPassed
-                              ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                              : 'bg-rose-600 hover:bg-rose-700 text-white'
-                          }`}
-                        >
-                          {isProcessing ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Send className="w-4 h-4" />
-                          )}
-                          <span>Save &amp; Dispatch Verdict</span>
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-
-            {/* Desktop Candidate Scoring Sheet Table (Screens >= 768px) */}
-            <div className={`hidden md:block ${adminCardClass} !p-0 overflow-hidden border border-slate-200/80 dark:border-slate-800`}>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-300 font-bold uppercase tracking-wider text-[11px]">
-                    <tr>
-                      <th className="py-3.5 px-4">Candidate & App ID</th>
-                      <th className="py-3.5 px-4">Program & Residence</th>
-                      <th className="py-3.5 px-4">Interview Schedule</th>
-                      <th className="py-3.5 px-4 w-28 text-center">Score (0-100)</th>
-                      <th className="py-3.5 px-4 w-44">Live Verdict</th>
-                      <th className="py-3.5 px-4">Panel Remarks</th>
-                      <th className="py-3.5 px-4 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                    {scoringCandidates.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="py-14 text-center">
-                          <div className="flex flex-col items-center justify-center gap-2.5">
-                            <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400">
-                              <ClipboardList className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-                            </div>
-                            <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">No candidates found awaiting interview scoring.</span>
-                            <span className="text-xs text-slate-500 dark:text-slate-400 max-w-sm">
-                              Shortlist candidates and schedule interviews in the Applications Pipeline first.
-                            </span>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : (
-                      scoringCandidates.map((app) => {
-                        const entry = candidateScores[app.id];
-                        const currentScore = entry?.score !== undefined ? entry.score : (app.interview_score ?? '');
-                        const currentNotes = entry?.notes !== undefined ? entry.notes : (app.interview_notes ?? '');
-                        const isNumeric = currentScore !== '' && !isNaN(Number(currentScore));
-                        const numScore = Number(currentScore);
-                        const isPassed = isNumeric && numScore >= passMarkThreshold;
-                        const isProcessing = !!rowProcessing[app.id];
-
-                        return (
-                          <tr
-                            key={app.id}
-                            onClick={() => setInspectApp(app)}
-                            className="cursor-pointer hover:bg-emerald-50/70 dark:hover:bg-slate-800/60 transition-colors"
-                          >
-                            {/* Candidate Info with Passport Thumbnail */}
-                            <td className="py-3.5 px-4">
-                              <div className="flex items-center gap-3">
-                                {app.passport_photo_url ? (
-                                  <img
-                                    src={app.passport_photo_url}
-                                    alt={app.full_name}
-                                    className="w-10 h-11 object-cover rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm shrink-0 bg-slate-100 dark:bg-slate-800"
-                                  />
-                                ) : (
-                                  <div className="w-10 h-11 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/60 flex items-center justify-center shrink-0 text-slate-400">
-                                    <Users className="w-4 h-4" />
-                                  </div>
-                                )}
-                                <div>
-                                  <div className="font-bold text-slate-900 dark:text-white text-sm">
-                                    {app.full_name}
-                                  </div>
-                                  <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                                    {app.application_number} • {app.phone}
-                                  </div>
-                                  <div className="text-[10px] text-slate-400 font-sans mt-0.5">
-                                    UNEB: {app.index_number || 'N/A'} ({app.gender})
-                                  </div>
-                                </div>
-                              </div>
-                            </td>
-
-                            {/* Program & Residence */}
-                            <td className="py-3.5 px-4">
-                              <div className="font-semibold text-emerald-700 dark:text-emerald-400">
-                                {app.admitted_program || app.programs[0]}
-                              </div>
-                              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                                {app.residential_preference || 'Resident'} Boarding
-                              </div>
-                              <div className="text-[10px] text-slate-400 mt-0.5">
-                                Intake: {app.intake}
-                              </div>
-                            </td>
-
-                            {/* Interview Appointment */}
-                            <td className="py-3.5 px-4">
-                              <div className="flex items-center gap-1 font-semibold text-slate-900 dark:text-white">
-                                <Calendar className="w-3.5 h-3.5 text-indigo-500" />
-                                <span>{app.interview_date || 'Not set'}</span>
-                              </div>
-                              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                                {app.interview_time || '09:00 AM'} • {app.interview_venue || 'RCSN Main Campus'}
-                              </div>
-                              <div className="mt-1">
-                                {getStatusBadge(app.status)}
-                              </div>
-                            </td>
-
-                            {/* Score Input (0-100) */}
-                            <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
-                              <div className="inline-flex items-center justify-center">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="100"
-                                  placeholder="0-100"
-                                  value={currentScore}
-                                  onChange={(e) => {
-                                    const val = e.target.value === '' ? '' : Number(e.target.value);
-                                    handleScoreInputChange(app.id, val, currentNotes);
-                                  }}
-                                  className={`w-20 px-2.5 py-2 rounded-xl text-center font-black text-sm border outline-none transition-all ${
-                                    isNumeric
-                                      ? isPassed
-                                        ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-700 dark:text-emerald-300 ring-2 ring-emerald-500/20'
-                                        : 'bg-rose-50 dark:bg-rose-950/40 border-rose-500 text-rose-700 dark:text-rose-300 ring-2 ring-rose-500/20'
-                                      : 'bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:border-indigo-500'
-                                  }`}
-                                />
-                              </div>
-                            </td>
-
-                            {/* Live Computed Verdict */}
-                            <td className="py-3.5 px-4">
-                              {!isNumeric ? (
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                                  <Clock className="w-3 h-3" />
-                                  <span>Awaiting Score</span>
-                                </span>
-                              ) : isPassed ? (
-                                <div className="space-y-0.5">
-                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 border border-emerald-500/30">
-                                    <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                                    <span>PASS (≥ {passMarkThreshold}%)</span>
-                                  </span>
-                                  <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold pl-1">
-                                    {autoAdmitOnPass ? '→ Auto-Admit & Invoice' : '→ Pass Recorded'}
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="space-y-0.5">
-                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-300 border border-rose-500/30">
-                                    <XCircle className="w-3 h-3 text-rose-600 dark:text-rose-400" />
-                                    <span>FAIL (&lt; {passMarkThreshold}%)</span>
-                                  </span>
-                                  <div className="text-[10px] text-rose-600 dark:text-rose-400 font-semibold pl-1">
-                                    → Regret Notice
-                                  </div>
-                                </div>
-                              )}
-                            </td>
-
-                            {/* Panel Remarks Input */}
-                            <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
-                              <input
-                                type="text"
-                                placeholder="Panel remarks (e.g. Excellent bedside manner, verified UCE passes)"
-                                value={currentNotes}
-                                onChange={(e) => handleScoreInputChange(app.id, currentScore, e.target.value)}
-                                className="w-full px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-200 outline-none focus:border-emerald-500"
-                              />
-                            </td>
-
-                            {/* Action Buttons */}
-                            <td className="py-3.5 px-4 text-right space-x-1.5 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                          </td>
+                          <td className="whitespace-nowrap">
+                            {!isNumeric ? (
+                              <span className="gov-tag">AWAITING</span>
+                            ) : isPassed ? (
+                              <span className="gov-tag gov-tag-approved">PASS (≥{passMarkThreshold}%)</span>
+                            ) : (
+                              <span className="gov-tag gov-tag-rejected">FAIL (&lt;{passMarkThreshold}%)</span>
+                            )}
+                          </td>
+                          <td onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="text"
+                              placeholder="Remarks..."
+                              value={currentNotes}
+                              onChange={(e) => handleScoreInputChange(app.id, currentScore, e.target.value)}
+                              className="gov-input w-full text-xs"
+                            />
+                          </td>
+                          <td style={{ textAlign: 'right' }} className="whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-end gap-1.5">
                               <button
                                 type="button"
                                 onClick={() => handleSingleCandidateEvaluate(app)}
                                 disabled={isProcessing || !isNumeric}
-                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
-                                  isPassed
-                                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                                    : 'bg-rose-600 hover:bg-rose-700 text-white'
-                                }`}
-                                title="Submit verdict, record score, and dispatch official email"
+                                className="gov-btn gov-btn-sm gov-btn-primary"
+                                title="Save verdict and record score"
                               >
                                 {isProcessing ? (
-                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  <Loader2 className="w-3 h-3 animate-spin" />
                                 ) : (
-                                  <Send className="w-3.5 h-3.5" />
+                                  <Send className="w-3 h-3" />
                                 )}
-                                <span>Evaluate</span>
+                                <span>Save</span>
                               </button>
-
-                              {/* Download Invoice if Admitted */}
-                              {['admitted', 'offer_accepted', 'enrolled'].includes(app.status) && (
-                                <button
-                                  type="button"
-                                  onClick={() => generateAdmissionInvoicePdf(app)}
-                                  className="p-1.5 rounded-lg border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 transition-all"
-                                  title="Download Tuition & Fees Invoice (PDF)"
-                                >
-                                  <Receipt className="w-3.5 h-3.5" />
-                                </button>
-                              )}
-
-                              {/* Download Interview Slip */}
-                              {app.interview_date && (
-                                <button
-                                  type="button"
-                                  onClick={() => generateInterviewSlipPdf(app)}
-                                  className="p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300"
-                                  title="Download Interview Slip PDF"
-                                >
-                                  <Calendar className="w-3.5 h-3.5" />
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                              <button
+                                type="button"
+                                onClick={() => setInspectApp(app)}
+                                className="gov-btn gov-btn-sm"
+                                title="Dossier"
+                              >
+                                <Eye className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         )}

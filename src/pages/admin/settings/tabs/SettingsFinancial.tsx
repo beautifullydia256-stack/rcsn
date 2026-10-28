@@ -23,8 +23,10 @@ import { registerApiUrl } from '@/lib/registerApiOrigin';
 import { isTertiarySchool, useSchoolType } from '@/hooks/useSchoolType';
 import { useUIStore } from '@/store/uiStore';
 import { getTokens, SORA, INTER, fmtUGX } from '@/styles/posThemeTokens';
+import { GovPageLoader } from '@/components/ui/GovLoadingIndicator';
 import NativeModal from '@/components/NativeModal';
 import SchoolPayIntegrationCard from '../components/SchoolPayIntegrationCard';
+import SectionHeader from './SectionHeader';
 import {
   RCSN_OFFICIAL_BANK_ACCOUNT,
   RCSN_DEFAULT_FUNCTIONAL_ITEMS,
@@ -302,7 +304,7 @@ async function fetchFinancialSettings(schoolId: string): Promise<{
 export default function SettingsFinancial({
   schoolId,
   classes: classList,
-  embedded: _embedded,
+  embedded,
   schoolType: propSchoolType,
 }: {
   schoolId: string | null;
@@ -743,12 +745,7 @@ export default function SettingsFinancial({
   };
 
   if (isLoading) {
-    return (
-      <div style={{ padding: '32px 0', display: 'flex', alignItems: 'center', gap: '12px', color: t.textMid }}>
-        <RefreshCw size={18} className="animate-spin" style={{ color: t.mint }} />
-        <span style={{ fontFamily: INTER, fontSize: '14px' }}>Loading financial settings...</span>
-      </div>
-    );
+    return <GovPageLoader message="LOADING INSTITUTIONAL FINANCIAL CONFIGURATION..." minHeight="min-h-[30vh]" />;
   }
 
   // Active semester breakdown and totals for Course Detail view
@@ -762,106 +759,54 @@ export default function SettingsFinancial({
     activeCourse?.semesters.findIndex((s) => s.code === activeSemesterCode) ?? 0;
 
   return (
-    <div style={{ fontFamily: INTER, color: t.textHi, paddingBottom: '48px' }}>
+    <div className="space-y-6">
+      <SectionHeader
+        embedded={embedded}
+        title="FEES & FINANCIAL LEDGER REGISTRY"
+        badge="TREASURY CONFIGURATION"
+      />
+
       {/* Alert Notifications */}
       {error && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            padding: '12px 16px',
-            borderRadius: '10px',
-            background: isDark ? 'rgba(239, 68, 68, 0.12)' : '#FEF2F2',
-            border: `1px solid ${isDark ? 'rgba(239, 68, 68, 0.25)' : '#FCA5A5'}`,
-            color: isDark ? '#FCA5A5' : '#B91C1C',
-            marginBottom: '16px',
-            fontSize: '13px',
-          }}
-        >
-          <AlertTriangle size={16} className="shrink-0" />
-          <span>{error}</span>
+        <div className="rounded border border-red-300 bg-red-50 p-3 text-xs font-mono text-red-700">
+          {error}
         </div>
       )}
 
       {success && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            padding: '12px 16px',
-            borderRadius: '10px',
-            background: isDark ? 'rgba(61, 232, 160, 0.12)' : '#F0FDF4',
-            border: `1px solid ${isDark ? 'rgba(61, 232, 160, 0.25)' : '#86EFAC'}`,
-            color: isDark ? '#3DE8A0' : '#15803D',
-            marginBottom: '16px',
-            fontSize: '13px',
-          }}
-        >
-          <CheckCircle2 size={16} className="shrink-0" />
-          <span>{success}</span>
+        <div className="rounded border border-emerald-300 bg-emerald-50 p-3 text-xs font-mono text-emerald-800">
+          {success}
         </div>
       )}
 
-      {/* Top Section: Compact SchoolPay Status Card & Admission Fee Card */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: '14px',
-          marginBottom: '24px',
-        }}
-      >
-        {/* Compact SchoolPay Status Card */}
-        <div
-          style={{
-            background: t.panel,
-            border: `1px solid ${t.stroke}`,
-            borderRadius: '14px',
-            padding: '16px 20px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '16px',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '10px',
-                background: t.mintDim,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: t.mint,
-              }}
-            >
-              <CreditCard size={20} />
+      {/* Top Section: SchoolPay Status Card & Admission Fee Card */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* SchoolPay Gateway Card */}
+        <div className="gov-card p-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded border border-[#CCCCCC] bg-[#F5F5F5] flex items-center justify-center text-[#111111]">
+              <CreditCard size={18} />
             </div>
             <div>
-              <div style={{ fontFamily: SORA, fontSize: '14px', fontWeight: 600, color: t.textHi }}>
-                SchoolPay Gateway
+              <div className="text-xs font-mono font-bold text-[#111111] uppercase tracking-wide">
+                SCHOOLPAY PAYMENT GATEWAY
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
+              <div className="flex items-center gap-1.5 mt-1">
                 <span
-                  style={{
-                    width: '7px',
-                    height: '7px',
-                    borderRadius: '50%',
-                    background: schoolPayStatus?.connected ? t.mint : t.gold,
-                    display: 'inline-block',
-                    boxShadow: schoolPayStatus?.connected ? `0 0 8px ${t.mint}` : 'none',
-                  }}
+                  className={`w-2 h-2 rounded-full inline-block ${
+                    schoolPayStatus?.connected
+                      ? 'bg-emerald-600'
+                      : schoolPayStatus?.enabled
+                      ? 'bg-amber-500'
+                      : 'bg-neutral-400'
+                  }`}
                 />
-                <span style={{ fontSize: '12px', color: t.textMid }}>
+                <span className="text-[11px] font-mono text-[#666666] uppercase">
                   {schoolPayStatus?.connected
-                    ? 'Connected & Active'
+                    ? 'CONNECTED & ACTIVE'
                     : schoolPayStatus?.enabled
-                      ? 'Enabled (Pending credentials)'
-                      : 'Not Configured'}
+                    ? 'ENABLED (PENDING CREDENTIALS)'
+                    : 'NOT CONFIGURED'}
                 </span>
               </div>
             </div>
@@ -870,67 +815,31 @@ export default function SettingsFinancial({
           <button
             type="button"
             onClick={() => setShowSchoolPayModal(true)}
-            style={{
-              background: t.fieldBg,
-              border: `1px solid ${t.stroke}`,
-              borderRadius: '9px',
-              padding: '8px 14px',
-              fontSize: '12px',
-              fontWeight: 600,
-              color: t.textHi,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              whiteSpace: 'nowrap',
-              transition: 'all 0.15s ease',
-            }}
+            className="gov-btn gov-btn-sm"
           >
-            <Sliders size={13} style={{ color: t.mint }} />
-            <span>Configure</span>
+            <Sliders size={13} />
+            <span>CONFIGURE</span>
           </button>
         </div>
 
         {/* Admission Fee Card */}
-        <div
-          style={{
-            background: t.panel,
-            border: `1px solid ${t.stroke}`,
-            borderRadius: '14px',
-            padding: '16px 20px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '16px',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '10px',
-                background: t.blueDim,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: t.blue,
-              }}
-            >
-              <GraduationCap size={20} />
+        <div className="gov-card p-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded border border-[#CCCCCC] bg-[#F5F5F5] flex items-center justify-center text-[#111111]">
+              <GraduationCap size={18} />
             </div>
             <div>
-              <div style={{ fontFamily: SORA, fontSize: '14px', fontWeight: 600, color: t.textHi }}>
-                Admission / Registration Fee
+              <div className="text-xs font-mono font-bold text-[#111111] uppercase tracking-wide">
+                ADMISSION / REGISTRATION FEE
               </div>
-              <div style={{ fontSize: '12px', color: t.textMid, marginTop: '2px' }}>
-                One-off charge on Year 1 enrollment
+              <div className="text-[11px] font-mono text-[#666666] uppercase mt-0.5">
+                ONE-OFF CHARGE ON YEAR 1 ENROLLMENT
               </div>
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '11px', fontWeight: 600, color: t.textLow }}>UGX</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-mono font-bold text-[#666666]">UGX</span>
             <input
               type="number"
               min={0}
@@ -938,18 +847,7 @@ export default function SettingsFinancial({
               onChange={(e) => setAdmissionFee(e.target.value)}
               onBlur={saveAdmissionFeeOnly}
               placeholder="e.g. 50000"
-              style={{
-                width: '120px',
-                padding: '7px 10px',
-                background: t.fieldBg,
-                border: `1px solid ${t.stroke}`,
-                borderRadius: '8px',
-                color: t.textHi,
-                fontSize: '13px',
-                fontFamily: SORA,
-                textAlign: 'right',
-                outline: 'none',
-              }}
+              className="gov-input font-mono text-xs w-28 text-right font-bold"
             />
           </div>
         </div>
@@ -961,96 +859,52 @@ export default function SettingsFinancial({
           /* =========================================================================
              LEVEL 1: COURSES OVERVIEW SCREEN
              ========================================================================= */
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <div>
-                <h3 style={{ fontFamily: SORA, fontSize: '17px', fontWeight: 700, margin: 0, color: t.textHi }}>
-                  Programmes & Fee Structures
-                </h3>
-                <p style={{ margin: '4px 0 0', fontSize: '13px', color: t.textMid }}>
-                  Select any course to view or configure semester tuition and itemized levy schedules.
-                </p>
+          <div className="space-y-4">
+            {/* Control Bar */}
+            <div className="gov-control-bar">
+              <div className="gov-control-bar-left">
+                <span className="text-xs font-mono uppercase font-bold text-[#111111] tracking-wider">
+                  PROGRAMMES & ACCREDITED FEE SCHEDULES
+                </span>
               </div>
-
-              <button
-                type="button"
-                onClick={syncStudentBalances}
-                disabled={syncing}
-                style={{
-                  background: t.fieldBg,
-                  border: `1px solid ${t.stroke}`,
-                  borderRadius: '10px',
-                  padding: '9px 16px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  color: t.textHi,
-                  cursor: syncing ? 'default' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  opacity: syncing ? 0.6 : 1,
-                }}
-              >
-                <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} style={{ color: t.mint }} />
-                <span>{syncing ? 'Syncing...' : 'Sync All Balances'}</span>
-              </button>
+              <div className="gov-control-bar-right">
+                <button
+                  type="button"
+                  onClick={syncStudentBalances}
+                  disabled={syncing}
+                  className="gov-btn gov-btn-sm inline-flex items-center gap-1.5"
+                >
+                  <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
+                  <span>{syncing ? 'SYNCING LEDGERS...' : 'SYNC ALL BALANCES'}</span>
+                </button>
+              </div>
             </div>
 
-            {/* RCSN Official Bank Account Banner */}
-            <div
-              style={{
-                background: isDark ? 'rgba(16, 185, 129, 0.08)' : '#F0FDF4',
-                border: `1px solid ${isDark ? 'rgba(16, 185, 129, 0.25)' : '#BBF7D0'}`,
-                borderRadius: '14px',
-                padding: '16px 20px',
-                marginBottom: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '12px',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div
-                  style={{
-                    width: '42px',
-                    height: '42px',
-                    borderRadius: '10px',
-                    background: isDark ? 'rgba(16, 185, 129, 0.2)' : '#DCFCE7',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: t.mint,
-                  }}
-                >
-                  <CreditCard size={20} />
+            {/* RCSN Official Centenary Bank Account Banner */}
+            <div className="gov-card p-4 bg-[#F9F9F9] border border-[#CCCCCC] flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded border border-[#CCCCCC] bg-white flex items-center justify-center text-[#111111]">
+                  <Building2 size={18} />
                 </div>
                 <div>
-                  <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: t.mint, letterSpacing: '0.04em' }}>
-                    Official Fee Deposit Account · Centenary Bank
+                  <div className="text-[10px] font-mono uppercase font-bold text-[#666666] tracking-wider">
+                    OFFICIAL TUITION DEPOSIT ACCOUNT · {RCSN_OFFICIAL_BANK_ACCOUNT.bankName.toUpperCase()}
                   </div>
-                  <div style={{ fontFamily: SORA, fontSize: '15px', fontWeight: 800, color: t.textHi, marginTop: '2px' }}>
+                  <div className="text-sm font-mono font-bold text-[#111111] uppercase mt-0.5">
                     {RCSN_OFFICIAL_BANK_ACCOUNT.accountName} — A/C {RCSN_OFFICIAL_BANK_ACCOUNT.accountNumber}
                   </div>
-                  <div style={{ fontSize: '11px', color: t.textMid, marginTop: '2px' }}>
-                    {RCSN_OFFICIAL_BANK_ACCOUNT.bankName} ({RCSN_OFFICIAL_BANK_ACCOUNT.branch}) · Minimum 1st payment: UGX 1,000,000 + 2,300/= bank charge
+                  <div className="text-[11px] font-mono text-[#666666] mt-0.5">
+                    BRANCH: {RCSN_OFFICIAL_BANK_ACCOUNT.branch.toUpperCase()} · MINIMUM 1ST INSTALLMENT: UGX 1,000,000 + 2,300/= BANK CHARGE
                   </div>
                 </div>
               </div>
-              <div style={{ fontSize: '11px', fontWeight: 600, color: isDark ? '#A7F3D0' : '#166534', background: isDark ? 'rgba(16, 185, 129, 0.15)' : '#DCFCE7', padding: '6px 12px', borderRadius: '8px' }}>
-                Verified Collection Account
+              <div className="gov-tag gov-tag-approved text-[10px] font-mono uppercase">
+                VERIFIED TREASURY ACCOUNT
               </div>
             </div>
 
             {/* Course Cards Grid */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))',
-                gap: '16px',
-              }}
-            >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {TERTIARY_COURSES.map((course) => {
                 const courseSemData = tertiaryBreakdowns[course.code] || {};
                 const configuredSemesters = course.semesters.filter((sem) => {
@@ -1065,43 +919,20 @@ export default function SettingsFinancial({
                 return (
                   <div
                     key={course.code}
-                    style={{
-                      background: t.panel,
-                      border: `1px solid ${t.stroke}`,
-                      borderRadius: '16px',
-                      padding: '22px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
-                    }}
+                    className="gov-card p-5 flex flex-col justify-between space-y-4"
                   >
                     <div>
                       {/* Course Header */}
-                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div
-                            style={{
-                              width: '42px',
-                              height: '42px',
-                              borderRadius: '12px',
-                              background: t.mintDim,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: t.mint,
-                              fontWeight: 800,
-                              fontFamily: SORA,
-                              fontSize: '15px',
-                            }}
-                          >
+                      <div className="flex items-start justify-between gap-3 border-b border-[#E2E8F0] pb-3">
+                        <div className="flex items-center gap-3">
+                          <span className="inline-flex items-center justify-center px-2.5 py-1 text-xs font-mono font-bold bg-[#111111] text-white rounded">
                             {course.code}
-                          </div>
+                          </span>
                           <div>
-                            <div style={{ fontFamily: SORA, fontSize: '15px', fontWeight: 700, color: t.textHi }}>
+                            <div className="text-sm font-mono font-bold text-[#111111] uppercase">
                               {course.name}
                             </div>
-                            <div style={{ fontSize: '12px', color: t.textMid, marginTop: '2px' }}>
+                            <div className="text-xs font-mono text-[#666666]">
                               {course.duration}
                             </div>
                           </div>
@@ -1109,45 +940,28 @@ export default function SettingsFinancial({
 
                         {/* Status Badge */}
                         <span
-                          style={{
-                            fontSize: '11px',
-                            fontWeight: 600,
-                            padding: '4px 10px',
-                            borderRadius: '20px',
-                            background: isFullyConfigured
-                              ? t.mintDim
+                          className={`gov-tag ${
+                            isFullyConfigured
+                              ? 'gov-tag-approved'
                               : isPartiallyConfigured
-                                ? t.goldDim
-                                : t.fieldBg,
-                            color: isFullyConfigured
-                              ? t.mint
-                              : isPartiallyConfigured
-                                ? t.gold
-                                : t.textLow,
-                            border: `1px solid ${
-                              isFullyConfigured
-                                ? t.mintRing
-                                : isPartiallyConfigured
-                                  ? 'rgba(245,192,68,0.25)'
-                                  : t.stroke
-                            }`,
-                            whiteSpace: 'nowrap',
-                          }}
+                              ? 'gov-tag-warned'
+                              : 'bg-[#EAEAEA] text-[#666666] border border-[#CCCCCC]'
+                          } text-[10px] font-mono uppercase`}
                         >
                           {isFullyConfigured
-                            ? `Configured (${course.semesters.length}/${course.semesters.length})`
+                            ? `CONFIGURED (${course.semesters.length}/${course.semesters.length})`
                             : isPartiallyConfigured
-                              ? `Configured (${configuredSemesters.length}/${course.semesters.length})`
-                              : 'Not Configured'}
+                            ? `PARTIAL (${configuredSemesters.length}/${course.semesters.length})`
+                            : 'NOT SET'}
                         </span>
                       </div>
 
                       {/* Semester Summary Pills */}
-                      <div style={{ marginTop: '18px' }}>
-                        <div style={{ fontSize: '11px', fontWeight: 600, color: t.textLow, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
-                          Semester Fee Schedule
+                      <div className="mt-3">
+                        <div className="text-[10px] font-mono font-bold text-[#666666] uppercase tracking-wider mb-2">
+                          SEMESTER FEE SCHEDULE (NON-RESIDENT / RESIDENT)
                         </div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                           {course.semesters.map((sem) => {
                             const semBd = courseSemData[sem.code] || createEmptyBreakdown();
                             const totals = computeSemesterTotals(semBd);
@@ -1156,26 +970,17 @@ export default function SettingsFinancial({
                             return (
                               <div
                                 key={sem.code}
-                                style={{
-                                  background: t.fieldBg,
-                                  border: `1px solid ${t.stroke}`,
-                                  borderRadius: '8px',
-                                  padding: '7px 11px',
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  gap: '2px',
-                                  minWidth: '105px',
-                                }}
+                                className="border border-[#E2E8F0] bg-[#FAFAFA] rounded p-2 text-xs font-mono"
                               >
-                                <span style={{ fontSize: '11px', fontWeight: 700, color: t.textMid }}>
+                                <span className="font-bold text-[#111111] block">
                                   {sem.short}
                                 </span>
-                                <span style={{ fontFamily: SORA, fontSize: '12px', fontWeight: 700, color: hasFees ? t.textHi : t.textLow }}>
-                                  {hasFees ? `UGX ${fmtUGX(totals.dayTotal)}` : 'Not set'}
+                                <span className="text-[#333333] block mt-0.5">
+                                  {hasFees ? `UGX ${fmtUGX(totals.dayTotal)}` : 'NOT SET'}
                                 </span>
                                 {hasFees && totals.hostel > 0 && (
-                                  <span style={{ fontSize: '10px', color: t.mint }}>
-                                    Board: UGX {fmtUGX(totals.boardingTotal)}
+                                  <span className="text-[10px] text-[#666666] block">
+                                    RES: UGX {fmtUGX(totals.boardingTotal)}
                                   </span>
                                 )}
                               </div>
@@ -1186,37 +991,28 @@ export default function SettingsFinancial({
 
                       {/* Expandable Breakdown Accordion */}
                       {isExpanded && (
-                        <div
-                          style={{
-                            marginTop: '16px',
-                            padding: '14px',
-                            background: t.fieldBg,
-                            borderRadius: '10px',
-                            border: `1px solid ${t.stroke}`,
-                          }}
-                        >
-                          <div style={{ fontSize: '11px', fontWeight: 700, color: t.textMid, textTransform: 'uppercase', marginBottom: '10px' }}>
-                            Itemized Functional Fees Breakdown
+                        <div className="mt-3 border border-[#E2E8F0] rounded p-3 bg-[#FDFDFD] space-y-2">
+                          <div className="text-[10px] font-mono font-bold text-[#666666] uppercase">
+                            ITEMIZED FUNCTIONAL LEVIES BREAKDOWN
                           </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '240px', overflowY: 'auto' }}>
+                          <div className="space-y-2 max-h-56 overflow-y-auto">
                             {course.semesters.map((sem) => {
                               const semBd = courseSemData[sem.code] || createEmptyBreakdown();
                               const totals = computeSemesterTotals(semBd);
                               if (totals.dayTotal === 0) return null;
 
                               return (
-                                <div key={sem.code} style={{ fontSize: '11px', borderBottom: `1px solid ${t.divider}`, paddingBottom: '8px' }}>
-                                  <div style={{ fontWeight: 700, color: t.textHi, marginBottom: '4px' }}>
-                                    {sem.label}: Day UGX {fmtUGX(totals.dayTotal)} | Boarding UGX {fmtUGX(totals.boardingTotal)}
+                                <div key={sem.code} className="text-xs font-mono border-b border-[#EEEEEE] pb-2 last:border-b-0">
+                                  <div className="font-bold text-[#111111]">
+                                    {sem.label}: DAY UGX {fmtUGX(totals.dayTotal)} | RES UGX {fmtUGX(totals.boardingTotal)}
                                   </div>
-                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '4px', color: t.textMid }}>
-                                    <div>Tuition: UGX {fmtUGX(totals.base)}</div>
-                                    <div>Hostel: UGX {fmtUGX(totals.hostel)}</div>
-                                    <div>Clinical: UGX {fmtUGX(totals.clinical)}</div>
-                                    <div>Facilitation: UGX {fmtUGX(totals.facilitation)}</div>
-                                    <div>Guild: UGX {fmtUGX(totals.guild)}</div>
-                                    <div>ID & Uniform: UGX {fmtUGX(totals.idCard + totals.uniform)}</div>
-                                    {totals.customSum > 0 && <div>Custom Items: UGX {fmtUGX(totals.customSum)}</div>}
+                                  <div className="grid grid-cols-2 gap-1 text-[11px] text-[#555555] mt-1">
+                                    <div>TUITION: UGX {fmtUGX(totals.base)}</div>
+                                    <div>HOSTEL: UGX {fmtUGX(totals.hostel)}</div>
+                                    <div>CLINICAL: UGX {fmtUGX(totals.clinical)}</div>
+                                    <div>FACILITATION: UGX {fmtUGX(totals.facilitation)}</div>
+                                    <div>GUILD: UGX {fmtUGX(totals.guild)}</div>
+                                    <div>ID & UNIFORM: UGX {fmtUGX(totals.idCard + totals.uniform)}</div>
                                   </div>
                                 </div>
                               );
@@ -1227,26 +1023,16 @@ export default function SettingsFinancial({
                     </div>
 
                     {/* Card Actions */}
-                    <div style={{ marginTop: '20px', paddingTop: '14px', borderTop: `1px solid ${t.divider}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                    <div className="border-t border-[#E2E8F0] pt-3 flex items-center justify-between gap-2">
                       <button
                         type="button"
                         onClick={() =>
                           setExpandedCourseAccordion(isExpanded ? null : course.code)
                         }
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: t.textMid,
-                          fontSize: '12px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          padding: '6px 0',
-                        }}
+                        className="gov-btn gov-btn-sm"
                       >
-                        {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                        <span>{isExpanded ? 'Hide Breakdown' : 'View Breakdown'}</span>
+                        {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                        <span>{isExpanded ? 'HIDE BREAKDOWN' : 'VIEW BREAKDOWN'}</span>
                       </button>
 
                       <button
@@ -1255,21 +1041,9 @@ export default function SettingsFinancial({
                           setActiveCourseCode(course.code);
                           setActiveSemesterCode('Y1S1');
                         }}
-                        style={{
-                          background: isFullyConfigured ? t.fieldBg : `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`,
-                          color: isFullyConfigured ? t.textHi : t.ctaText,
-                          border: isFullyConfigured ? `1px solid ${t.stroke}` : 'none',
-                          borderRadius: '10px',
-                          padding: '9px 18px',
-                          fontSize: '12px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                        }}
+                        className="gov-btn gov-btn-sm gov-btn-primary"
                       >
-                        <span>{isFullyConfigured ? 'Edit Fee Structure' : 'Set Fee Structure'}</span>
+                        <span>{isFullyConfigured ? 'EDIT FEE SCHEDULE' : 'CONFIGURE SCHEDULE'}</span>
                         <span>&rarr;</span>
                       </button>
                     </div>
@@ -1283,121 +1057,56 @@ export default function SettingsFinancial({
              LEVEL 2: COURSE DETAIL & PER-SEMESTER BUILDER
              ========================================================================= */
           activeCourse && (
-            <div>
-              {/* Back to courses navigation header */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+            <div className="space-y-5">
+              {/* Top Navigation Row */}
+              <div className="flex items-center justify-between gap-3">
                 <button
                   type="button"
                   onClick={() => setActiveCourseCode(null)}
-                  style={{
-                    background: t.fieldBg,
-                    border: `1px solid ${t.stroke}`,
-                    borderRadius: '10px',
-                    padding: '8px 14px',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    color: t.textHi,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    transition: 'all 0.15s ease',
-                  }}
+                  className="gov-btn gov-btn-sm inline-flex items-center gap-1.5"
                 >
-                  <ArrowLeft size={16} />
-                  <span>Back to All Courses</span>
+                  <ArrowLeft size={14} />
+                  <span>ALL PROGRAMMES</span>
                 </button>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <button
-                    type="button"
-                    onClick={() => saveTertiaryCourse(activeCourse.code)}
-                    disabled={saving}
-                    style={{
-                      background: `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`,
-                      color: t.ctaText,
-                      border: 'none',
-                      borderRadius: '10px',
-                      padding: '9px 20px',
-                      fontFamily: SORA,
-                      fontSize: '13px',
-                      fontWeight: 700,
-                      cursor: saving ? 'default' : 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      opacity: saving ? 0.7 : 1,
-                    }}
-                  >
-                    {saving && <RefreshCw size={14} className="animate-spin" />}
-                    <span>{saving ? 'Saving...' : `Save ${activeCourse.code} Fees`}</span>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => saveTertiaryCourse(activeCourse.code)}
+                  disabled={saving}
+                  className="gov-btn gov-btn-sm gov-btn-primary inline-flex items-center gap-1.5"
+                >
+                  {saving && <RefreshCw size={13} className="animate-spin" />}
+                  <span>{saving ? 'SAVING...' : `SAVE ${activeCourse.code} FEES`}</span>
+                </button>
               </div>
 
               {/* Course Title Banner */}
-              <div
-                style={{
-                  background: t.panel,
-                  border: `1px solid ${t.stroke}`,
-                  borderRadius: '16px',
-                  padding: '20px 24px',
-                  marginBottom: '20px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '16px',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <div
-                    style={{
-                      width: '48px',
-                      height: '48px',
-                      borderRadius: '14px',
-                      background: t.mintDim,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: t.mint,
-                      fontFamily: SORA,
-                      fontSize: '18px',
-                      fontWeight: 800,
-                    }}
-                  >
+              <div className="gov-card p-4 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex items-center justify-center px-3 py-1.5 text-sm font-mono font-bold bg-[#111111] text-white rounded">
                     {activeCourse.code}
-                  </div>
+                  </span>
                   <div>
-                    <h2 style={{ fontFamily: SORA, fontSize: '18px', fontWeight: 700, margin: 0, color: t.textHi }}>
+                    <h2 className="text-sm font-mono font-bold text-[#111111] uppercase">
                       {activeCourse.fullName}
                     </h2>
-                    <div style={{ fontSize: '13px', color: t.textMid, marginTop: '3px' }}>
-                      {activeCourse.duration} &bull; {activeCourse.semesters.length} Semesters Total
+                    <div className="text-xs font-mono text-[#666666] mt-0.5">
+                      {activeCourse.duration} · {activeCourse.semesters.length} TOTAL SEMESTERS
                     </div>
                   </div>
                 </div>
 
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '11px', color: t.textLow, textTransform: 'uppercase', fontWeight: 600 }}>
-                    Active Editing
-                  </div>
-                  <div style={{ fontFamily: SORA, fontSize: '14px', fontWeight: 700, color: t.mint }}>
+                <div className="text-right">
+                  <span className="text-[10px] font-mono uppercase text-[#888888] block">ACTIVE SEMESTER</span>
+                  <span className="text-xs font-mono font-bold text-[#111111] uppercase">
                     {activeCourse.semesters.find((s) => s.code === activeSemesterCode)?.label}
-                  </div>
+                  </span>
                 </div>
               </div>
 
               {/* Semester Selector Tabs */}
-              <div
-                style={{
-                  display: 'flex',
-                  gap: '8px',
-                  overflowX: 'auto',
-                  paddingBottom: '8px',
-                  marginBottom: '20px',
-                }}
-              >
-                {activeCourse.semesters.map((sem, idx) => {
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {activeCourse.semesters.map((sem) => {
                   const isActive = activeSemesterCode === sem.code;
                   const semBd = tertiaryBreakdowns[activeCourse.code]?.[sem.code] || createEmptyBreakdown();
                   const totals = computeSemesterTotals(semBd);
@@ -1408,32 +1117,16 @@ export default function SettingsFinancial({
                       key={sem.code}
                       type="button"
                       onClick={() => setActiveSemesterCode(sem.code)}
-                      style={{
-                        background: isActive ? t.panel : t.fieldBg,
-                        border: `1px solid ${isActive ? t.mint : t.stroke}`,
-                        borderRadius: '12px',
-                        padding: '10px 16px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'flex-start',
-                        gap: '2px',
-                        minWidth: '140px',
-                        textAlign: 'left',
-                        boxShadow: isActive ? `0 0 12px ${t.mintDim}` : 'none',
-                        transition: 'all 0.15s ease',
-                      }}
+                      className={`gov-btn gov-btn-sm text-left flex flex-col items-start min-w-[120px] ${
+                        isActive ? 'gov-btn-primary' : ''
+                      }`}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                        <span style={{ fontSize: '12px', fontWeight: 700, color: isActive ? t.mint : t.textHi }}>
-                          {sem.short}
-                        </span>
-                        {isSet && (
-                          <Check size={12} style={{ color: t.mint }} />
-                        )}
+                      <div className="flex items-center justify-between w-full">
+                        <span className="font-mono text-xs font-bold">{sem.short}</span>
+                        {isSet && <Check size={12} className={isActive ? 'text-white' : 'text-black'} />}
                       </div>
-                      <span style={{ fontFamily: SORA, fontSize: '12px', fontWeight: 600, color: isSet ? t.textHi : t.textLow }}>
-                        {isSet ? `UGX ${fmtUGX(totals.dayTotal)}` : 'Not set'}
+                      <span className={`text-[10px] font-mono mt-0.5 ${isActive ? 'text-white/80' : 'text-[#666666]'}`}>
+                        {isSet ? `UGX ${fmtUGX(totals.dayTotal)}` : 'NOT SET'}
                       </span>
                     </button>
                   );
@@ -1441,27 +1134,17 @@ export default function SettingsFinancial({
               </div>
 
               {/* Active Semester Form & Live Computed Totals */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '24px' }}>
-                {/* Left Column: Core Inputs & Levies */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                {/* Left 2 Columns: Core Inputs & Levies */}
+                <div className="lg:col-span-2 space-y-4">
                   {/* Semester Actions Bar */}
-                  <div
-                    style={{
-                      background: t.panel,
-                      border: `1px solid ${t.stroke}`,
-                      borderRadius: '14px',
-                      padding: '14px 18px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                    }}
-                  >
+                  <div className="gov-card p-3 flex items-center justify-between">
                     <div>
-                      <span style={{ fontFamily: SORA, fontSize: '14px', fontWeight: 700, color: t.textHi }}>
+                      <span className="text-xs font-mono font-bold text-[#111111] uppercase">
                         {activeCourse.semesters.find((s) => s.code === activeSemesterCode)?.label}
                       </span>
                       {copyFeedback && (
-                        <div style={{ fontSize: '11px', color: t.mint, fontWeight: 600, marginTop: '2px' }}>
+                        <div className="text-[11px] font-mono text-emerald-700 font-bold mt-0.5">
                           {copyFeedback}
                         </div>
                       )}
@@ -1471,46 +1154,24 @@ export default function SettingsFinancial({
                       <button
                         type="button"
                         onClick={() => copyFromPreviousSemester(activeCourse.code, currentSemesterIndex)}
-                        style={{
-                          background: t.mintDim,
-                          border: `1px solid ${t.mintRing}`,
-                          borderRadius: '8px',
-                          padding: '7px 12px',
-                          fontSize: '12px',
-                          fontWeight: 600,
-                          color: t.mint,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                        }}
+                        className="gov-btn gov-btn-sm font-mono inline-flex items-center gap-1.5"
                       >
                         <Copy size={13} />
-                        <span>Same as Previous Semester</span>
+                        <span>SAME AS PREVIOUS SEMESTER</span>
                       </button>
                     )}
                   </div>
 
                   {/* Base Tuition & Hostel Section */}
-                  <div
-                    style={{
-                      background: t.panel,
-                      border: `1px solid ${t.stroke}`,
-                      borderRadius: '14px',
-                      padding: '18px 20px',
-                    }}
-                  >
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                  <div className="gov-card p-5 space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {/* Tuition Fee */}
                       <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                          <Coins size={15} style={{ color: t.gold }} />
-                          <label style={{ fontSize: '12px', fontWeight: 700, color: t.textHi }}>
-                            Tuition Fee
-                          </label>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '11px', fontWeight: 600, color: t.textLow }}>UGX</span>
+                        <label className="mb-1 block text-xs font-mono uppercase font-bold text-[#555555]">
+                          BASE TUITION FEE *
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono font-bold text-[#666666]">UGX</span>
                           <input
                             type="number"
                             min={0}
@@ -1524,35 +1185,21 @@ export default function SettingsFinancial({
                               )
                             }
                             placeholder="e.g. 1200000"
-                            style={{
-                              width: '100%',
-                              padding: '9px 12px',
-                              background: t.fieldBg,
-                              border: `1px solid ${t.stroke}`,
-                              borderRadius: '8px',
-                              color: t.textHi,
-                              fontSize: '14px',
-                              fontFamily: SORA,
-                              fontWeight: 600,
-                              outline: 'none',
-                            }}
+                            className="gov-input w-full font-mono text-xs font-bold"
                           />
                         </div>
-                        <div style={{ fontSize: '11px', color: t.textLow, marginTop: '5px' }}>
-                          Tuition fee for all students in this semester
+                        <div className="text-[11px] font-mono text-[#888888] mt-1">
+                          APPLICABLE TO ALL TRAINEES ENROLLED IN THIS SEMESTER
                         </div>
                       </div>
 
-                      {/* Hostel Accommodation Fee (Resident) */}
+                      {/* Hostel Accommodation Fee */}
                       <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                          <Building2 size={15} style={{ color: t.mint }} />
-                          <label style={{ fontSize: '12px', fontWeight: 700, color: t.textHi }}>
-                            Hostel Accommodation Fee
-                          </label>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '11px', fontWeight: 600, color: t.textLow }}>UGX</span>
+                        <label className="mb-1 block text-xs font-mono uppercase font-bold text-[#555555]">
+                          HOSTEL ACCOMMODATION FEE (RESIDENT)
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono font-bold text-[#666666]">UGX</span>
                           <input
                             type="number"
                             min={0}
@@ -1566,108 +1213,57 @@ export default function SettingsFinancial({
                               )
                             }
                             placeholder="e.g. 500000"
-                            style={{
-                              width: '100%',
-                              padding: '9px 12px',
-                              background: t.fieldBg,
-                              border: `1px solid ${t.stroke}`,
-                              borderRadius: '8px',
-                              color: t.textHi,
-                              fontSize: '14px',
-                              fontFamily: SORA,
-                              fontWeight: 600,
-                              outline: 'none',
-                            }}
+                            className="gov-input w-full font-mono text-xs font-bold"
                           />
                         </div>
-                        <div style={{ fontSize: '11px', color: t.textLow, marginTop: '5px' }}>
-                          Applicable to Resident students accommodated in school hostels
+                        <div className="text-[11px] font-mono text-[#888888] mt-1">
+                          ACCOMMODATION LEVY FOR BOARDING RESIDENTS
                         </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Unified Dynamic Functional Fees Manager */}
-                  <div
-                    style={{
-                      background: t.panel,
-                      border: `1px solid ${t.stroke}`,
-                      borderRadius: '14px',
-                      padding: '18px 20px',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
+                  <div className="gov-card p-5 space-y-4">
+                    <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-2">
                       <div>
-                        <div style={{ fontSize: '13px', fontWeight: 700, color: t.textHi }}>
-                          Functional Fees & Operational Levies
-                        </div>
-                        <div style={{ fontSize: '11px', color: t.textLow, marginTop: '2px' }}>
-                          Pre-loaded from RCSN circular. The school can price, edit, delete, or add fees for this semester.
-                        </div>
+                        <span className="text-xs font-mono uppercase font-bold text-[#111111] tracking-wider">
+                          FUNCTIONAL FEES & OPERATIONAL LEVIES
+                        </span>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div className="flex items-center gap-2">
                         <button
                           type="button"
                           onClick={() => resetDefaultFunctionalItems(activeCourse.code, activeSemesterCode)}
-                          title="Restore the 18 default RCSN functional fee items"
-                          style={{
-                            background: t.fieldBg,
-                            border: `1px solid ${t.stroke}`,
-                            borderRadius: '8px',
-                            padding: '6px 11px',
-                            fontSize: '11px',
-                            fontWeight: 600,
-                            color: t.textMid,
-                            cursor: 'pointer',
-                          }}
+                          className="gov-btn gov-btn-sm font-mono text-xs"
                         >
-                          Restore Circular Defaults
+                          RESTORE CIRCULAR DEFAULTS
                         </button>
                         <button
                           type="button"
                           onClick={() => addFunctionalItem(activeCourse.code, activeSemesterCode)}
-                          style={{
-                            background: `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`,
-                            border: 'none',
-                            borderRadius: '8px',
-                            padding: '6px 12px',
-                            fontSize: '11px',
-                            fontWeight: 700,
-                            color: t.ctaText,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                          }}
+                          className="gov-btn gov-btn-sm gov-btn-primary font-mono text-xs inline-flex items-center gap-1"
                         >
                           <Plus size={13} />
-                          <span>Add Fee Item</span>
+                          <span>+ ADD ITEM</span>
                         </button>
                       </div>
                     </div>
 
                     {/* Table / List of items */}
                     {(currentSemesterBreakdown.functionalItems || []).length === 0 ? (
-                      <div style={{ fontSize: '12px', color: t.textLow, padding: '16px 0', textAlign: 'center' }}>
-                        No functional fees configured for this semester. Click &ldquo;Add Fee Item&rdquo; or &ldquo;Restore Circular Defaults&rdquo;.
+                      <div className="text-xs font-mono text-[#888888] py-8 text-center">
+                        NO FUNCTIONAL FEES CONFIGURED. CLICK &ldquo;RESTORE CIRCULAR DEFAULTS&rdquo; OR &ldquo;+ ADD ITEM&rdquo;.
                       </div>
                     ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '520px', overflowY: 'auto', paddingRight: '4px' }}>
+                      <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
                         {(currentSemesterBreakdown.functionalItems || []).map((it, idx) => (
                           <div
                             key={it.id}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              padding: '6px 8px',
-                              background: t.fieldBg,
-                              border: `1px solid ${t.stroke}`,
-                              borderRadius: '8px',
-                            }}
+                            className="flex items-center gap-2 border border-[#E2E8F0] bg-[#FAFAFA] p-2 rounded"
                           >
-                            <span style={{ fontSize: '11px', color: t.textLow, fontWeight: 700, minWidth: '18px' }}>
+                            <span className="text-xs font-mono font-bold text-[#666666] w-6 text-center">
                               {idx + 1}.
                             </span>
                             <input
@@ -1682,35 +1278,15 @@ export default function SettingsFinancial({
                                 )
                               }
                               placeholder="Fee name (e.g. Clinical placement)"
-                              style={{
-                                flex: 1,
-                                minWidth: 0,
-                                padding: '6px 8px',
-                                background: 'transparent',
-                                border: 'none',
-                                color: t.textHi,
-                                fontSize: '12px',
-                                fontWeight: 600,
-                                outline: 'none',
-                              }}
+                              className="gov-input flex-1 font-mono text-xs uppercase"
                             />
                             {it.name.toLowerCase().includes('hostel') && (
-                              <span
-                                style={{
-                                  fontSize: '10px',
-                                  fontWeight: 700,
-                                  textTransform: 'uppercase',
-                                  padding: '2px 6px',
-                                  borderRadius: '4px',
-                                  background: t.mintDim,
-                                  color: t.mint,
-                                }}
-                              >
-                                Resident
+                              <span className="gov-tag gov-tag-approved text-[10px] font-mono">
+                                RESIDENT
                               </span>
                             )}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <span style={{ fontSize: '11px', color: t.textLow, fontWeight: 600 }}>UGX</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-mono text-[#666666]">UGX</span>
                               <input
                                 type="number"
                                 min={0}
@@ -1724,38 +1300,16 @@ export default function SettingsFinancial({
                                   )
                                 }
                                 placeholder="0"
-                                style={{
-                                  width: '95px',
-                                  padding: '5px 8px',
-                                  background: t.panel,
-                                  border: `1px solid ${t.stroke}`,
-                                  borderRadius: '6px',
-                                  color: t.textHi,
-                                  fontSize: '12.5px',
-                                  fontFamily: SORA,
-                                  fontWeight: 700,
-                                  textAlign: 'right',
-                                  outline: 'none',
-                                }}
+                                className="gov-input font-mono text-xs w-28 text-right font-bold"
                               />
                             </div>
                             <button
                               type="button"
                               onClick={() => removeFunctionalItem(activeCourse.code, activeSemesterCode, it.id)}
-                              title="Delete this fee item from this semester"
-                              style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: t.red,
-                                cursor: 'pointer',
-                                padding: '4px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                borderRadius: '4px',
-                              }}
+                              className="gov-btn gov-btn-sm text-red-600 border-[#CCCCCC] hover:bg-red-50 p-1"
+                              title="Delete fee item"
                             >
-                              <Trash2 size={14} />
+                              <Trash2 size={13} />
                             </button>
                           </div>
                         ))}
@@ -1764,216 +1318,132 @@ export default function SettingsFinancial({
                   </div>
                 </div>
 
-                {/* Right Column: Live Computed Totals & Summary Table */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  {/* Live Auto-Calculated Totals Card */}
-                  <div
-                    style={{
-                      background: t.panel,
-                      border: `1px solid ${t.mintRing}`,
-                      borderRadius: '16px',
-                      padding: '22px',
-                      boxShadow: `0 4px 20px ${t.mintDim}`,
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Calculator size={18} style={{ color: t.mint }} />
-                        <span style={{ fontFamily: SORA, fontSize: '14px', fontWeight: 700, color: t.textHi }}>
-                          Computed Semester Totals
-                        </span>
-                      </div>
-                      <span style={{ fontSize: '11px', color: t.mint, fontWeight: 600 }}>
+                {/* Right Column: Live Computed Totals & Summary Schedule */}
+                <div className="space-y-4">
+                  {/* Computed Totals Card */}
+                  <div className="gov-card p-5 space-y-4 border-2 border-black">
+                    <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-2">
+                      <span className="text-xs font-mono uppercase font-bold text-[#111111] tracking-wider">
+                        COMPUTED SEMESTER TOTALS
+                      </span>
+                      <span className="text-xs font-mono font-bold text-[#111111]">
                         {activeCourse.semesters.find((s) => s.code === activeSemesterCode)?.short}
                       </span>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
-                      {/* Day Scholar Total */}
-                      <div
-                        style={{
-                          background: t.fieldBg,
-                          border: `1px solid ${t.stroke}`,
-                          borderRadius: '12px',
-                          padding: '14px 16px',
-                        }}
-                      >
-                        <div style={{ fontSize: '11px', fontWeight: 700, color: t.textMid, textTransform: 'uppercase' }}>
-                          Non-Resident Fee
-                        </div>
-                        <div style={{ fontFamily: SORA, fontSize: '22px', fontWeight: 800, color: t.textHi, marginTop: '4px' }}>
+                    <div className="space-y-3">
+                      {/* Non-Resident Total */}
+                      <div className="border border-[#CCCCCC] bg-[#FAFAFA] p-3 rounded">
+                        <span className="text-[10px] font-mono font-bold text-[#666666] uppercase block">
+                          NON-RESIDENT (DAY) TOTAL
+                        </span>
+                        <div className="text-xl font-mono font-bold text-[#111111] mt-1">
                           UGX {fmtUGX(currentSemesterTotals.dayTotal)}
                         </div>
-                        <div style={{ fontSize: '11px', color: t.textLow, marginTop: '4px' }}>
-                          Tuition (UGX {fmtUGX(currentSemesterTotals.base)}) + Functional Fees (UGX{' '}
-                          {fmtUGX(currentSemesterTotals.leviesTotal)})
+                        <div className="text-[10px] font-mono text-[#666666] mt-1">
+                          TUITION ({fmtUGX(currentSemesterTotals.base)}) + FUNCTIONAL ({fmtUGX(currentSemesterTotals.leviesTotal)})
                         </div>
                       </div>
 
                       {/* Resident Total */}
-                      <div
-                        style={{
-                          background: t.fieldBg,
-                          border: `1px solid ${t.mintRing}`,
-                          borderRadius: '12px',
-                          padding: '14px 16px',
-                        }}
-                      >
-                        <div style={{ fontSize: '11px', fontWeight: 700, color: t.mint, textTransform: 'uppercase' }}>
-                          Resident Fee (With Hostel)
-                        </div>
-                        <div style={{ fontFamily: SORA, fontSize: '22px', fontWeight: 800, color: t.mint, marginTop: '4px' }}>
+                      <div className="border border-[#CCCCCC] bg-[#F5F5F5] p-3 rounded">
+                        <span className="text-[10px] font-mono font-bold text-[#111111] uppercase block">
+                          RESIDENT (HOSTEL INCLUDED) TOTAL
+                        </span>
+                        <div className="text-xl font-mono font-bold text-[#111111] mt-1">
                           UGX {fmtUGX(currentSemesterTotals.boardingTotal)}
                         </div>
-                        <div style={{ fontSize: '11px', color: t.textLow, marginTop: '4px' }}>
-                          Non-Resident Total + Hostel Accommodation (UGX {fmtUGX(currentSemesterTotals.hostel)})
+                        <div className="text-[10px] font-mono text-[#666666] mt-1">
+                          NON-RESIDENT + HOSTEL ({fmtUGX(currentSemesterTotals.hostel)})
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Course Semester Overview Schedule Table */}
-                  <div
-                    style={{
-                      background: t.panel,
-                      border: `1px solid ${t.stroke}`,
-                      borderRadius: '16px',
-                      padding: '18px 20px',
-                    }}
-                  >
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: t.textHi, marginBottom: '12px' }}>
-                      All Semesters Schedule for {activeCourse.code}
+                  {/* All Semesters Schedule Overview Card */}
+                  <div className="gov-card p-0 overflow-hidden">
+                    <div className="border-b border-[#E2E8F0] bg-[#FDFDFD] px-4 py-3">
+                      <span className="text-xs font-mono uppercase font-bold text-[#111111]">
+                        SCHEDULE FOR {activeCourse.code}
+                      </span>
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {activeCourse.semesters.map((sem) => {
-                        const semBd = tertiaryBreakdowns[activeCourse.code]?.[sem.code] || createEmptyBreakdown();
-                        const totals = computeSemesterTotals(semBd);
-                        const isCurrent = sem.code === activeSemesterCode;
-                        const isSet = totals.dayTotal > 0;
+                    <div className="gov-table-container">
+                      <table className="gov-table">
+                        <thead>
+                          <tr>
+                            <th className="font-mono">SEMESTER</th>
+                            <th className="font-mono text-right">NON-RESIDENT</th>
+                            <th className="font-mono text-right w-16">ACTION</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {activeCourse.semesters.map((sem) => {
+                            const semBd = tertiaryBreakdowns[activeCourse.code]?.[sem.code] || createEmptyBreakdown();
+                            const totals = computeSemesterTotals(semBd);
+                            const isCurrent = sem.code === activeSemesterCode;
+                            const isSet = totals.dayTotal > 0;
 
-                        return (
-                          <div
-                            key={sem.code}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              padding: '8px 12px',
-                              borderRadius: '8px',
-                              background: isCurrent ? t.mintDim : t.fieldBg,
-                              border: `1px solid ${isCurrent ? t.mintRing : t.stroke}`,
-                              fontSize: '12px',
-                            }}
-                          >
-                            <span style={{ fontWeight: 600, color: isCurrent ? t.mint : t.textHi }}>
-                              {sem.label}
-                            </span>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                              <span style={{ fontFamily: SORA, fontWeight: 700, color: isSet ? t.textHi : t.textLow }}>
-                                {isSet ? `UGX ${fmtUGX(totals.dayTotal)}` : '—'}
-                              </span>
-                              {!isCurrent && (
-                                <button
-                                  type="button"
-                                  onClick={() => setActiveSemesterCode(sem.code)}
-                                  style={{
-                                    background: 'transparent',
-                                    border: 'none',
-                                    color: t.mint,
-                                    fontSize: '11px',
-                                    fontWeight: 600,
-                                    cursor: 'pointer',
-                                    padding: '2px 4px',
-                                  }}
-                                >
-                                  Edit
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
+                            return (
+                              <tr key={sem.code} className={isCurrent ? 'bg-[#FAFAFA]' : ''}>
+                                <td className="font-mono text-xs font-bold text-[#111111]">
+                                  {sem.label}
+                                </td>
+                                <td className="text-right font-mono text-xs font-bold text-[#111111]">
+                                  {isSet ? `UGX ${fmtUGX(totals.dayTotal)}` : '—'}
+                                </td>
+                                <td className="text-right">
+                                  {!isCurrent ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => setActiveSemesterCode(sem.code)}
+                                      className="gov-btn gov-btn-sm text-[11px]"
+                                    >
+                                      EDIT
+                                    </button>
+                                  ) : (
+                                    <span className="text-[10px] font-mono text-[#888888]">[ACTIVE]</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Bottom Sticky Action Bar */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '12px',
-                  padding: '16px 20px',
-                  background: t.panel,
-                  border: `1px solid ${t.stroke}`,
-                  borderRadius: '14px',
-                }}
-              >
+              {/* Bottom Action Bar */}
+              <div className="gov-card p-4 flex items-center justify-between gap-3">
                 <button
                   type="button"
                   onClick={() => setActiveCourseCode(null)}
-                  style={{
-                    background: t.fieldBg,
-                    border: `1px solid ${t.stroke}`,
-                    borderRadius: '10px',
-                    padding: '10px 16px',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    color: t.textHi,
-                    cursor: 'pointer',
-                  }}
+                  className="gov-btn gov-btn-sm"
                 >
-                  &larr; Back to Courses Overview
+                  &larr; BACK TO OVERVIEW
                 </button>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={syncStudentBalances}
                     disabled={syncing}
-                    style={{
-                      background: t.fieldBg,
-                      border: `1px solid ${t.stroke}`,
-                      borderRadius: '10px',
-                      padding: '10px 16px',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      color: t.textHi,
-                      cursor: syncing ? 'default' : 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                    }}
+                    className="gov-btn gov-btn-sm inline-flex items-center gap-1.5"
                   >
-                    <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} style={{ color: t.mint }} />
-                    <span>{syncing ? 'Syncing...' : 'Sync Balances'}</span>
+                    <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
+                    <span>{syncing ? 'SYNCING...' : 'SYNC BALANCES'}</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => saveTertiaryCourse(activeCourse.code)}
                     disabled={saving}
-                    style={{
-                      background: `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`,
-                      color: t.ctaText,
-                      border: 'none',
-                      borderRadius: '10px',
-                      padding: '10px 24px',
-                      fontFamily: SORA,
-                      fontSize: '13px',
-                      fontWeight: 700,
-                      cursor: saving ? 'default' : 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      opacity: saving ? 0.7 : 1,
-                    }}
+                    className="gov-btn gov-btn-sm gov-btn-primary inline-flex items-center gap-1.5"
                   >
-                    {saving && <RefreshCw size={14} className="animate-spin" />}
-                    <span>{saving ? 'Saving...' : `Save Fee Structure for ${activeCourse.code}`}</span>
+                    {saving && <RefreshCw size={13} className="animate-spin" />}
+                    <span>{saving ? 'SAVING...' : `SAVE ${activeCourse.code} STRUCTURE`}</span>
                   </button>
                 </div>
               </div>
@@ -1982,124 +1452,72 @@ export default function SettingsFinancial({
         )
       ) : (
         /* =========================================================================
-           PRIMARY / SECONDARY SCHOOL CLASS FEES
+           PRIMARY / SECONDARY FALLBACK
            ========================================================================= */
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <div>
-              <h3 style={{ fontFamily: SORA, fontSize: '17px', fontWeight: 700, margin: 0, color: t.textHi }}>
-                Class Fee Structures
-              </h3>
-              <p style={{ margin: '4px 0 0', fontSize: '13px', color: t.textMid }}>
-                Configure day tuition and boarding amounts per term for each class.
-              </p>
+        <div className="space-y-4">
+          <div className="gov-control-bar">
+            <div className="gov-control-bar-left">
+              <span className="text-xs font-mono uppercase font-bold text-[#111111]">CLASS FEE STRUCTURES</span>
             </div>
-
-            <button
-              type="button"
-              onClick={savePrimarySecondaryFees}
-              disabled={saving}
-              style={{
-                background: `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`,
-                color: t.ctaText,
-                border: 'none',
-                borderRadius: '10px',
-                padding: '9px 20px',
-                fontFamily: SORA,
-                fontSize: '13px',
-                fontWeight: 700,
-                cursor: saving ? 'default' : 'pointer',
-              }}
-            >
-              {saving ? 'Saving...' : 'Save Class Fees'}
-            </button>
+            <div className="gov-control-bar-right">
+              <button
+                type="button"
+                onClick={savePrimarySecondaryFees}
+                disabled={saving}
+                className="gov-btn gov-btn-sm gov-btn-primary"
+              >
+                {saving ? 'SAVING...' : 'SAVE CLASS FEES'}
+              </button>
+            </div>
           </div>
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-              gap: '16px',
-            }}
-          >
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {classList.map((cls) => {
               const dayTuition = feeStructure[cls] || '';
               const boardingTuition = feeStructure[`${cls}_boarding_tuition`] || '';
 
               return (
-                <div
-                  key={cls}
-                  style={{
-                    background: t.panel,
-                    border: `1px solid ${t.stroke}`,
-                    borderRadius: '14px',
-                    padding: '18px 20px',
-                  }}
-                >
-                  <div style={{ fontFamily: SORA, fontSize: '15px', fontWeight: 700, color: t.textHi, marginBottom: '14px' }}>
+                <div key={cls} className="gov-card p-4 space-y-3">
+                  <div className="text-xs font-mono font-bold text-[#111111] uppercase border-b border-[#E2E8F0] pb-2">
                     {cls}
                   </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div>
-                      <label style={{ fontSize: '11px', fontWeight: 600, color: t.textMid, display: 'block', marginBottom: '4px' }}>
-                        Day Tuition (Per Term)
-                      </label>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '11px', color: t.textLow }}>UGX</span>
-                        <input
-                          type="number"
-                          min={0}
-                          value={dayTuition}
-                          onChange={(e) =>
-                            setFeeStructure((prev) => ({ ...prev, [cls]: e.target.value }))
-                          }
-                          placeholder="e.g. 150000"
-                          style={{
-                            width: '100%',
-                            padding: '8px 10px',
-                            background: t.fieldBg,
-                            border: `1px solid ${t.stroke}`,
-                            borderRadius: '8px',
-                            color: t.textHi,
-                            fontSize: '13px',
-                            fontFamily: SORA,
-                            outline: 'none',
-                          }}
-                        />
-                      </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-mono uppercase text-[#666666]">
+                      DAY TUITION (PER TERM)
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono text-[#666666]">UGX</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={dayTuition}
+                        onChange={(e) =>
+                          setFeeStructure((prev) => ({ ...prev, [cls]: e.target.value }))
+                        }
+                        placeholder="e.g. 150000"
+                        className="gov-input w-full font-mono text-xs"
+                      />
                     </div>
-
-                    <div>
-                      <label style={{ fontSize: '11px', fontWeight: 600, color: t.mint, display: 'block', marginBottom: '4px' }}>
-                        Boarding Fee (Per Term)
-                      </label>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '11px', color: t.textLow }}>UGX</span>
-                        <input
-                          type="number"
-                          min={0}
-                          value={boardingTuition}
-                          onChange={(e) =>
-                            setFeeStructure((prev) => ({
-                              ...prev,
-                              [`${cls}_boarding_tuition`]: e.target.value,
-                            }))
-                          }
-                          placeholder="e.g. 300000"
-                          style={{
-                            width: '100%',
-                            padding: '8px 10px',
-                            background: t.fieldBg,
-                            border: `1px solid ${t.stroke}`,
-                            borderRadius: '8px',
-                            color: t.textHi,
-                            fontSize: '13px',
-                            fontFamily: SORA,
-                            outline: 'none',
-                          }}
-                        />
-                      </div>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-mono uppercase text-[#666666]">
+                      BOARDING FEE (PER TERM)
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono text-[#666666]">UGX</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={boardingTuition}
+                        onChange={(e) =>
+                          setFeeStructure((prev) => ({
+                            ...prev,
+                            [`${cls}_boarding_tuition`]: e.target.value,
+                          }))
+                        }
+                        placeholder="e.g. 300000"
+                        className="gov-input w-full font-mono text-xs"
+                      />
                     </div>
                   </div>
                 </div>
@@ -2116,10 +1534,10 @@ export default function SettingsFinancial({
           setShowSchoolPayModal(false);
           void refetchSchoolPay();
         }}
-        title="SchoolPay Configuration"
+        title="SCHOOLPAY PAYMENT GATEWAY SPECIFICATION"
         size="xl"
       >
-        <div style={{ padding: '4px 0' }}>
+        <div className="p-2">
           <SchoolPayIntegrationCard schoolId={schoolId} />
         </div>
       </NativeModal>

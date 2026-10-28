@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { resolveCurrentSchoolTerm } from '@/lib/adminFinanceTerm';
 import SectionHeader from './SectionHeader';
 import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
+import '@/styles/government-system.css';
 
 type TermRow = {
   id?: string;
@@ -264,195 +265,188 @@ export default function SettingsTerms({
         }
       />
 
-      <div className={`mb-4 ${settingsInsetSurface} border border-[var(--pw-blue)]/35 p-4`}>
+      <div className="mb-4 gov-card rounded-lg border border-[#CCCCCC] bg-white p-4">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h4 className="flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--pw-blue, #3d8ef8)' }}>
-            <Calendar className="h-4 w-4 text-[var(--pw-blue)]" />
-            {isTertiary ? 'RCSN Institutional Academic Periods & Calendar Sessions' : 'Uganda Academic Calendar'}
+          <h4 className="flex items-center gap-2 text-xs font-mono font-bold uppercase text-[#111111]">
+            <Calendar className="h-4 w-4 text-[#555555]" />
+            {isTertiary ? 'ACADEMIC PERIODS & CALENDAR SESSIONS' : 'ACADEMIC CALENDAR'}
           </h4>
           <button
             type="button"
             onClick={() => setShowTermInfo(!showTermInfo)}
-            className="text-xs ac-text-secondary underline decoration-[var(--pw-blue)]/50 hover:brightness-125"
+            className="gov-btn gov-btn-sm"
           >
-            {showTermInfo ? 'Hide' : 'Show'} Details
+            {showTermInfo ? 'HIDE DETAILS' : 'VIEW DETAILS'}
           </button>
         </div>
         {showTermInfo && (
-          <div className="mt-3 space-y-2 text-xs ac-text-secondary">
+          <div className="mt-3 space-y-2 text-xs text-[#555555] font-mono">
             {isTertiary ? (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="rounded border border-[var(--pw-border)] bg-[var(--pw-s3)] p-2.5">
-                  <div className="mb-1 font-semibold ac-text-primary">Academic Period 1 (First Session)</div>
-                  <div>February / March – June / July</div>
-                  <div className="ac-text-muted mt-1">Classroom instruction, continuous assessments, and clinical rotations run concurrently across all cohorts</div>
+                <div className="rounded border border-[#CCCCCC] bg-[#F8F9FA] p-3">
+                  <div className="mb-1 font-bold text-[#111111] uppercase">ACADEMIC PERIOD 1 (FIRST SESSION)</div>
+                  <div className="text-[11px] text-[#555555]">FEBRUARY / MARCH – JUNE / JULY</div>
+                  <div className="text-[10px] text-[#777777] mt-1">Classroom instruction, continuous assessments, and hospital ward clinical rotations.</div>
                 </div>
-                <div className="rounded border border-[var(--pw-border)] bg-[var(--pw-s3)] p-2.5">
-                  <div className="mb-1 font-semibold ac-text-primary">Academic Period 2 (Second Session)</div>
-                  <div>August / September – December / January</div>
-                  <div className="ac-text-muted mt-1">Second half session: curriculum lectures, hospital ward rotations, and UNMEB national exam series</div>
+                <div className="rounded border border-[#CCCCCC] bg-[#F8F9FA] p-3">
+                  <div className="mb-1 font-bold text-[#111111] uppercase">ACADEMIC PERIOD 2 (SECOND SESSION)</div>
+                  <div className="text-[11px] text-[#555555]">AUGUST / SEPTEMBER – DECEMBER / JANUARY</div>
+                  <div className="text-[10px] text-[#777777] mt-1">Curriculum lectures, hospital ward rotations, and UNMEB national examination series.</div>
                 </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div className="rounded border border-[var(--pw-border)] bg-[var(--pw-s3)] p-2">
-                  <div className="mb-1 font-medium ac-text-primary">Term I</div>
-                  <div>February - May</div>
-                  <div className="ac-text-muted">Duration: ~3 months</div>
+                <div className="rounded border border-[#CCCCCC] bg-[#F8F9FA] p-2.5">
+                  <div className="mb-1 font-bold text-[#111111]">TERM I</div>
+                  <div className="text-[11px]">February - May (~3 months)</div>
                 </div>
-                <div className="rounded border border-[var(--pw-border)] bg-[var(--pw-s3)] p-2">
-                  <div className="mb-1 font-medium ac-text-primary">Term II</div>
-                  <div>June - August</div>
-                  <div className="ac-text-muted">Duration: ~2.5 months</div>
+                <div className="rounded border border-[#CCCCCC] bg-[#F8F9FA] p-2.5">
+                  <div className="mb-1 font-bold text-[#111111]">TERM II</div>
+                  <div className="text-[11px]">June - August (~2.5 months)</div>
                 </div>
-                <div className="rounded border border-[var(--pw-border)] bg-[var(--pw-s3)] p-2">
-                  <div className="mb-1 font-medium ac-text-primary">Term III</div>
-                  <div>September - December</div>
-                  <div className="ac-text-muted">Duration: ~3 months</div>
+                <div className="rounded border border-[#CCCCCC] bg-[#F8F9FA] p-2.5">
+                  <div className="mb-1 font-bold text-[#111111]">TERM III</div>
+                  <div className="text-[11px]">September - December (~3 months)</div>
                 </div>
               </div>
             )}
-            <p className="mt-2 flex items-center gap-1.5 italic ac-text-muted">
-              <Info className="h-3.5 w-3.5 text-[var(--pw-blue)]" />
-              {isTertiary
-                ? 'At RCSN, Academic Periods (Period 1 and Period 2) define the shared calendar window when teaching, clinicals, and examinations run. Each intake progresses through their specific semester stage during this period.'
-                : 'These are standard Uganda term dates. You can customize dates below.'}
-            </p>
           </div>
         )}
       </div>
 
-      <div className={`${settingsInsetSurface} mb-4 space-y-4 p-4 sm:p-5`}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm ac-text-secondary">
-          <input
-            type="radio"
-            className="accent-blue-500"
-            checked={mode === 'current'}
-            onChange={() => setMode('current')}
-          />
-          Edit Current {periodNoun}
-        </label>
-        <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm ac-text-secondary">
-          <input
-            type="radio"
-            className="accent-blue-500"
-            checked={mode === 'next'}
-            onChange={() => setMode('next')}
-          />
-          Edit Next {periodNoun}
-        </label>
-        {currentTerm && (
-          <span className="text-sm ac-text-muted">
-            Current: {periodNoun} {currentTerm.term}, {currentTerm.year} (
-            {currentTerm.start_date
-              ? new Date(currentTerm.start_date).toLocaleDateString()
-              : 'Start TBD'}{' '}
-            - {new Date(currentTerm.end_date).toLocaleDateString()})
-          </span>
-        )}
-      </div>
+      <div className="gov-card rounded-lg border border-[#CCCCCC] bg-white mb-4 space-y-4 p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <label className="flex cursor-pointer items-center gap-2 text-xs font-mono font-bold text-[#222222]">
+            <input
+              type="radio"
+              className="accent-[#111111]"
+              checked={mode === 'current'}
+              onChange={() => setMode('current')}
+            />
+            EDIT CURRENT {periodNoun.toUpperCase()}
+          </label>
+          <label className="flex cursor-pointer items-center gap-2 text-xs font-mono font-bold text-[#222222]">
+            <input
+              type="radio"
+              className="accent-[#111111]"
+              checked={mode === 'next'}
+              onChange={() => setMode('next')}
+            />
+            EDIT NEXT {periodNoun.toUpperCase()}
+          </label>
+          {currentTerm && (
+            <span className="text-xs font-mono text-[#666666]">
+              ACTIVE: {periodNoun.toUpperCase()} {currentTerm.term}, {currentTerm.year} (
+              {currentTerm.start_date
+                ? new Date(currentTerm.start_date).toLocaleDateString()
+                : 'START TBD'}{' '}
+              - {new Date(currentTerm.end_date).toLocaleDateString()})
+            </span>
+          )}
+        </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
-        <input
-          type="number"
-          min={2020}
-          max={2099}
-          className="ac-input min-h-[44px] w-full"
-          value={year}
-          onChange={(e) =>
-            setYear(parseInt((e.target.value || '').slice(0, 4) || String(new Date().getFullYear()), 10))
-          }
-        />
-        <select
-          className="ac-input min-h-[44px] w-full"
-          value={term}
-          onChange={(e) => setTerm(parseInt(e.target.value, 10))}
-        >
-          <option value={1}>{isTertiary ? 'Academic Period 1 (First Session)' : 'Term 1'}</option>
-          <option value={2}>{isTertiary ? 'Academic Period 2 (Second Session)' : 'Term 2'}</option>
-          {!isTertiary && <option value={3}>Term 3</option>}
-        </select>
-        <input
-          type="date"
-          className="ac-input min-h-[44px] w-full"
-          value={start}
-          onChange={(e) => setStart(e.target.value)}
-        />
-        <input
-          type="date"
-          className="ac-input min-h-[44px] w-full"
-          value={end}
-          onChange={(e) => setEnd(e.target.value)}
-        />
-        <button
-          type="button"
-          disabled={!schoolId || saving}
-          onClick={save}
-          className={settingsPrimaryActionClass}
-        >
-          {saving ? 'Saving...' : `Save ${periodNoun}`}
-        </button>
-      </div>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
+          <input
+            type="number"
+            min={2020}
+            max={2099}
+            className="gov-input w-full text-xs font-mono"
+            value={year}
+            onChange={(e) =>
+              setYear(parseInt((e.target.value || '').slice(0, 4) || String(new Date().getFullYear()), 10))
+            }
+          />
+          <select
+            className="gov-select w-full text-xs"
+            value={term}
+            onChange={(e) => setTerm(parseInt(e.target.value, 10))}
+          >
+            <option value={1}>{isTertiary ? 'Period 1 (First Session)' : 'Term 1'}</option>
+            <option value={2}>{isTertiary ? 'Period 2 (Second Session)' : 'Term 2'}</option>
+            {!isTertiary && <option value={3}>Term 3</option>}
+          </select>
+          <input
+            type="date"
+            className="gov-input w-full text-xs font-mono"
+            value={start}
+            onChange={(e) => setStart(e.target.value)}
+          />
+          <input
+            type="date"
+            className="gov-input w-full text-xs font-mono"
+            value={end}
+            onChange={(e) => setEnd(e.target.value)}
+          />
+          <button
+            type="button"
+            disabled={!schoolId || saving}
+            onClick={save}
+            className="gov-btn gov-btn-sm gov-btn-primary"
+          >
+            {saving ? 'SAVING…' : `SAVE ${periodNoun.toUpperCase()}`}
+          </button>
+        </div>
       </div>
 
       {error && (
-        <div className="mt-3 rounded-lg border border-red-400/40 bg-red-950/50 px-3 py-2 text-sm text-red-100">
+        <div className="mt-3 rounded border border-[#EF4444] bg-[#FEF2F2] px-3 py-2 text-xs font-mono font-bold text-[#B91C1C]">
           {error}
         </div>
       )}
 
-      <div className="mt-4 text-sm ac-text-secondary">Configured {periodNounPlural.toLowerCase()}</div>
-      <div className={`mt-2 overflow-x-auto ${settingsInsetSurface}`}>
-        <table className="min-w-full text-sm">
-          <thead className="border-b border-slate-200/80 bg-slate-50 dark:border-white/10 dark:bg-white/[0.04]">
-            <tr className="text-left">
-              <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-white/60">Year</th>
-              <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-white/60">{periodNoun}</th>
-              <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-white/60">Start</th>
-              <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-white/60">End</th>
+      <div className="mt-4 text-xs font-mono font-bold uppercase text-[#555555]">
+        CONFIGURED {periodNounPlural.toUpperCase()}
+      </div>
+      <div className="mt-2 gov-table-container">
+        <table className="gov-table w-full text-xs">
+          <thead>
+            <tr>
+              <th className="px-3 py-2 text-left font-mono uppercase text-[10px] text-[#555555] border-r border-[#CCCCCC]">YEAR</th>
+              <th className="px-3 py-2 text-left font-mono uppercase text-[10px] text-[#555555] border-r border-[#CCCCCC]">{periodNoun.toUpperCase()}</th>
+              <th className="px-3 py-2 text-left font-mono uppercase text-[10px] text-[#555555] border-r border-[#CCCCCC]">START DATE</th>
+              <th className="px-3 py-2 text-left font-mono uppercase text-[10px] text-[#555555]">END DATE</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200/60 dark:divide-white/10 [&>tr:nth-child(even)]:bg-slate-50/50 dark:[&>tr:nth-child(even)]:bg-white/[0.02]">
+          <tbody>
             {displayRows.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-3 ac-text-secondary">
-                  No {periodNounPlural.toLowerCase()} set yet.
+                <td colSpan={4} className="px-4 py-3 text-center text-xs font-mono text-[#666666]">
+                  NO {periodNounPlural.toUpperCase()} CONFIGURED YET.
                 </td>
               </tr>
             ) : (
               displayRows.map((r) => {
                 const isCurrent = r === currentTermRow;
                 return (
-                  <tr key={`${r.year}-${r.term}`}>
-                    <td className="px-4 py-3 text-slate-700 dark:text-white/80">{r.year}</td>
-                    <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">
+                  <tr key={`${r.year}-${r.term}`} className="border-b border-[#E5E5E5] hover:bg-[#F9FAFB]">
+                    <td className="px-3 py-2 font-mono text-[#111111] border-r border-[#CCCCCC]">{r.year}</td>
+                    <td className="px-3 py-2 font-bold text-[#111111] border-r border-[#CCCCCC]">
                       {isTertiary
                         ? (isCurrent ? (
-                            <span>
-                              Academic Period {r.term}{' '}
-                              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                                (Current)
+                            <span className="flex items-center gap-2">
+                              <span>Academic Period {r.term}</span>
+                              <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-bold bg-[#DCFCE7] text-[#15803D] border border-[#86EFAC] rounded">
+                                ACTIVE
                               </span>
                             </span>
                           ) : (
                             `Academic Period ${r.term}`
                           ))
                         : (isCurrent ? (
-                            <span>
-                              Term {r.term}{' '}
-                              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                                (Current)
+                            <span className="flex items-center gap-2">
+                              <span>Term {r.term}</span>
+                              <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-bold bg-[#DCFCE7] text-[#15803D] border border-[#86EFAC] rounded">
+                                ACTIVE
                               </span>
                             </span>
                           ) : (
                             `Term ${r.term}`
                           ))}
                     </td>
-                    <td className="px-4 py-3 text-slate-700 dark:text-white/80">
+                    <td className="px-3 py-2 font-mono text-[#444444] border-r border-[#CCCCCC]">
                       {r.start_date ? new Date(r.start_date).toLocaleDateString() : 'TBD'}
                     </td>
-                    <td className="px-4 py-3 text-slate-700 dark:text-white/80">
+                    <td className="px-3 py-2 font-mono text-[#444444]">
                       {new Date(r.end_date).toLocaleDateString()}
                     </td>
                   </tr>
@@ -463,14 +457,14 @@ export default function SettingsTerms({
         </table>
       </div>
 
-      <div className={`mt-6 ${settingsInsetSurface} border border-emerald-500/35 bg-emerald-950/20 p-4 dark:bg-emerald-950/25`}>
-        <h3 className="mb-3 flex items-center gap-2 font-medium text-emerald-200">
-          <Calendar className="h-4 w-4 text-emerald-300" />
-          {isTertiary ? 'Next Academic Period Begins Date' : 'Next Term Begins Date'}
+      <div className="mt-6 gov-card rounded-lg border border-[#CCCCCC] bg-white p-4 space-y-3">
+        <h3 className="flex items-center gap-2 text-xs font-mono font-bold uppercase text-[#111111]">
+          <Calendar className="h-4 w-4 text-[#555555]" />
+          {isTertiary ? 'NEXT ACADEMIC PERIOD COMMENCEMENT DATE' : 'NEXT TERM COMMENCEMENT DATE'}
         </h3>
-        <p className="mb-3 text-sm ac-text-secondary">
+        <p className="text-xs text-[#555555] font-mono">
           {isTertiary
-            ? 'Set the date when the next academic period begins. This will appear on student result slips and institutional communications.'
+            ? 'Set the commencement date for the upcoming academic period. This timestamp is printed onto official student academic result slips.'
             : 'Set the date when the next term begins. This will appear on student report cards.'}
         </p>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -478,19 +472,19 @@ export default function SettingsTerms({
             type="date"
             value={nextTermBeginsDate}
             onChange={(e) => setNextTermBeginsDate(e.target.value)}
-            className="ac-input min-h-[44px] w-full sm:w-auto"
+            className="gov-input w-full sm:w-auto text-xs font-mono"
           />
           <button
             type="button"
             onClick={saveNextTermBeginsDate}
             disabled={!schoolId || !nextTermBeginsDate || savingNextTermDate}
-            className={settingsPrimaryActionClass}
+            className="gov-btn gov-btn-sm gov-btn-primary"
           >
-            {savingNextTermDate ? 'Saving...' : 'Save Date'}
+            {savingNextTermDate ? 'SAVING…' : 'SAVE COMMENCEMENT DATE'}
           </button>
         </div>
         {nextTermDateSuccess && (
-          <div className="mt-3 rounded-lg border border-emerald-400/35 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">
+          <div className="mt-3 rounded border border-[#22C55E] bg-[#F0FDF4] px-3 py-2 text-xs font-mono font-bold text-[#15803D]">
             {nextTermDateSuccess}
           </div>
         )}

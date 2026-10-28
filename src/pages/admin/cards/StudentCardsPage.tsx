@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
 import NativeModal from '@/components/NativeModal';
+import '@/styles/government-system.css';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { getTokens, cardGrad, SORA, INTER } from '@/styles/posThemeTokens';
@@ -256,465 +257,244 @@ export default function StudentCardsPage() {
 
   return (
     <AdminPageWrapper>
-      <div style={{ width: '100%', maxWidth: 'none', padding: '24px 32px', boxSizing: 'border-box' }}>
-        {/* Header */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 24 }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <span
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  letterSpacing: 0.8,
-                  textTransform: 'uppercase',
-                  color: '#10b981',
-                  background: 'rgba(16, 185, 129, 0.1)',
-                  padding: '2px 8px',
-                  borderRadius: 4,
-                }}
-              >
-                Access Control & Security
-              </span>
-              <span style={{ fontSize: 12, color: tk.subText }}>Digital & Printable Smart Cards</span>
-            </div>
-            <h1 style={{ fontFamily: SORA, fontSize: 26, fontWeight: 700, color: tk.text, margin: 0 }}>
-              Student Service Access Cards
+      <div className="space-y-4">
+        {/* ── 1. TOP HEADER (EXACTLY MATCHING GOVERNMENTSTUDENTSVIEW) ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-[17px] font-bold tracking-tight text-[#111111] uppercase font-sans m-0">
+              STUDENT IDENTITY CARDS & ACCESS PASSES
             </h1>
-            <p style={{ fontFamily: INTER, fontSize: 13, color: tk.subText, margin: '4px 0 0' }}>
-              Issue and verify secure School Entrance Passes, Examination Cards, and Meal Cards with fee gating & QR verification.
-            </p>
+            <span className="inline-flex items-center px-2 py-0.5 text-[11px] font-mono font-bold bg-[#EAEAEA] text-[#222222] border border-[#CCCCCC]">
+              {filteredCards.length} {filteredCards.length === 1 ? 'CARD' : 'CARDS'}
+            </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
             <button
               type="button"
               onClick={() => navigate('/dashboard/security/passes')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                background: isDark ? '#1e293b' : '#f1f5f9',
-                color: tk.text,
-                border: `1px solid ${tk.cardBorder}`,
-                padding: '9px 16px',
-                borderRadius: 8,
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
+              className="gov-btn gov-btn-sm"
+              title="Gatehouse Scanner"
             >
-              <QrCode className="w-4 h-4 text-emerald-400" />
-              <span>Gatehouse Scanner</span>
+              <QrCode className="w-3.5 h-3.5" />
+              <span>Gate Scanner</span>
             </button>
 
             {filteredCards.length > 0 && (
               <button
                 type="button"
                 onClick={() => setBatchPrintCards(filteredCards)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  background: isDark ? '#1e293b' : '#f1f5f9',
-                  color: tk.text,
-                  border: `1px solid ${tk.cardBorder}`,
-                  padding: '9px 16px',
-                  borderRadius: 8,
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
+                className="gov-btn gov-btn-sm"
+                title="Batch Print Cards"
               >
-                <Printer className="w-4 h-4" />
-                <span>Batch Print Cards</span>
+                <Printer className="w-3.5 h-3.5" />
+                <span>Batch Print ({filteredCards.length})</span>
               </button>
             )}
 
             <button
               type="button"
               onClick={() => setShowIssueModal(true)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                background: '#10b981',
-                color: '#ffffff',
-                border: 'none',
-                padding: '9px 18px',
-                borderRadius: 8,
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
-              }}
+              className="gov-btn gov-btn-sm gov-btn-primary"
+              title="Issue New Cards"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-3.5 h-3.5" />
               <span>Issue New Cards</span>
             </button>
           </div>
         </div>
 
-        {/* KPI Strip */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 24 }}>
-          <div style={{ background: cardGrad(isDark), border: `1px solid ${tk.cardBorder}`, borderRadius: 12, padding: 16 }}>
-            <div style={{ fontSize: 12, color: tk.subText, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>Total Issued</span>
-              <CreditCard className="w-4 h-4 text-emerald-400" />
-            </div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: tk.text, marginTop: 4 }}>{stats.total}</div>
-            <div style={{ fontSize: 11, color: '#10b981', marginTop: 2 }}>All access cards</div>
+        {/* ── 2. METRICS STRIP (6 BOXES) ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="gov-card p-3 rounded-lg text-center">
+            <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#666666]">Total Issued</div>
+            <div className="text-xl font-bold font-mono text-[#111111] mt-1">{stats.total}</div>
           </div>
-
-          <div style={{ background: cardGrad(isDark), border: `1px solid ${tk.cardBorder}`, borderRadius: 12, padding: 16 }}>
-            <div style={{ fontSize: 12, color: tk.subText, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>Active Passes</span>
-              <CheckCircle2 className="w-4 h-4 text-teal-400" />
-            </div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: '#10b981', marginTop: 4 }}>{stats.active}</div>
-            <div style={{ fontSize: 11, color: tk.subText, marginTop: 2 }}>Valid access granted</div>
+          <div className="gov-card p-3 rounded-lg text-center">
+            <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#666666]">Active Passes</div>
+            <div className="text-xl font-bold font-mono text-[#00873E] mt-1">{stats.active}</div>
           </div>
-
-          <div style={{ background: cardGrad(isDark), border: `1px solid ${tk.cardBorder}`, borderRadius: 12, padding: 16 }}>
-            <div style={{ fontSize: 12, color: tk.subText, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>Expired Cards</span>
-              <AlertTriangle className="w-4 h-4 text-rose-400" />
-            </div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: stats.expired > 0 ? '#f43f5e' : tk.text, marginTop: 4 }}>
-              {stats.expired}
-            </div>
-            <div style={{ fontSize: 11, color: tk.subText, marginTop: 2 }}>Past validity date</div>
+          <div className="gov-card p-3 rounded-lg text-center">
+            <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#666666]">Expired Cards</div>
+            <div className="text-xl font-bold font-mono text-[#D9383A] mt-1">{stats.expired}</div>
           </div>
-
-          <div style={{ background: cardGrad(isDark), border: `1px solid ${tk.cardBorder}`, borderRadius: 12, padding: 16 }}>
-            <div style={{ fontSize: 12, color: tk.subText, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>Entrance Passes</span>
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            </div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: tk.text, marginTop: 4 }}>{stats.entrance}</div>
-            <div style={{ fontSize: 11, color: tk.subText, marginTop: 2 }}>Gate / Fee cleared</div>
+          <div className="gov-card p-3 rounded-lg text-center">
+            <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#666666]">Entrance Passes</div>
+            <div className="text-xl font-bold font-mono text-[#111111] mt-1">{stats.entrance}</div>
           </div>
-
-          <div style={{ background: cardGrad(isDark), border: `1px solid ${tk.cardBorder}`, borderRadius: 12, padding: 16 }}>
-            <div style={{ fontSize: 12, color: tk.subText, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>Exam Cards</span>
-              <Award className="w-4 h-4 text-indigo-400" />
-            </div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: tk.text, marginTop: 4 }}>{stats.exam}</div>
-            <div style={{ fontSize: 11, color: tk.subText, marginTop: 2 }}>Exam room entry</div>
+          <div className="gov-card p-3 rounded-lg text-center">
+            <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#666666]">Exam Cards</div>
+            <div className="text-xl font-bold font-mono text-[#111111] mt-1">{stats.exam}</div>
           </div>
-
-          <div style={{ background: cardGrad(isDark), border: `1px solid ${tk.cardBorder}`, borderRadius: 12, padding: 16 }}>
-            <div style={{ fontSize: 12, color: tk.subText, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>Meal Cards</span>
-              <Utensils className="w-4 h-4 text-amber-400" />
-            </div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: tk.text, marginTop: 4 }}>{stats.meal}</div>
-            <div style={{ fontSize: 11, color: tk.subText, marginTop: 2 }}>Dining hall access</div>
+          <div className="gov-card p-3 rounded-lg text-center">
+            <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#666666]">Meal Cards</div>
+            <div className="text-xl font-bold font-mono text-[#111111] mt-1">{stats.meal}</div>
           </div>
         </div>
 
-        {/* Toolbar & Filter Bar */}
-        <div
-          style={{
-            background: cardGrad(isDark),
-            border: `1px solid ${tk.cardBorder}`,
-            borderRadius: 12,
-            padding: '14px 18px',
-            marginBottom: 20,
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 12,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 260 }}>
-            <div style={{ position: 'relative', width: '100%', maxWidth: 360 }}>
-              <Search className="w-4 h-4" style={{ position: 'absolute', left: 12, top: 11, color: tk.subText }} />
+        {/* ── 3. CONTROL BAR ── */}
+        <div className="gov-control-bar justify-between">
+          <div className="gov-control-bar-left">
+            <div className="relative flex-1 sm:w-64">
+              <Search className="w-3.5 h-3.5 text-[#666666] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by student name or serial..."
-                style={{
-                  width: '100%',
-                  padding: '8px 12px 8px 36px',
-                  borderRadius: 8,
-                  background: isDark ? '#1e293b' : '#f8fafc',
-                  border: `1px solid ${tk.cardBorder}`,
-                  color: tk.text,
-                  fontSize: 13,
-                  boxSizing: 'border-box',
-                }}
+                placeholder="SEARCH STUDENT / CARD NO..."
+                className="gov-input pl-8 font-mono text-xs w-full"
               />
             </div>
 
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              style={{
-                padding: '8px 12px',
-                borderRadius: 8,
-                background: isDark ? '#1e293b' : '#f8fafc',
-                border: `1px solid ${tk.cardBorder}`,
-                color: tk.text,
-                fontSize: 13,
-                cursor: 'pointer',
-              }}
+              className="gov-select w-auto text-xs font-mono uppercase"
             >
-              <option value="all">All Card Types</option>
-              <option value="entrance">Entrance Passes (Gate)</option>
-              <option value="examination">Examination Cards</option>
-              <option value="meal">Meal Cards</option>
-              <option value="library">Library Passes</option>
+              <option value="all">ALL CARD TYPES</option>
+              <option value="entrance">ENTRANCE PASSES</option>
+              <option value="examination">EXAMINATION CARDS</option>
+              <option value="meal">MEAL CARDS</option>
+              <option value="library">LIBRARY PASSES</option>
             </select>
 
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              style={{
-                padding: '8px 12px',
-                borderRadius: 8,
-                background: isDark ? '#1e293b' : '#f8fafc',
-                border: `1px solid ${tk.cardBorder}`,
-                color: tk.text,
-                fontSize: 13,
-                cursor: 'pointer',
-              }}
+              className="gov-select w-auto text-xs font-mono uppercase"
             >
-              <option value="all">All Statuses</option>
-              <option value="active">Active (Valid)</option>
-              <option value="expired">Expired</option>
-              <option value="revoked">Revoked</option>
+              <option value="all">ALL STATUSES</option>
+              <option value="active">ACTIVE</option>
+              <option value="expired">EXPIRED</option>
+              <option value="revoked">REVOKED</option>
             </select>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="gov-control-bar-right">
             <button
               type="button"
               onClick={loadCards}
-              style={{
-                padding: '8px 12px',
-                borderRadius: 8,
-                background: 'transparent',
-                border: `1px solid ${tk.cardBorder}`,
-                color: tk.subText,
-                fontSize: 13,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                cursor: 'pointer',
-              }}
+              disabled={loading}
+              className="gov-btn gov-btn-sm"
+              title="Refresh card records"
             >
-              <RefreshCw className="w-4 h-4" />
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
               <span>Refresh</span>
             </button>
           </div>
         </div>
 
-        {/* Cards Table */}
-        <div
-          style={{
-            background: cardGrad(isDark),
-            border: `1px solid ${tk.cardBorder}`,
-            borderRadius: 14,
-            overflow: 'hidden',
-          }}
-        >
-          {loading ? (
-            <div style={{ padding: 48, textAlign: 'center', color: tk.subText }}>Loading cards...</div>
-          ) : filteredCards.length === 0 ? (
-            <div style={{ padding: 48, textAlign: 'center' }}>
-              <CreditCard className="w-12 h-12 text-slate-400" style={{ margin: '0 auto 12px' }} />
-              <h3 style={{ margin: 0, fontSize: 16, color: tk.text }}>No service access cards found</h3>
-              <p style={{ margin: '6px 0 16px', fontSize: 13, color: tk.subText }}>
-                Create entrance passes, examination cards, or meal cards to get started.
-              </p>
-              <button
-                type="button"
-                onClick={() => setShowIssueModal(true)}
-                style={{
-                  background: '#10b981',
-                  color: '#ffffff',
-                  border: 'none',
-                  padding: '8px 16px',
-                  borderRadius: 8,
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Issue First Batch
-              </button>
-            </div>
-          ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
-              <thead>
-                <tr style={{ background: isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc', borderBottom: `1px solid ${tk.cardBorder}` }}>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, color: tk.subText }}>Card Number</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, color: tk.subText }}>Student</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, color: tk.subText }}>Class</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, color: tk.subText }}>Card Type & Title</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, color: tk.subText }}>Fee Clearance</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, color: tk.subText }}>Validity / Expiry</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, color: tk.subText }}>Status</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, color: tk.subText, textAlign: 'right' }}>Actions</th>
+        {/* ── 4. HIGH-DENSITY DATA TABLE ── */}
+        <div className="gov-table-container">
+          <table className="gov-table">
+            <thead>
+              <tr>
+                <th>Card Serial</th>
+                <th>Student Name</th>
+                <th>Class / Cohort</th>
+                <th>Card Type</th>
+                <th>Fee Status</th>
+                <th>Valid Until</th>
+                <th>Status</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className="py-8 text-center text-[#666666] font-mono text-xs">
+                    LOADING CARDS...
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {filteredCards.map((c) => {
+              ) : filteredCards.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-8 text-center text-[#666666] font-mono text-xs">
+                    NO ACCESS CARDS FOUND
+                  </td>
+                </tr>
+              ) : (
+                filteredCards.map((c) => {
                   const isExp = new Date(c.expiry_date) < new Date();
                   const effectiveStatus = c.status === 'revoked' ? 'revoked' : isExp ? 'expired' : 'active';
 
                   return (
-                    <tr
-                      key={c.id}
-                      style={{
-                        borderBottom: `1px solid ${tk.cardBorder}`,
-                        transition: 'background 0.1s',
-                      }}
-                    >
-                      <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontWeight: 700, color: '#10b981' }}>
+                    <tr key={c.id} className="hover:bg-[#F9F9FB] transition-colors">
+                      <td className="font-mono font-bold text-xs text-[#111111]">
                         {c.card_number}
                       </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <div style={{ fontWeight: 600, color: tk.text }}>{c.student?.name || 'Student'}</div>
-                        <div style={{ fontSize: 11, color: tk.subText }}>{c.student?.admission_number || '—'}</div>
+                      <td>
+                        <div className="font-bold text-[#111111]">{c.student?.name || 'Student'}</div>
+                        <div className="font-mono text-[11px] text-[#555555]">{c.student?.admission_number || '—'}</div>
                       </td>
-                      <td style={{ padding: '12px 16px', color: tk.text }}>
+                      <td className="font-mono text-xs text-[#555555]">
                         {c.student?.current_class || '—'} {c.student?.stream ? `(${c.student.stream})` : ''}
                       </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          {c.card_type === 'entrance' ? (
-                            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                          ) : c.card_type === 'examination' ? (
-                            <Award className="w-4 h-4 text-indigo-400" />
-                          ) : (
-                            <Utensils className="w-4 h-4 text-amber-400" />
-                          )}
-                          <span style={{ fontWeight: 600, color: tk.text }}>{c.title}</span>
+                      <td>
+                        <div className="font-semibold text-xs text-[#111111]">
+                          {c.title}
                         </div>
                       </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <span
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 700,
-                            padding: '2px 8px',
-                            borderRadius: 6,
-                            background: c.fee_percentage_at_issuance >= 100 ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
-                            color: c.fee_percentage_at_issuance >= 100 ? '#10b981' : '#f59e0b',
-                          }}
-                        >
-                          {c.fee_percentage_at_issuance}% Paid
-                          {c.min_fee_percent_required > 0 ? ` (≥${c.min_fee_percent_required}%)` : ''}
+                      <td>
+                        <span className={`gov-tag ${c.fee_percentage_at_issuance >= 100 ? 'gov-tag-approved' : 'gov-tag-warned'}`}>
+                          {c.fee_percentage_at_issuance}% PAID
                         </span>
                       </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <div style={{ fontSize: 12, color: isExp ? '#f43f5e' : tk.text, fontWeight: isExp ? 700 : 500 }}>
-                          {new Date(c.expiry_date).toLocaleDateString()} {new Date(c.expiry_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </div>
+                      <td className="font-mono text-xs text-[#555555]">
+                        {new Date(c.expiry_date).toLocaleDateString()}
                       </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <span
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 700,
-                            padding: '3px 8px',
-                            borderRadius: 6,
-                            textTransform: 'uppercase',
-                            background:
-                              effectiveStatus === 'active'
-                                ? 'rgba(16, 185, 129, 0.15)'
-                                : effectiveStatus === 'expired'
-                                ? 'rgba(244, 63, 94, 0.15)'
-                                : 'rgba(148, 163, 184, 0.15)',
-                            color:
-                              effectiveStatus === 'active'
-                                ? '#10b981'
-                                : effectiveStatus === 'expired'
-                                ? '#f43f5e'
-                                : tk.subText,
-                          }}
-                        >
-                          {effectiveStatus}
-                        </span>
+                      <td>
+                        {effectiveStatus === 'active' ? (
+                          <span className="gov-tag gov-tag-approved">ACTIVE</span>
+                        ) : effectiveStatus === 'expired' ? (
+                          <span className="gov-tag gov-tag-rejected">EXPIRED</span>
+                        ) : (
+                          <span className="gov-tag">REVOKED</span>
+                        )}
                       </td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+                      <td style={{ textAlign: 'right' }} className="whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5">
                           <button
                             type="button"
                             onClick={() => setPreviewCard(c)}
-                            title="View / Print Card"
-                            style={{
-                              background: 'transparent',
-                              border: `1px solid ${tk.cardBorder}`,
-                              color: tk.text,
-                              padding: '5px 8px',
-                              borderRadius: 6,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 4,
-                              fontSize: 12,
-                            }}
+                            className="gov-btn gov-btn-sm"
+                            title="Preview card"
                           >
-                            <QrCode className="w-3.5 h-3.5 text-emerald-400" />
-                            <span>Preview</span>
+                            <QrCode className="w-3 h-3" />
+                            <span>Card</span>
                           </button>
-
                           <button
                             type="button"
                             onClick={() => {
                               setExtendExpiryCard(c);
                               setNewExpiryInput(new Date(c.expiry_date).toISOString().slice(0, 16));
                             }}
-                            title="Extend Expiry"
-                            style={{
-                              background: 'transparent',
-                              border: `1px solid ${tk.cardBorder}`,
-                              color: tk.text,
-                              padding: '5px 8px',
-                              borderRadius: 6,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 4,
-                              fontSize: 12,
-                            }}
+                            className="gov-btn gov-btn-sm"
+                            title="Extend validity"
                           >
-                            <Clock className="w-3.5 h-3.5 text-amber-400" />
+                            <Clock className="w-3 h-3 text-amber-600" />
                             <span>Extend</span>
                           </button>
-
                           {effectiveStatus !== 'revoked' && (
                             <button
                               type="button"
                               onClick={() => handleRevoke(c)}
-                              title="Revoke Card"
-                              style={{
-                                background: 'transparent',
-                                border: '1px solid rgba(244, 63, 94, 0.3)',
-                                color: '#f43f5e',
-                                padding: '5px 8px',
-                                borderRadius: 6,
-                                cursor: 'pointer',
-                                fontSize: 12,
-                              }}
+                              className="gov-btn gov-btn-sm"
+                              title="Revoke access"
                             >
-                              Revoke
+                              <X className="w-3 h-3 text-rose-600" />
+                              <span>Revoke</span>
                             </button>
                           )}
                         </div>
                       </td>
                     </tr>
                   );
-                })}
-              </tbody>
-            </table>
-          )}
+                })
+              )}
+            </tbody>
+          </table>
         </div>
+      </div>
 
         {/* BATCH ISSUANCE MODAL */}
         <NativeModal
@@ -1098,7 +878,6 @@ export default function StudentCardsPage() {
             </div>
           )}
         </NativeModal>
-      </div>
     </AdminPageWrapper>
   );
 }

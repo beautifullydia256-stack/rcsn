@@ -4,9 +4,6 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
-import { useUIStore } from '@/store/uiStore';
-import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
-import PosEmptyState from '@/components/finance/pos/PosEmptyState';
 import { resolveCurrentSchoolTerm } from '@/lib/adminFinanceTerm';
 import { PRIMARY_GRADE_SCALE } from '@/lib/reportUtils';
 import { useAcademicPeriod, isTertiarySchool } from '@/lib/academicPeriodTerminology';
@@ -18,13 +15,13 @@ import {
   ChevronRight,
   Download,
   FileSpreadsheet,
-  Layers,
-  Sparkles,
   Users,
   AlertCircle,
-  FileText,
+  RefreshCw,
+  Search,
 } from 'lucide-react';
-import { getTokens, cardGrad, SORA, INTER } from '@/styles/posThemeTokens';
+import { GovPageLoader, GovRollingBox, GovTableLoader } from '@/components/ui/GovLoadingIndicator';
+import '@/styles/government-system.css';
 
 // ─── Grade helpers ────────────────────────────────────────────────────────────
 
@@ -275,30 +272,30 @@ function downloadPDF(
   className: string,
   schoolName: string,
   periodLabel: string,
-  assessmentLabel: string,
 ) {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const isALevel = isALevelClass(className);
 
-  doc.setFontSize(16);
+  doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.text(schoolName.toUpperCase(), 14, 15);
 
-  doc.setFontSize(11);
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.text(
-    `${className.toUpperCase()} — ${examSet.name.toUpperCase()} (${periodLabel})`,
+    `OFFICIAL RESULTS BROADSHEET: ${className.toUpperCase()} — ${examSet.name.toUpperCase()} (${periodLabel})`,
     14,
     22,
   );
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setTextColor(100);
-  doc.text(`Generated: ${new Date().toLocaleDateString('en-GB')}`, 14, 27);
+  doc.text(`Generated: ${new Date().toLocaleString('en-UG')}`, 14, 27);
   doc.setTextColor(0);
 
   const headRow = [
-    '#',
-    'Student Name',
+    'Rank',
+    'Candidate Name',
+    'Reg / Admin No',
     ...subjects,
     'Agg',
     ...(isALevel ? [] : ['Div']),
@@ -307,6 +304,7 @@ function downloadPDF(
   const bodyRows = rows.map((r) => [
     r.rank != null ? String(r.rank) : '—',
     r.name,
+    r.admissionNumber ?? '—',
     ...subjects.map((s) => r.subjects[s]?.grade ?? '—'),
     r.aggregate != null ? String(r.aggregate) : '—',
     ...(isALevel ? [] : [r.division]),
@@ -318,7 +316,7 @@ function downloadPDF(
     body: bodyRows,
     theme: 'grid',
     styles: { fontSize: 8, cellPadding: 2 },
-    headStyles: { fillColor: [46, 111, 216], textColor: 255, fontStyle: 'bold' },
+    headStyles: { fillColor: [17, 17, 17], textColor: 255, fontStyle: 'bold' },
     alternateRowStyles: { fillColor: [248, 249, 250] },
     didParseCell: (data) => {
       if (data.section === 'body') {
@@ -326,21 +324,18 @@ function downloadPDF(
           data.cell.styles.halign = 'center';
           data.cell.styles.fontStyle = 'bold';
         }
-        if (data.column.index >= 2) {
+        if (data.column.index >= 3) {
           data.cell.styles.halign = 'center';
         }
       }
     },
   });
 
-  doc.save(`${schoolName} - ${className} - ${examSet.name} - ${periodLabel}.pdf`);
+  doc.save(`${schoolName}-${className}-${examSet.name}-Broadsheet.pdf`);
 }
 
 export default function ExamSetResultsPage() {
   const user = useAuthStore((s) => s.user);
-  const theme = useUIStore((s) => s.theme);
-  const isDark = theme === 'dark';
-  const t = getTokens(isDark);
   const { labels, formatPeriod } = useAcademicPeriod();
 
   const [selectedClass, setSelectedClass] = useState('');
@@ -357,7 +352,6 @@ export default function ExamSetResultsPage() {
     staleTime: 10 * 60 * 1000,
   });
 
-  // Dynamic class resolution prioritizing actual school streams and active student classes
   const { data: classOptions = [] } = useQuery({
     queryKey: ['assessment-classes', school?.school_id, school?.type],
     queryFn: async () => {
@@ -377,11 +371,7 @@ export default function ExamSetResultsPage() {
         .filter(Boolean)
         .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
 
-      // If the school has actual configured class streams or active students, use strictly those classes.
-      // Do NOT contaminate real classes with generic fallback presets.
-      if (realClasses.length > 0) {
-        return realClasses;
-      }
+      if (realClasses.length > 0) return realClasses;
       return classesForSchoolType(school.type ?? null);
     },
     enabled: !!school?.school_id,
@@ -409,13 +399,17 @@ export default function ExamSetResultsPage() {
     ];
   }, [rawExamSets, isTertiary]);
 
-  // Reset exam set when class changes
   useEffect(() => {
-    setSelectedExamSetId('');
-    setResultRows([]);
-    setSubjects([]);
-    setError(null);
-  }, [selectedClass]);
+    if (classOptions.length > 0 && !selectedClass) {
+      setSelectedClass(classOptions[0]);
+    }
+  }, [classOptions, selectedClass]);
+
+  useEffect(() => {
+    if (examSets.length > 0 && !selectedExamSetId) {
+      setSelectedExamSetId(examSets[0].id);
+    }
+  }, [examSets, selectedExamSetId]);
 
   const selectedExamSet = examSets.find((e) => e.id === selectedExamSetId);
 
@@ -436,6 +430,12 @@ export default function ExamSetResultsPage() {
     }
   };
 
+  useEffect(() => {
+    if (selectedClass && selectedExamSetId && school?.school_id) {
+      void loadResults();
+    }
+  }, [selectedClass, selectedExamSetId, school?.school_id]);
+
   const handleDownload = () => {
     if (!selectedExamSet || !school?.name) return;
     downloadPDF(
@@ -445,14 +445,11 @@ export default function ExamSetResultsPage() {
       selectedClass,
       school.name,
       formatPeriod(selectedExamSet.term, selectedExamSet.year, { includeYearComma: false }),
-      labels.periodAssessments === 'Exam Sets' ? 'Exam Set' : 'Assessment',
     );
   };
 
-  const canLoad = !!selectedClass && !!selectedExamSetId;
-  const canDownload = canLoad && resultRows.length > 0;
+  const canDownload = resultRows.length > 0;
 
-  // Aggregate stats
   const stats = useMemo(() => {
     const totalRanked = resultRows.filter((r) => r.rank !== null).length;
     const totalStudents = resultRows.length;
@@ -462,356 +459,215 @@ export default function ExamSetResultsPage() {
   }, [resultRows]);
 
   return (
-    <AdminPageWrapper
-      eyebrow={labels.periodAssessments}
-      title={`${labels.periodAssessments} Results & Ranking`}
-      subtitle={`Select a class cohort and ${labels.periodAssessments.toLowerCase()} series to generate ranked result ledgers and official print sheets.`}
-    >
-      <div className="w-full space-y-6">
-        {/* 4-Card Summary Strip */}
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
-          <div
-            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
-            style={{
-              background: cardGrad(t, 'blue'),
-              border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
-              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
-            }}
+    <div className="admin-terminal-page space-y-5">
+      {/* ── 1. TOP HEADER ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#CCCCCC] pb-4">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-[#111111] uppercase font-mono">
+            UHPAB &amp; SEMESTER ASSESSMENT RESULTS REGISTRY
+          </h1>
+          <p className="text-xs text-[#555555] font-mono tracking-wider uppercase mt-0.5">
+            CANDIDATE EXAMINATION PERFORMANCE, GRADES &amp; BROADSHEET LEDGER
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={loadResults}
+            disabled={loading}
+            className="gov-btn gov-btn-sm flex items-center gap-1.5"
+            title="Reload Results"
           >
-            <div className="flex items-center justify-between">
-              <span className={`text-xs font-medium uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
-                Ranked Learners
-              </span>
-              <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${isDark ? 'bg-blue-500/15 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>
-                <Users className="h-4 w-4" />
-              </div>
-            </div>
-            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
-              {stats.totalRanked} / {stats.totalStudents}
-            </p>
-            <p className={`mt-1 text-xs font-medium ${isDark ? 'text-blue-400/90' : 'text-blue-700'}`}>
-              Evaluated with valid scores
-            </p>
-          </div>
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span>SYNC</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleDownload}
+            disabled={!canDownload}
+            className="gov-btn gov-btn-primary gov-btn-sm flex items-center gap-1.5"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>EXPORT BROADSHEET PDF</span>
+          </button>
+        </div>
+      </div>
 
-          <div
-            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
-            style={{
-              background: cardGrad(t, 'emerald'),
-              border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
-              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <span className={`text-xs font-medium uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
-                Top Aggregate / GPA
-              </span>
-              <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${isDark ? 'bg-emerald-500/15 text-emerald-400' : 'bg-emerald-50 text-emerald-600'}`}>
-                <Award className="h-4 w-4" />
-              </div>
-            </div>
-            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
-              {stats.bestAgg}
-            </p>
-            <p className={`mt-1 text-xs font-medium ${isDark ? 'text-emerald-400/90' : 'text-emerald-700'}`}>
-              Leading rank performance
-            </p>
-          </div>
+      {/* Alert */}
+      {error && (
+        <div className="border border-rose-300 bg-rose-50 p-3 text-xs font-mono text-rose-800 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-rose-700 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
 
-          <div
-            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
-            style={{
-              background: cardGrad(t, 'purple'),
-              border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
-              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <span className={`text-xs font-medium uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
-                Division 1 / Honors
-              </span>
-              <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${isDark ? 'bg-purple-500/15 text-purple-400' : 'bg-purple-50 text-purple-600'}`}>
-                <CheckCircle2 className="h-4 w-4" />
-              </div>
-            </div>
-            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
-              {stats.div1Count}
-            </p>
-            <p className={`mt-1 text-xs font-medium ${isDark ? 'text-purple-400/90' : 'text-purple-700'}`}>
-              First-class standing learners
-            </p>
+      {/* ── 2. MONOCHROME KPI SUMMARY METRIC CARDS ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            RANKED CANDIDATES
           </div>
-
-          <div
-            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
-            style={{
-              background: cardGrad(t, 'amber'),
-              border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
-              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <span className={`text-xs font-medium uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
-                Subjects Graded
-              </span>
-              <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${isDark ? 'bg-amber-500/15 text-amber-400' : 'bg-amber-50 text-amber-600'}`}>
-                <BookOpen className="h-4 w-4" />
-              </div>
-            </div>
-            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
-              {subjects.length}
-            </p>
-            <p className={`mt-1 text-xs font-medium ${isDark ? 'text-amber-400/90' : 'text-amber-700'}`}>
-              Curriculum units tested
-            </p>
+          <div className="text-2xl font-bold font-mono text-[#111111] mt-1">
+            {stats.totalRanked} / {stats.totalStudents}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            EVALUATED WITH VALID MARKS
           </div>
         </div>
 
-        {/* Selection Toolbar */}
-        <div
-          className="rounded-2xl p-5 shadow-sm space-y-4"
-          style={{
-            backgroundColor: t.panel,
-            border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
-            boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
-          }}
-        >
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 items-end">
-            <div>
-              <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                Class / Cohort Level
-              </label>
-              <select
-                value={selectedClass}
-                onChange={(e) => setSelectedClass(e.target.value)}
-                className={`w-full rounded-xl border px-3 py-2 text-xs font-medium ${isDark ? 'text-slate-100' : 'text-slate-900'}`}
-                style={{ backgroundColor: t.fieldBg, borderColor: isDark ? t.stroke : '#cbd5e1' }}
-              >
-                <option value="">Select class cohort…</option>
-                {classOptions.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            TOP AGGREGATE / GPA
+          </div>
+          <div className="text-2xl font-bold font-mono text-emerald-700 mt-1">
+            {stats.bestAgg}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            HIGHEST COHORT RANK
+          </div>
+        </div>
 
-            <div>
-              <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                {labels.periodAssessments === 'Exam Sets' ? 'Exam Set' : 'Assessment Series'}
-              </label>
-              <select
-                value={selectedExamSetId}
-                onChange={(e) => setSelectedExamSetId(e.target.value)}
-                disabled={!selectedClass}
-                className={`w-full rounded-xl border px-3 py-2 text-xs font-medium disabled:opacity-50 ${isDark ? 'text-slate-100' : 'text-slate-900'}`}
-                style={{ backgroundColor: t.fieldBg, borderColor: isDark ? t.stroke : '#cbd5e1' }}
-              >
-                <option value="">
-                  Select {labels.periodAssessments === 'Exam Sets' ? 'exam set' : 'assessment'}…
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            HONORS / FIRST CLASS
+          </div>
+          <div className="text-2xl font-bold font-mono text-[#111111] mt-1">
+            {stats.div1Count}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            DISTINCTION CANDIDATES
+          </div>
+        </div>
+
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            CURRICULUM UNITS TESTED
+          </div>
+          <div className="text-2xl font-bold font-mono text-[#111111] mt-1">
+            {subjects.length}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            RECORDED PAPERS / MODULES
+          </div>
+        </div>
+      </div>
+
+      {/* ── 3. CONTROL BAR ── */}
+      <div className="gov-control-bar flex flex-wrap items-center justify-between gap-3 p-3 bg-white border border-[#CCCCCC]">
+        <div className="flex flex-wrap items-center gap-3">
+          <div>
+            <span className="text-[10px] font-mono uppercase tracking-wider text-[#555555] block mb-1">
+              Select Cohort / Stream:
+            </span>
+            <select
+              value={selectedClass}
+              onChange={(e) => setSelectedClass(e.target.value)}
+              className="gov-select text-xs font-mono"
+            >
+              <option value="">— Select Cohort —</option>
+              {classOptions.map((c) => (
+                <option key={c} value={c}>
+                  {c}
                 </option>
-                {examSets.map((es) => (
-                  <option key={es.id} value={es.id}>
-                    {es.name} — {formatPeriod(es.term, es.year, { includeYearComma: false })}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={!canLoad || loading}
-                onClick={loadResults}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-teal-600 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-500 disabled:opacity-50 transition shadow-sm"
-              >
-                {loading ? (
-                  <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                ) : (
-                  <FileSpreadsheet className="h-3.5 w-3.5" />
-                )}
-                {loading ? 'Compiling…' : 'Load Results'}
-              </button>
-
-              <button
-                type="button"
-                disabled={!canDownload}
-                onClick={handleDownload}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-emerald-900/20 hover:from-emerald-500 hover:to-teal-500 transition disabled:opacity-50"
-              >
-                <Download className="h-3.5 w-3.5" />
-                Download PDF
-              </button>
-            </div>
+              ))}
+            </select>
           </div>
 
-          {error && (
-            <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-200">
-              <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
+          <div>
+            <span className="text-[10px] font-mono uppercase tracking-wider text-[#555555] block mb-1">
+              Assessment Series:
+            </span>
+            <select
+              value={selectedExamSetId}
+              onChange={(e) => setSelectedExamSetId(e.target.value)}
+              className="gov-select text-xs font-mono"
+            >
+              <option value="">— Select Series —</option>
+              {examSets.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} ({formatPeriod(s.term, s.year, { short: true })})
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        {/* Results Register Table */}
-        {resultRows.length > 0 && selectedExamSet ? (
-          <div
-            className="rounded-2xl overflow-hidden shadow-sm"
-            style={{
-              backgroundColor: t.panel,
-              border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
-              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
-            }}
-          >
-            <div className={`border-b p-4 flex flex-wrap items-center justify-between gap-3 ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
-              <div>
-                <h3 className={`text-sm font-semibold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
-                  {selectedClass} · {selectedExamSet.name}
-                </h3>
-                <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                  {formatPeriod(selectedExamSet.term, selectedExamSet.year, { includeYearComma: false })} ·{' '}
-                  <strong className={isDark ? 'text-emerald-400' : 'text-emerald-600'}>{stats.totalRanked}</strong> ranked learners,{' '}
-                  <span className={isDark ? 'text-slate-500' : 'text-slate-500'}>{stats.totalStudents - stats.totalRanked} pending marks</span>
-                </p>
-              </div>
-            </div>
+        <div className="text-xs font-mono text-[#555555]">
+          AUDITED CANDIDATES: <span className="font-bold text-[#111111]">{resultRows.length}</span>
+        </div>
+      </div>
 
-            <div className="overflow-x-auto">
-              <table className={`w-full text-left text-xs ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-                <thead>
-                  <tr
-                    className={`border-b text-[11px] font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`}
-                    style={{
-                      backgroundColor: isDark ? t.fieldBg : '#f8fafc',
-                      borderColor: isDark ? t.stroke : '#e2e8f0',
-                    }}
-                  >
-                    <th className="py-3 px-3 text-center w-12"># Rank</th>
-                    <th className="py-3 px-4">Learner Name</th>
-                    {subjects.map((s) => (
-                      <th key={s} className="py-3 px-3 text-center whitespace-nowrap">
-                        {s}
-                      </th>
-                    ))}
-                    <th className="py-3 px-3 text-center font-bold">Aggregate</th>
-                    {!isALevelClass(selectedClass) && (
-                      <th className="py-3 px-3 text-center font-bold">Division</th>
-                    )}
-                  </tr>
-                </thead>
-                <tbody className={`divide-y ${isDark ? 'divide-white/5' : 'divide-slate-200'}`}>
-                  {resultRows.map((row) => (
-                    <tr
-                      key={row.studentId}
-                      className={`transition ${isDark ? 'hover:bg-white/[0.02]' : 'hover:bg-slate-50'} ${
-                        row.rank === null ? 'opacity-50' : ''
-                      }`}
-                    >
-                      <td className="py-3 px-3 text-center font-bold">
-                        {row.rank != null ? (
-                          <span
-                            className={`inline-flex h-6 w-6 items-center justify-center rounded-lg text-xs font-semibold ${
-                              row.rank === 1
-                                ? isDark
-                                  ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30'
-                                  : 'bg-amber-50 text-amber-800 font-bold border border-amber-300'
-                                : row.rank <= 3
-                                ? isDark
-                                  ? 'bg-emerald-500/20 text-emerald-300'
-                                  : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                                : isDark
-                                  ? 'text-slate-400'
-                                  : 'text-slate-600'
-                            }`}
-                          >
-                            {row.rank}
-                          </span>
-                        ) : (
-                          '—'
-                        )}
-                      </td>
-
-                      <td className={`py-3 px-4 font-semibold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
-                        {row.name}
-                        {row.admissionNumber && (
-                          <span className={`ml-2 font-mono text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                            ({row.admissionNumber})
-                          </span>
-                        )}
-                      </td>
-
-                      {subjects.map((s) => {
-                        const sub = row.subjects[s];
-                        return (
-                          <td key={s} className="py-3 px-3 text-center">
-                            {sub && sub.grade !== '—' ? (
-                              <span className={`rounded px-2 py-0.5 font-semibold ${isDark ? 'bg-white/5 text-slate-200' : 'bg-slate-100 text-slate-800 border border-slate-200'}`}>
-                                {sub.grade}
-                              </span>
-                            ) : (
-                              <span className={isDark ? 'text-slate-600' : 'text-slate-400'}>—</span>
-                            )}
-                          </td>
-                        );
-                      })}
-
-                      <td className={`py-3 px-3 text-center font-mono font-bold ${isDark ? 'text-teal-300' : 'text-teal-700'}`}>
-                        {row.aggregate ?? '—'}
-                      </td>
-
-                      {!isALevelClass(selectedClass) && (
-                        <td className="py-3 px-3 text-center">
-                          {row.division !== '—' ? (
-                            <span
-                              className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
-                                row.division === 'I'
-                                  ? isDark
-                                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                                    : 'bg-emerald-50 text-emerald-800 border border-emerald-300'
-                                  : row.division === 'II'
-                                  ? isDark
-                                    ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-                                    : 'bg-blue-50 text-blue-800 border border-blue-300'
-                                  : row.division === 'III'
-                                  ? isDark
-                                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                                    : 'bg-amber-50 text-amber-800 border border-amber-300'
-                                  : isDark
-                                    ? 'bg-red-500/20 text-red-300 border border-red-500/30'
-                                    : 'bg-red-50 text-red-800 border border-red-300'
-                              }`}
-                            >
-                              Div {row.division}
+      {/* ── 4. BROADSHEET DATA TABLE ── */}
+      <div className="gov-card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="gov-table w-full text-left">
+            <thead>
+              <tr>
+                <th className="w-12 text-center">RANK</th>
+                <th>CANDIDATE NAME</th>
+                <th>EXAM / NSIN NUMBER</th>
+                {subjects.map((sub) => (
+                  <th key={sub} className="text-center font-mono">
+                    {sub}
+                  </th>
+                ))}
+                <th className="text-center">AGGREGATE</th>
+                <th className="text-center">CLASS / DIV</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <GovTableLoader colSpan={5 + subjects.length} message="COMPUTING ACADEMIC RESULTS BROADSHEET..." />
+              ) : resultRows.length === 0 ? (
+                <tr>
+                  <td colSpan={5 + subjects.length} className="text-center py-12 text-xs font-mono text-[#777777]">
+                    NO EXAMINATION RESULTS ENTERED FOR THIS COHORT AND ASSESSMENT SERIES
+                  </td>
+                </tr>
+              ) : (
+                resultRows.map((r) => (
+                  <tr key={r.studentId} className="hover:bg-[#F9FAFB] transition-colors">
+                    <td className="text-center font-mono text-xs font-bold text-[#111111]">
+                      {r.rank != null ? `#${r.rank}` : '—'}
+                    </td>
+                    <td className="font-bold text-xs text-[#111111] whitespace-nowrap">
+                      {r.name}
+                    </td>
+                    <td className="font-mono text-xs text-[#555555] whitespace-nowrap">
+                      {r.admissionNumber || '—'}
+                    </td>
+                    {subjects.map((sub) => {
+                      const item = r.subjects[sub];
+                      return (
+                        <td key={sub} className="text-center font-mono text-xs whitespace-nowrap">
+                          {item ? (
+                            <span>
+                              <span className="font-bold text-[#111111]">{item.grade}</span>
+                              {item.marks != null && (
+                                <span className="text-[10px] text-[#777777] ml-1">({item.marks})</span>
+                              )}
                             </span>
                           ) : (
-                            <span className={isDark ? 'text-slate-600' : 'text-slate-400'}>—</span>
+                            <span className="text-[#CCCCCC]">—</span>
                           )}
                         </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        ) : !loading && canLoad ? (
-          <div
-            className="rounded-2xl p-8"
-            style={{
-              backgroundColor: t.panel,
-              border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
-              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
-            }}
-          >
-            <PosEmptyState
-              icon={<Award className="w-8 h-8 text-teal-400" />}
-              title="No Results Recorded"
-              description={`No marks found for ${selectedClass} in this ${labels.periodAssessments.toLowerCase()}. Teachers can input marks via the Teacher Portal.`}
-              accentColor="mint"
-            />
-          </div>
-        ) : null}
+                      );
+                    })}
+                    <td className="text-center font-mono text-xs font-bold text-[#111111]">
+                      {r.aggregate != null ? r.aggregate : '—'}
+                    </td>
+                    <td className="text-center">
+                      <span className="font-mono text-xs font-bold px-1.5 py-0.5 border border-[#CCCCCC] bg-[#F1F3F5] text-[#111111]">
+                        {r.division}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </AdminPageWrapper>
+    </div>
   );
 }

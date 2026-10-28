@@ -6,6 +6,7 @@ import { registerApiUrl } from '@/lib/registerApiOrigin';
 import { useAuthStore } from '@/store/authStore';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
 import { useSchoolType } from '@/hooks/useSchoolType';
+import { GovTableLoader } from '@/components/ui/GovLoadingIndicator';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -112,15 +113,7 @@ export default function TeachersPage() {
             </thead>
             <tbody>
               {loading ? (
-                Array.from({ length: 8 }).map((_, i) => (
-                  <tr key={`skeleton-${i}`} className="border-b border-[var(--ac-border)]">
-                    <td className="px-4 py-3"><div className="h-5 w-32 rounded ac-skeleton-block animate-pulse" /></td>
-                    <td className="px-4 py-3"><div className="h-5 w-24 rounded ac-skeleton-block animate-pulse" /></td>
-                    <td className="px-4 py-3"><div className="h-5 w-40 rounded ac-skeleton-block animate-pulse" /></td>
-                    <td className="px-4 py-3"><div className="h-5 w-24 rounded ac-skeleton-block animate-pulse" /></td>
-                    <td className="px-4 py-3"><div className="h-7 w-20 rounded ac-skeleton-block animate-pulse" /></td>
-                  </tr>
-                ))
+                <GovTableLoader colSpan={5} />
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={5} className="px-4 py-6 text-center ac-text-muted">No {isTertiary ? 'tutors' : 'teachers'} found.</td></tr>
               ) : (

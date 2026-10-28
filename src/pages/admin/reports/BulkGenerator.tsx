@@ -4,8 +4,10 @@ import { useAuthStore } from '../../../store/authStore';
 import { supabase } from '../../../lib/supabase';
 import { getFunctionInvokeErrorDetail } from '../../../lib/supabaseFunctionInvokeError';
 import { useSnapshot } from '../../../hooks/useSnapshot';
-import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
-import { Play, CheckCircle, XCircle, Loader } from 'lucide-react';
+import AdminPageWrapper from '../../../components/layout/AdminPageWrapper';
+import { Play, CheckCircle, XCircle, ArrowLeft, RefreshCw, FileText } from 'lucide-react';
+import { GovPageLoader, GovRollingBox } from '@/components/ui/GovLoadingIndicator';
+import '@/styles/government-system.css';
 
 export default function BulkGenerator() {
   const [searchParams] = useSearchParams();
@@ -151,200 +153,310 @@ export default function BulkGenerator() {
 
   if (snapshotLoading) {
     return (
-      <AdminPageWrapper title="Bulk Report Generation">
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-2 border-white/30 border-t-white"></div>
-        </div>
-      </AdminPageWrapper>
+      <div className="admin-terminal-page space-y-5 p-4">
+        <GovPageLoader message="LOADING REPORT SNAPSHOT SPECIFICATION & METADATA..." minHeight="min-h-[40vh]" />
+      </div>
     );
   }
 
   if (!snapshot) {
     return (
-      <AdminPageWrapper title="Bulk Report Generation">
-        <div className={`${adminCardClass} text-center py-8`}>
-          <p className="text-white/85">No snapshot selected. Please select a snapshot from Snapshots first.</p>
+      <div className="admin-terminal-page space-y-5 p-4">
+        <div className="gov-card p-8 text-center space-y-3">
+          <p className="font-mono text-sm uppercase text-[#111111] font-bold">NO VALID SNAPSHOT SPECIFIED</p>
+          <p className="font-mono text-xs text-[#555555]">
+            Please select an active academic snapshot from the Snapshot Registry before initializing batch generation.
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard/admin/reports/generate')}
+            className="gov-btn gov-btn-secondary gov-btn-sm font-mono mt-2"
+          >
+            RETURN TO REPORT GENERATOR
+          </button>
         </div>
-      </AdminPageWrapper>
+      </div>
     );
   }
 
   // When auto=1 (from Student Report Generator): show only "Generating reports..." then redirect to viewer
   if (autoRun) {
     return (
-      <AdminPageWrapper title="Generating reports">
-        <div className={`${adminCardClass} text-center py-12 space-y-6`}>
+      <div className="admin-terminal-page space-y-5 p-4">
+        <div className="border-b border-[#CCCCCC] pb-4">
+          <h1 className="text-xl font-bold tracking-tight text-[#111111] uppercase font-mono">
+            AUTOMATED BATCH GENERATION DISPATCH
+          </h1>
+          <p className="text-xs text-[#555555] font-mono tracking-wider uppercase mt-0.5">
+            REPUBLIC OF UGANDA • RAKAI COMMUNITY SCHOOL OF NURSING
+          </p>
+        </div>
+
+        <div className="gov-card p-8 text-center space-y-4">
           {status === 'generating' && (
             <>
-              <div className="flex justify-center">
-                <Loader className="w-12 h-12 animate-spin text-blue-400" />
+              <div className="flex justify-center py-2">
+                <GovRollingBox size="md" />
               </div>
-              <p className="text-white font-medium">Generating reports...</p>
-              <div className="w-full max-w-xs mx-auto bg-white/20 rounded-full h-2">
+              <p className="font-mono text-sm font-bold text-[#111111] uppercase">
+                PROCESSING BATCH REPORT GENERATION...
+              </p>
+              <div className="w-full max-w-md mx-auto bg-[#E5E7EB] h-2.5 border border-[#CCCCCC]">
                 <div
-                  className="bg-blue-500 h-2 rounded-full transition-all"
+                  className="bg-[#111111] h-full transition-all duration-300"
                   style={{
                     width: `${progress.total > 0 ? (progress.current / progress.total) * 100 : 0}%`,
                   }}
                 />
               </div>
-              <p className="text-sm text-white/70">{progress.current} / {progress.total} students</p>
+              <p className="text-xs font-mono text-[#555555]">
+                {progress.current} / {progress.total} CANDIDATES COMPILED
+              </p>
             </>
           )}
+
           {status === 'error' && (
             <>
-              <XCircle className="w-12 h-12 text-red-400 mx-auto" />
-              <p className="text-red-400">{error}</p>
+              <div className="flex justify-center py-2 text-rose-600">
+                <XCircle className="w-8 h-8" />
+              </div>
+              <p className="font-mono text-xs font-bold text-rose-700 uppercase">{error}</p>
               <button
                 type="button"
                 onClick={() => navigate('/dashboard/admin/reports/generate')}
-                className="rounded-lg bg-white/10 border border-white/20 px-4 py-2 text-white hover:bg-white/15"
+                className="gov-btn gov-btn-secondary gov-btn-sm font-mono"
               >
-                Back to Report Generator
+                BACK TO REPORT GENERATOR
               </button>
             </>
           )}
+
           {status === 'idle' && snapshot?.status === 'locked' && (
             <>
-              <div className="flex justify-center">
-                <Loader className="w-12 h-12 animate-spin text-blue-400" />
+              <div className="flex justify-center py-2">
+                <GovRollingBox size="sm" />
               </div>
-              <p className="text-white font-medium">Preparing...</p>
+              <p className="font-mono text-xs text-[#555555] uppercase">INITIALIZING BATCH ENGINE WORKERS...</p>
             </>
           )}
         </div>
-      </AdminPageWrapper>
+      </div>
     );
   }
 
   return (
-    <AdminPageWrapper title="Bulk Report Generation">
-      <div className={`${adminCardClass} space-y-4`}>
-        <h2 className="text-lg font-semibold text-white">Snapshot: Term {snapshot.term} {snapshot.year}</h2>
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-white/70">Status:</span>
-          <span className={`font-semibold ${
-            snapshot.status === 'locked' ? 'text-blue-400' :
-            snapshot.status === 'generated' ? 'text-green-400' :
-            'text-yellow-400'
+    <div className="admin-terminal-page space-y-5 p-4">
+      {/* ── 1. TOP HEADER ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#CCCCCC] pb-4">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-[#111111] uppercase font-mono">
+            INSTITUTIONAL BATCH RESULT SLIP & TRANSCRIPT ENGINE
+          </h1>
+          <p className="text-xs text-[#555555] font-mono tracking-wider uppercase mt-0.5">
+            EXAMINATION RECORD SNAPSHOT PROCESSOR • REPUBLIC OF UGANDA
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate('/dashboard/admin/reports/generate')}
+          className="gov-btn gov-btn-secondary gov-btn-sm flex items-center gap-1.5"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>BACK TO DESK</span>
+        </button>
+      </div>
+
+      {/* ── 2. MONOCHROME KPI SUMMARY METRIC CARDS ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            ACADEMIC CYCLE
+          </div>
+          <div className="text-xl font-bold font-mono text-[#111111] mt-1">
+            TERM {snapshot.term} {snapshot.year}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            TARGET REGISTRATION
+          </div>
+        </div>
+
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            CANDIDATE COHORT
+          </div>
+          <div className="text-xl font-bold font-mono text-[#111111] mt-1">
+            {snapshot.student_count || 0}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            STUDENTS IN SNAPSHOT
+          </div>
+        </div>
+
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            SNAPSHOT STATUS
+          </div>
+          <div className={`text-xl font-bold font-mono mt-1 ${
+            snapshot.status === 'locked' ? 'text-emerald-700' :
+            snapshot.status === 'generated' ? 'text-blue-700' :
+            'text-amber-700'
           }`}>
             {snapshot.status.toUpperCase()}
-          </span>
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            {snapshot.status === 'locked' ? 'READY FOR BATCH RUN' : 'ACTION REQUIRED'}
+          </div>
         </div>
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-white/70">Students:</span>
-          <span className="font-semibold text-white">{snapshot.student_count || 0}</span>
+
+        <div className="gov-card p-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#555555]">
+            ENGINE STATE
+          </div>
+          <div className="text-xl font-bold font-mono text-[#111111] mt-1 uppercase">
+            {status}
+          </div>
+          <div className="text-[10px] font-mono text-[#777777] mt-1 uppercase">
+            {progress.current} / {progress.total} COMPILED
+          </div>
         </div>
       </div>
 
       {error && (
-        <div className={`${adminCardClass} p-4 border-red-500/50`}>
-          <p className="text-red-400">{error}</p>
+        <div className="gov-card p-3 border-l-4 border-l-rose-600 bg-rose-50 flex items-center gap-2">
+          <XCircle className="w-4 h-4 text-rose-700 shrink-0" />
+          <p className="text-xs font-mono text-rose-800 uppercase font-semibold">{error}</p>
         </div>
       )}
 
       {snapshot.status !== 'locked' && (
-        <div className={`${adminCardClass} p-4 border-yellow-500/50`}>
-          <p className="text-yellow-400">Snapshot must be locked before generating reports. Please lock the snapshot first.</p>
+        <div className="gov-card p-3 border-l-4 border-l-amber-500 bg-amber-50 flex items-center gap-2">
+          <p className="text-xs font-mono text-amber-900 uppercase">
+            CRITICAL NOTICE: Snapshot must be officially locked before batch processing to guarantee data integrity.
+          </p>
         </div>
       )}
 
       {snapshot.status === 'locked' && (
-        <>
-          <div className={`${adminCardClass} space-y-4`}>
-            <h2 className="text-lg font-semibold text-white">Template Selection</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Template Configuration */}
+          <div className="gov-card p-4 space-y-3">
+            <h2 className="text-xs font-bold font-mono uppercase text-[#111111] border-b border-[#E5E7EB] pb-2">
+              1. OFFICIAL DOCUMENT TEMPLATE
+            </h2>
             <div>
-              <label className="block text-sm font-medium text-white/85 mb-2">Select Template</label>
+              <label className="block text-xs font-mono uppercase text-[#555555] mb-1.5">
+                SELECT TEMPLATE SCHEME
+              </label>
               <select
                 value={selectedTemplate}
                 onChange={(e) => setSelectedTemplate(e.target.value)}
-                className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="gov-input w-full text-xs font-mono"
                 disabled={generating}
               >
-                <option value="">-- Use Default Template --</option>
+                <option value="">-- USE STANDARD GOVERNMENT TEMPLATE --</option>
                 {templates.map((t) => (
                   <option key={t.id} value={t.id}>
-                    {t.name} {t.is_default ? '(Default)' : ''}
+                    {t.name} {t.is_default ? '(OFFICIAL DEFAULT)' : ''}
                   </option>
                 ))}
               </select>
             </div>
           </div>
 
-          <div className={`${adminCardClass} space-y-3`}>
-            <h2 className="text-lg font-semibold text-white">Class Selection (Optional)</h2>
-            <div className="space-y-2">
-              {classes.map((className) => (
-                <label key={className} className="flex items-center gap-2 text-white/85">
-                  <input
-                    type="checkbox"
-                    checked={selectedClasses.includes(className)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedClasses([...selectedClasses, className]);
-                      } else {
-                        setSelectedClasses(selectedClasses.filter((c) => c !== className));
-                      }
-                    }}
-                    disabled={generating}
-                    className="rounded border-white/30 text-blue-500"
-                  />
-                  <span>{className}</span>
-                </label>
-              ))}
+          {/* Class Cohorts */}
+          <div className="gov-card p-4 space-y-3">
+            <h2 className="text-xs font-bold font-mono uppercase text-[#111111] border-b border-[#E5E7EB] pb-2">
+              2. COHORT FILTER SELECTION (OPTIONAL)
+            </h2>
+            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+              {classes.length === 0 ? (
+                <p className="text-xs font-mono text-[#777777] italic">All enrolled classes will be processed.</p>
+              ) : (
+                classes.map((className) => (
+                  <label key={className} className="flex items-center gap-2 text-xs font-mono text-[#111111] cursor-pointer hover:bg-[#F9F9FB] p-1 border border-transparent hover:border-[#CCCCCC]">
+                    <input
+                      type="checkbox"
+                      checked={selectedClasses.includes(className)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedClasses([...selectedClasses, className]);
+                        } else {
+                          setSelectedClasses(selectedClasses.filter((c) => c !== className));
+                        }
+                      }}
+                      disabled={generating}
+                      className="rounded-none border-[#000000] text-[#111111] focus:ring-0"
+                    />
+                    <span>{className}</span>
+                  </label>
+                ))
+              )}
             </div>
           </div>
+        </div>
+      )}
 
-          <div className={`${adminCardClass} space-y-4`}>
-            {status === 'generating' && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-white/85">
-                  <Loader className="w-5 h-5 animate-spin" />
-                  <span>Generating reports...</span>
-                </div>
-                <div className="w-full bg-white/20 rounded-full h-2">
-                  <div
-                    className="bg-blue-500 h-2 rounded-full transition-all"
-                    style={{
-                      width: `${progress.total > 0 ? (progress.current / progress.total) * 100 : 0}%`,
-                    }}
-                  />
-                </div>
-                <p className="text-sm text-white/70">
-                  {progress.current} / {progress.total} students
-                </p>
+      {/* Execution Panel */}
+      {snapshot.status === 'locked' && (
+        <div className="gov-card p-4 space-y-4">
+          {status === 'generating' && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-xs font-mono text-[#111111]">
+                <GovRollingBox size="sm" />
+                <span className="font-bold uppercase">BATCH GENERATION IN PROGRESS...</span>
               </div>
-            )}
-
-            {status === 'completed' && (
-              <div className="flex items-center gap-2 text-green-400">
-                <CheckCircle className="w-5 h-5" />
-                <span>Reports generated successfully!</span>
+              <div className="w-full bg-[#E5E7EB] h-2 border border-[#CCCCCC]">
+                <div
+                  className="bg-[#111111] h-full transition-all"
+                  style={{
+                    width: `${progress.total > 0 ? (progress.current / progress.total) * 100 : 0}%`,
+                  }}
+                />
               </div>
-            )}
+              <p className="text-xs font-mono text-[#555555]">
+                {progress.current} / {progress.total} CANDIDATES COMPILED
+              </p>
+            </div>
+          )}
 
-            {status === 'error' && (
-              <div className="flex items-center gap-2 text-red-400">
-                <XCircle className="w-5 h-5" />
-                <span>Generation failed</span>
+          {status === 'completed' && (
+            <div className="p-3 bg-emerald-50 border border-emerald-300 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-emerald-800 text-xs font-mono font-bold">
+                <CheckCircle className="w-4 h-4 text-emerald-700" />
+                <span>BATCH GENERATION COMPLETED: {progress.current} RECORDS COMPILED</span>
               </div>
-            )}
+              <button
+                type="button"
+                onClick={() => navigate(`/dashboard/admin/reports/viewer?snapshot=${snapshotId}`)}
+                className="gov-btn gov-btn-primary gov-btn-sm font-mono text-xs"
+              >
+                VIEW COMPILED ARCHIVE
+              </button>
+            </div>
+          )}
 
+          <div className="flex items-center justify-end gap-3 pt-2 border-t border-[#E5E7EB]">
             <button
+              type="button"
               onClick={handleGenerate}
               disabled={generating || snapshot.status !== 'locked'}
-              className="w-full rounded-xl border border-blue-500/50 bg-blue-600 px-4 py-3 font-medium text-white hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
+              className="gov-btn gov-btn-primary gov-btn-md flex items-center gap-2 font-mono"
             >
-              <Play className="w-5 h-5" />
-              {generating ? 'Generating...' : 'Generate Reports'}
+              {generating ? (
+                <>
+                  <GovRollingBox size="sm" />
+                  <span>PROCESSING BATCH...</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4" />
+                  <span>START BATCH GENERATION</span>
+                </>
+              )}
             </button>
           </div>
-        </>
+        </div>
       )}
-    </AdminPageWrapper>
+    </div>
   );
 }
-
-
-
-

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { downloadTimetablePdf, type TimetableFixedPeriodForPdf } from '@/lib/timetablePdf';
 import SectionHeader from './SectionHeader';
-import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
 import { useAcademicVocabulary } from '@/hooks/useAcademicVocabulary';
 import TertiaryCohortPicker from '@/components/tertiary/TertiaryCohortPicker';
 
@@ -40,13 +39,13 @@ function DayPicker({ value, onChange }: { value: string[]; onChange: (d: string[
   const allDays = value.length === 0;
   return (
     <div className="flex flex-wrap items-center gap-1 mt-1.5">
-      <span className="text-[11px] ac-text-muted mr-1">Days:</span>
+      <span className="text-[11px] font-mono uppercase text-[#666666] mr-1">DAYS:</span>
       <button
         type="button"
         onClick={() => onChange([])}
-        className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${allDays ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-[var(--ac-border)] ac-text-muted hover:border-emerald-500 hover:text-emerald-400'}`}
+        className={`gov-btn gov-btn-sm text-[10px] font-mono py-0.5 px-2 ${allDays ? 'gov-btn-primary' : ''}`}
       >
-        All Days
+        ALL DAYS
       </button>
       {WEEK_DAYS.map((day) => {
         const on = value.includes(day);
@@ -57,14 +56,14 @@ function DayPicker({ value, onChange }: { value: string[]; onChange: (d: string[
             onClick={() => {
               if (on) {
                 const next = value.filter((d) => d !== day);
-                onChange(next); // if empty after removal it naturally means "all"
+                onChange(next);
               } else {
                 onChange([...value, day]);
               }
             }}
-            className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${on && !allDays ? 'bg-blue-600 border-blue-600 text-white' : 'border-[var(--ac-border)] ac-text-muted hover:border-blue-500 hover:text-blue-400'}`}
+            className={`gov-btn gov-btn-sm text-[10px] font-mono py-0.5 px-2 ${on && !allDays ? 'gov-btn-primary' : ''}`}
           >
-            {DAY_ABBR[day]}
+            {DAY_ABBR[day].toUpperCase()}
           </button>
         );
       })}
@@ -537,189 +536,190 @@ export default function SettingsTimetable({
   // Render
   // ---------------------------------------------------------------------------
   return (
-    <div>
-      {/* ── Header row with PDF download ───────────────────────────────────── */}
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className="space-y-6">
+      {/* Header row with PDF download */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <SectionHeader
           embedded={embedded}
-          title={v.timetableTitle}
-          desc={v.timetableDesc}
+          title={isTertiary ? 'MASTER TIMETABLE & CLINICAL ROTATION SCHEDULE' : 'INSTITUTIONAL TIMETABLE MATRIX'}
+          badge="SCHEDULE SPECIFICATION"
         />
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-            <label className="flex min-h-[44px] items-center gap-2 text-sm ac-text-secondary">
-              <span className="shrink-0">PDF scope</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            className="gov-select w-auto text-xs"
+            value={pdfScope}
+            onChange={(e) => {
+              const vScope = e.target.value === 'single_class' ? 'single_class' : 'whole_school';
+              setPdfScope(vScope);
+              if (vScope === 'whole_school') setPdfClass('');
+            }}
+          >
+            <option value="whole_school">{isTertiary ? 'WHOLE CAMPUS (ALL PROGRAMMES)' : 'WHOLE SCHOOL (ALL CLASSES)'}</option>
+            <option value="single_class">{isTertiary ? 'SINGLE COHORT / STAGE' : 'SINGLE CLASS'}</option>
+          </select>
+
+          {pdfScope === 'single_class' && (
+            isTertiary ? (
+              <div className="w-56">
+                <TertiaryCohortPicker
+                  selectedCohort={pdfClass}
+                  onChange={setPdfClass}
+                  layout="grid"
+                  selectClassName="gov-select text-xs"
+                  programmeLabel="PROGRAMME"
+                  semesterLabel="SEMESTER"
+                />
+              </div>
+            ) : (
               <select
-                className="ac-input min-h-[44px] min-w-[10rem]"
-                value={pdfScope}
-                onChange={(e) => {
-                  const vScope = e.target.value === 'single_class' ? 'single_class' : 'whole_school';
-                  setPdfScope(vScope);
-                  if (vScope === 'whole_school') setPdfClass('');
-                }}
+                className="gov-select w-auto text-xs"
+                value={pdfClass}
+                onChange={(e) => setPdfClass(e.target.value)}
               >
-                <option value="whole_school">{isTertiary ? 'Whole campus (all courses)' : 'Whole school (all classes)'}</option>
-                <option value="single_class">{isTertiary ? 'Single course / stage' : 'Single class'}</option>
+                <option value="">{v.selectClass}</option>
+                {expandedClassOptions.map((cls) => (
+                  <option key={cls} value={cls}>{cls}</option>
+                ))}
               </select>
-            </label>
-            {pdfScope === 'single_class' && (
-              isTertiary ? (
-                <div className="min-w-[18rem]">
-                  <TertiaryCohortPicker
-                    selectedCohort={pdfClass}
-                    onChange={setPdfClass}
-                    layout="grid"
-                    selectClassName="ac-input min-h-[44px] text-xs"
-                    programmeLabel="Select Programme"
-                    semesterLabel="Select Year & Semester"
-                  />
-                </div>
-              ) : (
-                <label className="flex min-h-[44px] items-center gap-2 text-sm ac-text-secondary">
-                  <span className="shrink-0">{v.classNoun}</span>
-                  <select
-                    className="ac-input min-h-[44px] min-w-[10rem]"
-                    value={pdfClass}
-                    onChange={(e) => setPdfClass(e.target.value)}
-                  >
-                    <option value="">{v.selectClass}</option>
-                    {expandedClassOptions.map((cls) => (
-                      <option key={cls} value={cls}>{cls}</option>
-                    ))}
-                  </select>
-                </label>
-              )
-            )}
-          </div>
+            )
+          )}
+
           <button
             type="button"
             onClick={() => { void handleDownloadPDF(); }}
-            className="flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-500"
+            className="gov-btn gov-btn-sm gov-btn-primary inline-flex items-center gap-1.5"
           >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            Download PDF
+            EXPORT TIMETABLE PDF
           </button>
         </div>
       </div>
 
       {error && (
-        <div className="mb-4 rounded-lg border border-red-400/40 bg-red-950/50 p-3 text-sm text-red-100">
+        <div className="rounded border border-red-300 bg-red-50 p-3 text-xs font-mono text-red-700">
           {error}
         </div>
       )}
 
-      {/* ── Fixed periods (break / lunch / custom) ──────────────────────────── */}
-      <div className={`${settingsInsetSurface} mb-6 space-y-5 p-4 sm:p-5`}>
-        <div>
-          <h3 className="mb-1 font-semibold ac-text-primary">Fixed School Periods</h3>
-          <p className="text-xs ac-text-muted">
-            These appear as coloured bands on the timetable PDF. Break Time and Lunch Time are
-            required. Custom periods are optional.
-          </p>
+      {/* Fixed periods (break / lunch / custom) card */}
+      <div className="gov-card p-5 space-y-4">
+        <div className="border-b border-[#E2E8F0] pb-2 mb-2 flex items-center justify-between">
+          <span className="text-xs font-mono uppercase font-bold text-[#111111] tracking-wider">
+            CAMPUS-WIDE FIXED BREAK & RECESS INTERVALS
+          </span>
+          <span className="text-[11px] font-mono text-[#666666]">MANDATORY FOR PDF WALL-CHART</span>
         </div>
 
-        {/* Break Time */}
-        <div>
-          <div className="mb-2 flex items-center gap-2">
-            <span className="inline-block h-3 w-3 rounded-full bg-red-500" />
-            <span className="text-sm font-medium text-red-400">
-              Break Time <span className="text-red-500">*</span>
-              {breakSaved && <span className="ml-2 text-xs text-emerald-400">Saved</span>}
-            </span>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Break Time */}
+          <div className="border border-[#E2E8F0] p-3 rounded bg-[#FAFAFA]">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-xs font-mono font-bold uppercase text-[#111111]">
+                MORNING BREAK INTERVAL
+              </span>
+              {breakSaved ? (
+                <span className="gov-tag gov-tag-approved text-[10px] font-mono">CONFIGURED</span>
+              ) : (
+                <span className="gov-tag gov-tag-warned text-[10px] font-mono">REQUIRED</span>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <label className="text-xs font-mono text-[#555555]">
+                START
+                <input type="time" className="gov-input font-mono text-xs ml-1 py-1" value={breakStart}
+                  onChange={(e) => setBreakStart(e.target.value)} />
+              </label>
+              <label className="text-xs font-mono text-[#555555]">
+                END
+                <input type="time" className="gov-input font-mono text-xs ml-1 py-1" value={breakEnd}
+                  onChange={(e) => setBreakEnd(e.target.value)} />
+              </label>
+              <button
+                type="button"
+                disabled={savingFixed}
+                onClick={handleSaveBreak}
+                className="gov-btn gov-btn-sm"
+              >
+                {savingFixed ? 'SAVING…' : 'SAVE BREAK'}
+              </button>
+            </div>
+            <DayPicker value={breakDays} onChange={setBreakDays} />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="flex items-center gap-1 text-xs ac-text-secondary">
-              Start
-              <input type="time" className="ac-input min-h-[38px]" value={breakStart}
-                onChange={(e) => setBreakStart(e.target.value)} />
-            </label>
-            <label className="flex items-center gap-1 text-xs ac-text-secondary">
-              End
-              <input type="time" className="ac-input min-h-[38px]" value={breakEnd}
-                onChange={(e) => setBreakEnd(e.target.value)} />
-            </label>
-            <button
-              type="button"
-              disabled={savingFixed}
-              onClick={handleSaveBreak}
-              className="rounded-md bg-red-600/80 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500 disabled:opacity-50"
-            >
-              {savingFixed ? 'Saving…' : 'Save Break Time'}
-            </button>
-          </div>
-          <DayPicker value={breakDays} onChange={setBreakDays} />
-        </div>
 
-        {/* Lunch Time */}
-        <div>
-          <div className="mb-2 flex items-center gap-2">
-            <span className="inline-block h-3 w-3 rounded-full bg-gray-900 ring-1 ring-slate-500" />
-            <span className="text-sm font-medium" style={{ color: '#6B7280' }}>
-              Lunch Time <span className="text-red-500">*</span>
-              {lunchSaved && <span className="ml-2 text-xs text-emerald-400">Saved</span>}
-            </span>
+          {/* Lunch Time */}
+          <div className="border border-[#E2E8F0] p-3 rounded bg-[#FAFAFA]">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-xs font-mono font-bold uppercase text-[#111111]">
+                MIDDAY RECESS / LUNCH INTERVAL
+              </span>
+              {lunchSaved ? (
+                <span className="gov-tag gov-tag-approved text-[10px] font-mono">CONFIGURED</span>
+              ) : (
+                <span className="gov-tag gov-tag-warned text-[10px] font-mono">REQUIRED</span>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <label className="text-xs font-mono text-[#555555]">
+                START
+                <input type="time" className="gov-input font-mono text-xs ml-1 py-1" value={lunchStart}
+                  onChange={(e) => setLunchStart(e.target.value)} />
+              </label>
+              <label className="text-xs font-mono text-[#555555]">
+                END
+                <input type="time" className="gov-input font-mono text-xs ml-1 py-1" value={lunchEnd}
+                  onChange={(e) => setLunchEnd(e.target.value)} />
+              </label>
+              <button
+                type="button"
+                disabled={savingFixed}
+                onClick={handleSaveLunch}
+                className="gov-btn gov-btn-sm"
+              >
+                {savingFixed ? 'SAVING…' : 'SAVE LUNCH'}
+              </button>
+            </div>
+            <DayPicker value={lunchDays} onChange={setLunchDays} />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="flex items-center gap-1 text-xs ac-text-secondary">
-              Start
-              <input type="time" className="ac-input min-h-[38px]" value={lunchStart}
-                onChange={(e) => setLunchStart(e.target.value)} />
-            </label>
-            <label className="flex items-center gap-1 text-xs ac-text-secondary">
-              End
-              <input type="time" className="ac-input min-h-[38px]" value={lunchEnd}
-                onChange={(e) => setLunchEnd(e.target.value)} />
-            </label>
-            <button
-              type="button"
-              disabled={savingFixed}
-              onClick={handleSaveLunch}
-              className="rounded-md bg-slate-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-600 disabled:opacity-50"
-            >
-              {savingFixed ? 'Saving…' : 'Save Lunch Time'}
-            </button>
-          </div>
-          <DayPicker value={lunchDays} onChange={setLunchDays} />
         </div>
 
         {/* Custom periods */}
-        <div>
-          <p className="mb-2 text-xs font-medium ac-text-secondary">
-            Custom Periods <span className="font-normal ac-text-muted">(optional — e.g. Assembly, Prayers, Games)</span>
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="border-t border-[#E2E8F0] pt-3 mt-3">
+          <span className="text-xs font-mono uppercase font-bold text-[#555555] block mb-2">
+            SPECIAL CUSTOM INTERVALS (ASSEMBLIES, CLINICAL HUDDLES, PRAYERS)
+          </span>
+          <div className="flex flex-wrap items-center gap-2 mb-2">
             <input
               type="text"
-              placeholder="Period name"
-              className="ac-input min-h-[38px] w-36"
+              placeholder="INTERVAL NAME"
+              className="gov-input text-xs font-mono uppercase w-40"
               value={customName}
               onChange={(e) => setCustomName(e.target.value)}
             />
-            <label className="flex items-center gap-1 text-xs ac-text-secondary">
-              Start
-              <input type="time" className="ac-input min-h-[38px]" value={customStart}
+            <label className="text-xs font-mono text-[#555555]">
+              START
+              <input type="time" className="gov-input font-mono text-xs ml-1 py-1" value={customStart}
                 onChange={(e) => setCustomStart(e.target.value)} />
             </label>
-            <label className="flex items-center gap-1 text-xs ac-text-secondary">
-              End
-              <input type="time" className="ac-input min-h-[38px]" value={customEnd}
+            <label className="text-xs font-mono text-[#555555]">
+              END
+              <input type="time" className="gov-input font-mono text-xs ml-1 py-1" value={customEnd}
                 onChange={(e) => setCustomEnd(e.target.value)} />
             </label>
-            <label className="flex items-center gap-1 text-xs ac-text-secondary">
-              Colour
-              <input type="color" className="h-9 w-10 cursor-pointer rounded border-0 bg-transparent p-0.5"
+            <label className="flex items-center gap-1 text-xs font-mono text-[#555555]">
+              COLOR
+              <input type="color" className="h-7 w-8 cursor-pointer rounded border border-[#CCCCCC] bg-white p-0.5 ml-1"
                 value={customColor} onChange={(e) => setCustomColor(e.target.value)} />
             </label>
             <button
               type="button"
               disabled={savingFixed}
               onClick={() => { void handleAddCustom(); }}
-              className="rounded-md bg-violet-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-600 disabled:opacity-50"
+              className="gov-btn gov-btn-sm"
             >
-              {savingFixed ? 'Adding…' : '+ Add Period'}
+              {savingFixed ? 'ADDING…' : '+ ADD INTERVAL'}
             </button>
           </div>
           <DayPicker value={customDays} onChange={setCustomDays} />
@@ -729,19 +729,19 @@ export default function SettingsTimetable({
               {customPeriods.map((fp) => (
                 <div
                   key={fp.id}
-                  className="flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium text-white"
-                  style={{ backgroundColor: fp.color }}
+                  className="flex items-center gap-2 rounded border border-[#CCCCCC] px-2.5 py-1 text-xs font-mono bg-white"
                 >
-                  <span>
+                  <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: fp.color }} />
+                  <span className="font-bold text-[#111111]">
                     {fp.name} ({fp.start_time}–{fp.end_time})
                     {fp.days && fp.days.length > 0 && (
-                      <span className="ml-1 opacity-80">· {daysLabel(fp.days)}</span>
+                      <span className="ml-1 text-[#666666]">· {daysLabel(fp.days)}</span>
                     )}
                   </span>
                   <button
                     type="button"
                     onClick={() => { void handleRemoveFixed(fp.id); }}
-                    className="opacity-70 hover:opacity-100"
+                    className="text-[#888888] hover:text-red-600 font-bold ml-1"
                     title="Remove"
                   >
                     ×
@@ -753,12 +753,14 @@ export default function SettingsTimetable({
         </div>
       </div>
 
-      {/* ── Add lesson period ───────────────────────────────────────────────── */}
-      <div className={`${settingsInsetSurface} space-y-4 p-4 sm:p-5`}>
-        <p className="text-sm font-medium ac-text-primary">
-          {isTertiary ? 'Add Lecture / Clinical Period' : 'Add Lesson Period'}
-        </p>
-        <div className={`grid grid-cols-1 gap-3 ${isTertiary ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
+      {/* Add lesson / lecture period card */}
+      <div className="gov-card p-5 space-y-4">
+        <div className="border-b border-[#E2E8F0] pb-2 mb-2 flex items-center justify-between">
+          <span className="text-xs font-mono uppercase font-bold text-[#111111] tracking-wider">
+            {isTertiary ? 'ADD LECTURE / CLINICAL ROTATION TIMETABLE SLOT' : 'ADD TIMETABLE LESSON SLOT'}
+          </span>
+        </div>
+        <div className={`grid grid-cols-1 gap-3 ${isTertiary ? 'md:grid-cols-5' : 'md:grid-cols-4'} items-end`}>
           {isTertiary ? (
             <div className="md:col-span-2">
               <TertiaryCohortPicker
@@ -769,106 +771,149 @@ export default function SettingsTimetable({
                   setSelectedSubject('');
                 }}
                 layout="grid"
-                programmeLabel="Programme"
-                semesterLabel="Year & Semester"
+                showLabels
+                programmeLabel="PROGRAMME"
+                semesterLabel="YEAR & SEMESTER"
               />
             </div>
           ) : (
-            <select className="ac-input min-h-[44px] w-full" value={selectedClass}
-              onChange={(e) => {
-                setSelectedClass(e.target.value);
-                setSelectedTeacher('');
-                setSelectedSubject('');
-              }}>
-              <option value="">{v.selectClass}</option>
-              {expandedClassOptions.map((cls) => (
-                <option key={cls} value={cls}>{cls}</option>
-              ))}
-            </select>
+            <div>
+              <label className="mb-1 block text-xs font-mono uppercase font-bold text-[#555555]">
+                {v.classNoun}
+              </label>
+              <select className="gov-select w-full" value={selectedClass}
+                onChange={(e) => {
+                  setSelectedClass(e.target.value);
+                  setSelectedTeacher('');
+                  setSelectedSubject('');
+                }}>
+                <option value="">{v.selectClass}</option>
+                {expandedClassOptions.map((cls) => (
+                  <option key={cls} value={cls}>{cls}</option>
+                ))}
+              </select>
+            </div>
           )}
 
-          <select className="ac-input min-h-[44px] w-full" value={selectedTeacher}
-            onChange={(e) => setSelectedTeacher(e.target.value)} disabled={!selectedClass}>
-            <option value="">{selectedClass ? v.selectTeacher : `${v.selectTeacher} (choose ${v.classNoun.toLowerCase()} first)`}</option>
-            {classTeachers.map((t) => (
-              <option key={t.teacher_id} value={t.teacher_id}>{t.name}</option>
-            ))}
-          </select>
+          <div>
+            <label className="mb-1 block text-xs font-mono uppercase font-bold text-[#555555]">
+              {v.teacherNoun}
+            </label>
+            <select className="gov-select w-full" value={selectedTeacher}
+              onChange={(e) => setSelectedTeacher(e.target.value)} disabled={!selectedClass}>
+              <option value="">{selectedClass ? v.selectTeacher : `${v.selectTeacher} (pick cohort first)`}</option>
+              {classTeachers.map((t) => (
+                <option key={t.teacher_id} value={t.teacher_id}>{t.name}</option>
+              ))}
+            </select>
+          </div>
 
-          <select className="ac-input min-h-[44px] w-full" value={selectedSubject}
-            onChange={(e) => setSelectedSubject(e.target.value)} disabled={!selectedTeacher}>
-            <option value="">{selectedTeacher ? v.selectSubject : `${v.selectSubject} (choose ${v.teacherNoun.toLowerCase()} first)`}</option>
-            {teacherSubjects.map((subj) => (
-              <option key={subj} value={subj}>{subj}</option>
-            ))}
-          </select>
+          <div>
+            <label className="mb-1 block text-xs font-mono uppercase font-bold text-[#555555]">
+              {v.subjectNoun}
+            </label>
+            <select className="gov-select w-full" value={selectedSubject}
+              onChange={(e) => setSelectedSubject(e.target.value)} disabled={!selectedTeacher}>
+              <option value="">{selectedTeacher ? v.selectSubject : `${v.selectSubject} (pick tutor first)`}</option>
+              {teacherSubjects.map((subj) => (
+                <option key={subj} value={subj}>{subj}</option>
+              ))}
+            </select>
+          </div>
 
-          <select className="ac-input min-h-[44px] w-full" value={selectedDay}
-            onChange={(e) => setSelectedDay(e.target.value)}>
-            <option value="">Day of week</option>
-            {ALL_DAYS.map((d) => (
-              <option key={d} value={d}>{d}</option>
-            ))}
-          </select>
+          <div>
+            <label className="mb-1 block text-xs font-mono uppercase font-bold text-[#555555]">
+              DAY OF WEEK
+            </label>
+            <select className="gov-select w-full" value={selectedDay}
+              onChange={(e) => setSelectedDay(e.target.value)}>
+              <option value="">SELECT DAY...</option>
+              {ALL_DAYS.map((d) => (
+                <option key={d} value={d}>{d.toUpperCase()}</option>
+              ))}
+            </select>
+          </div>
 
-          <input type="time" className="ac-input min-h-[44px] w-full" value={startTime}
-            onChange={(e) => setStartTime(e.target.value)} />
-          <input type="time" className="ac-input min-h-[44px] w-full" value={endTime}
-            onChange={(e) => setEndTime(e.target.value)} />
+          <div>
+            <label className="mb-1 block text-xs font-mono uppercase font-bold text-[#555555]">
+              START TIME
+            </label>
+            <input type="time" className="gov-input w-full font-mono text-xs" value={startTime}
+              onChange={(e) => setStartTime(e.target.value)} />
+          </div>
 
-          <button
-            type="button"
-            onClick={() => { void handleAddPeriod(); }}
-            disabled={saving}
-            className={`${settingsPrimaryActionClass} md:col-span-2`}
-          >
-            {saving ? 'Adding…' : (isTertiary ? 'Add Lecture / Clinical Period' : 'Add Period')}
-          </button>
+          <div>
+            <label className="mb-1 block text-xs font-mono uppercase font-bold text-[#555555]">
+              END TIME
+            </label>
+            <input type="time" className="gov-input w-full font-mono text-xs" value={endTime}
+              onChange={(e) => setEndTime(e.target.value)} />
+          </div>
+
+          <div>
+            <button
+              type="button"
+              onClick={() => { void handleAddPeriod(); }}
+              disabled={saving}
+              className="gov-btn gov-btn-sm gov-btn-primary w-full h-[38px]"
+            >
+              {saving ? 'ADDING…' : '+ ADD SLOT'}
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* ── Current lesson periods ──────────────────────────────────────────── */}
-      {timetablePeriods.length > 0 && (
-        <div className="mt-6">
-          <h3 className="mb-4 font-medium ac-text-primary">
-            {isTertiary ? 'Current Lecture & Clinical Timetable' : 'Current Timetable Periods'}
-          </h3>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {timetablePeriods.map((period) => (
-              <div key={period.id} className={`${settingsInsetSurface} p-4`}>
-                <div className="mb-2 flex items-start justify-between gap-2">
-                  <h4 className="font-medium ac-text-primary">{period.class_name}</h4>
-                  <button type="button" onClick={() => { void handleRemovePeriod(period.id); }}
-                    className="text-sm text-red-400 hover:text-red-300">Remove</button>
-                </div>
-                <div className="space-y-1 text-sm ac-text-secondary">
-                  <div><strong className="ac-text-primary">Day:</strong> {period.day_of_week}</div>
-                  <div><strong className="ac-text-primary">Time:</strong> {period.start_time} – {period.end_time}</div>
-                  <div><strong className="ac-text-primary">Subject:</strong> {period.subject}</div>
-                  <div><strong className="ac-text-primary">Teacher:</strong> {period.teacher_name}</div>
-                </div>
-              </div>
-            ))}
+      {/* Current Timetable Registry Table */}
+      <div className="gov-card p-0 overflow-hidden">
+        <div className="border-b border-[#E2E8F0] bg-[#FDFDFD] px-4 py-3 flex items-center justify-between">
+          <span className="text-xs font-mono uppercase font-bold text-[#111111]">
+            ACTIVE TIMETABLE PERIODS REGISTRY
+          </span>
+          <span className="text-xs font-mono text-[#555555]">
+            TOTAL PERIODS: <span className="font-bold text-[#111111]">{timetablePeriods.length}</span>
+          </span>
+        </div>
+
+        {timetablePeriods.length === 0 ? (
+          <div className="py-12 text-center text-xs font-mono text-[#888888]">
+            NO PERIODS REGISTERED YET.
           </div>
-        </div>
-      )}
-
-      {timetablePeriods.length === 0 && (
-        <div className="mt-4 py-8 text-center text-sm ac-text-muted">
-          No periods added yet. Fill in the form above and click &quot;Add Period&quot; to build your timetable.
-        </div>
-      )}
-
-      {/* ── PDF info ────────────────────────────────────────────────────────── */}
-      <div className={`mt-6 ${settingsInsetSurface} border border-[var(--pw-blue)]/35 p-4`}>
-        <h4 className="mb-2 text-sm font-medium" style={{ color: 'var(--pw-blue, #3d8ef8)' }}>
-          PDF Export
-        </h4>
-        <p className="text-xs ac-text-muted">
-          The whole-school PDF uses a wall-chart layout: days and classes as rows, time slots as columns.
-          Break Time and Lunch Time appear as coloured bands spanning all classes.
-          The school badge is included automatically if one has been uploaded in Settings → School Profile.
-        </p>
+        ) : (
+          <div className="gov-table-container">
+            <table className="gov-table">
+              <thead>
+                <tr>
+                  <th className="font-mono">COHORT / CLASS</th>
+                  <th className="font-mono">DAY OF WEEK</th>
+                  <th className="font-mono">TIME INTERVAL</th>
+                  <th className="font-mono">COURSE UNIT / MODULE</th>
+                  <th className="font-mono">FACULTY / TUTOR</th>
+                  <th className="font-mono text-right w-24">ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {timetablePeriods.map((period) => (
+                  <tr key={period.id}>
+                    <td className="font-bold text-[#111111] font-mono text-xs">{period.class_name}</td>
+                    <td className="font-mono text-xs uppercase">{period.day_of_week}</td>
+                    <td className="font-mono text-xs font-bold text-[#111111]">{period.start_time} – {period.end_time}</td>
+                    <td className="font-medium text-[#111111]">{period.subject}</td>
+                    <td className="text-xs text-[#555555]">{period.teacher_name}</td>
+                    <td className="text-right">
+                      <button
+                        type="button"
+                        onClick={() => { void handleRemovePeriod(period.id); }}
+                        className="gov-btn gov-btn-sm text-red-600 border-[#CCCCCC] hover:bg-red-50"
+                      >
+                        REMOVE
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -6,6 +6,8 @@ import { sortExamSetsByTermProgression } from '@/lib/teacherExamSetsInput';
 import SectionHeader from './SectionHeader';
 import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
 import { useAcademicPeriod } from '@/lib/academicPeriodTerminology';
+import { GovTableLoader } from '@/components/ui/GovLoadingIndicator';
+import '@/styles/government-system.css';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -304,19 +306,20 @@ export default function SettingsExamSets({
     Array.isArray(es.target_classes) ? es.target_classes : [];
 
   return (
-    <div>
+    <div className="space-y-4">
       <SectionHeader
         embedded={embedded}
         eyebrow={labels.periodAssessments}
         title={`${labels.periodAssessments} Management`}
-        desc={`${labels.periodAssessments} for the current ${labels.periodNoun.toLowerCase()} only (${currentTerm ? formatPeriod(currentTerm.term, currentTerm.year, { includeYearComma: false }) : `calendar ${labels.periodNoun.toLowerCase()}`}). Past and future ${labels.periodNounPlural.toLowerCase()} are hidden.`}
       />
 
-      <div className={`${settingsInsetSurface} ac-glass-card mb-6 p-4 sm:p-5`}>
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-          <h3 className="ac-text-primary font-medium">Create New {labels.periodAssessments === 'Exam Sets' ? 'Exam Set' : 'Assessment'}</h3>
+      <div className="gov-card rounded-lg border border-[#CCCCCC] bg-white p-4 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#CCCCCC] pb-3">
+          <div className="text-[12px] font-mono font-bold uppercase text-[#111111]">
+            CONFIGURE NEW {labels.periodAssessments === 'Exam Sets' ? 'EXAMINATION SERIES' : 'ASSESSMENT'}
+          </div>
           {isTertiary && (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-1">
               {[
                 { label: 'CAT 1', desc: 'Continuous Assessment 1 (Coursework)' },
                 { label: 'CAT 2', desc: 'Continuous Assessment 2 (Coursework)' },
@@ -331,7 +334,7 @@ export default function SettingsExamSets({
                     setName(preset.label);
                     setDescription(preset.desc);
                   }}
-                  className="rounded-md border border-slate-300 dark:border-white/10 bg-white/50 dark:bg-white/5 px-2 py-0.5 text-xs text-slate-700 dark:text-slate-300 hover:border-teal-500 hover:text-teal-600 transition-colors"
+                  className="gov-btn gov-btn-sm"
                 >
                   + {preset.label}
                 </button>
@@ -339,43 +342,65 @@ export default function SettingsExamSets({
             </div>
           )}
         </div>
+
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={isTertiary ? "Assessment Name (e.g., Continuous Assessment 1)" : "Exam Set Name (e.g., Beginning of Term)"}
-            className="ac-input rounded-lg px-3 py-2"
-          />
-          <input
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Description (optional)"
-            className="ac-input rounded-lg px-3 py-2"
-          />
-          <select
-            value={term}
-            onChange={(e) => setTerm(parseInt(e.target.value, 10))}
-            disabled={!!currentTerm}
-            title={currentTerm ? `Locked to the current ${labels.periodNoun.toLowerCase()}` : undefined}
-            className="ac-input rounded-lg px-3 py-2 disabled:opacity-60"
-          >
-            <option value={1}>{formatPeriod(1)}</option>
-            <option value={2}>{formatPeriod(2)}</option>
-            <option value={3}>{formatPeriod(3)}</option>
-          </select>
-          <input
-            type="number"
-            min={2020}
-            max={2099}
-            value={year}
-            onChange={(e) => setYear(parseInt(e.target.value, 10))}
-            disabled={!!currentTerm}
-            title={currentTerm ? 'Locked to the current academic year' : undefined}
-            className="ac-input rounded-lg px-3 py-2 disabled:opacity-60"
-          />
+          <div>
+            <label className="block text-[11px] font-mono font-bold uppercase text-[#555555] mb-1">
+              ASSESSMENT TITLE *
+            </label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={isTertiary ? "Assessment Name (e.g., Continuous Assessment 1)" : "Exam Set Name (e.g., Beginning of Term)"}
+              className="gov-input w-full text-xs"
+            />
+          </div>
+          <div>
+            <label className="block text-[11px] font-mono font-bold uppercase text-[#555555] mb-1">
+              NOTE / DESCRIPTION (OPTIONAL)
+            </label>
+            <input
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Description (optional)"
+              className="gov-input w-full text-xs"
+            />
+          </div>
+          <div>
+            <label className="block text-[11px] font-mono font-bold uppercase text-[#555555] mb-1">
+              ACADEMIC PERIOD / TERM
+            </label>
+            <select
+              value={term}
+              onChange={(e) => setTerm(parseInt(e.target.value, 10))}
+              disabled={!!currentTerm}
+              title={currentTerm ? `Locked to the current ${labels.periodNoun.toLowerCase()}` : undefined}
+              className="gov-select w-full text-xs disabled:opacity-60"
+            >
+              <option value={1}>{formatPeriod(1)}</option>
+              <option value={2}>{formatPeriod(2)}</option>
+              <option value={3}>{formatPeriod(3)}</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-[11px] font-mono font-bold uppercase text-[#555555] mb-1">
+              ACADEMIC YEAR
+            </label>
+            <input
+              type="number"
+              min={2020}
+              max={2099}
+              value={year}
+              onChange={(e) => setYear(parseInt(e.target.value, 10))}
+              disabled={!!currentTerm}
+              title={currentTerm ? 'Locked to the current academic year' : undefined}
+              className="gov-input w-full text-xs font-mono disabled:opacity-60"
+            />
+          </div>
         </div>
-        <div className="mt-3">
-          <label className="ac-text-secondary mb-2 flex items-center gap-2 text-sm">
+
+        <div>
+          <label className="mb-2 flex items-center gap-2 text-xs font-mono font-bold text-[#222222] cursor-pointer">
             <input
               type="checkbox"
               checked={allClasses}
@@ -383,21 +408,19 @@ export default function SettingsExamSets({
                 setAllClasses(e.target.checked);
                 if (e.target.checked) setTargetClasses([]);
               }}
-              className="accent-emerald-500"
+              className="accent-[#111111]"
             />
-            Apply to all classes
+            APPLY TO ALL COHORTS / CLASSES
           </label>
           {!allClasses && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5 pt-1">
               {classOptions.map((className) => (
                 <button
                   key={className}
                   type="button"
                   onClick={() => toggleClass(className)}
-                  className={`rounded-lg border px-3 py-1 text-sm transition-colors ${
-                    targetClasses.includes(className)
-                      ? 'border-emerald-400/80 bg-emerald-600/90 text-white shadow-sm shadow-emerald-900/20'
-                      : 'border-[var(--ac-border)] bg-[var(--ac-card-bg)] ac-text-primary hover:bg-[var(--ac-sidebar-active-bg)]'
+                  className={`gov-btn gov-btn-sm ${
+                    targetClasses.includes(className) ? 'gov-btn-primary' : ''
                   }`}
                 >
                   {className}
@@ -406,105 +429,108 @@ export default function SettingsExamSets({
             </div>
           )}
         </div>
-        <button
-          type="button"
-          disabled={
-            !schoolId || !name.trim() || saving || (!allClasses && targetClasses.length === 0)
-          }
-          onClick={saveExamSet}
-          className={`${settingsPrimaryActionClass} mt-3`}
-        >
-          {saving ? 'Creating...' : `Create ${labels.periodAssessments === 'Exam Sets' ? 'Exam Set' : 'Assessment'}`}
-        </button>
+
+        <div className="flex justify-end pt-2 border-t border-[#CCCCCC]">
+          <button
+            type="button"
+            disabled={
+              !schoolId || !name.trim() || saving || (!allClasses && targetClasses.length === 0)
+            }
+            onClick={saveExamSet}
+            className="gov-btn gov-btn-sm gov-btn-primary"
+          >
+            {saving ? 'COMMITTING…' : `CREATE ${labels.periodAssessments === 'Exam Sets' ? 'EXAM SET' : 'ASSESSMENT'}`}
+          </button>
+        </div>
       </div>
 
       {error && (
-        <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-300">
+        <div className="rounded border border-[#EF4444] bg-[#FEF2F2] px-3 py-2 text-xs font-mono font-bold text-[#B91C1C]">
           {error}
         </div>
       )}
 
-      <div className="ac-text-secondary mb-3 text-sm">
-        Current {labels.periodNoun.toLowerCase()} {labels.periodAssessments.toLowerCase()}
-        {currentTerm ? ` (${formatPeriod(currentTerm.term, currentTerm.year, { includeYearComma: false })})` : ''}
+      <div className="flex items-center justify-between gap-2 pt-2">
+        <div className="text-xs font-mono font-bold uppercase text-[#555555]">
+          CURRENT {labels.periodNoun.toUpperCase()} {labels.periodAssessments.toUpperCase()}
+          {currentTerm ? ` (${formatPeriod(currentTerm.term, currentTerm.year, { includeYearComma: false })})` : ''}
+        </div>
       </div>
-      <div className={`${settingsInsetSurface} ac-glass-card overflow-x-auto`}>
-        <table className="min-w-full min-w-[720px] text-sm md:min-w-0">
+
+      <div className="gov-table-container">
+        <table className="gov-table w-full text-xs">
           <thead>
-            <tr className="border-b border-[var(--ac-border)] text-left">
-              <th className="ac-text-muted px-4 py-2">Name</th>
-              <th className="ac-text-muted px-4 py-2">Description</th>
-              <th className="ac-text-muted px-4 py-2">{labels.periodNoun}</th>
-              <th className="ac-text-muted px-4 py-2">Year</th>
-              <th className="ac-text-muted px-4 py-2">Classes</th>
-              <th className="ac-text-muted px-4 py-2">Status</th>
-              <th className="ac-text-muted px-4 py-2">Active for Input</th>
-              <th className="ac-text-muted px-4 py-2">Actions</th>
+            <tr>
+              <th className="px-3 py-2 text-left font-mono uppercase text-[10px] text-[#555555] border-r border-[#CCCCCC]">SERIES NAME</th>
+              <th className="px-3 py-2 text-left font-mono uppercase text-[10px] text-[#555555] border-r border-[#CCCCCC]">DESCRIPTION</th>
+              <th className="px-3 py-2 text-left font-mono uppercase text-[10px] text-[#555555] border-r border-[#CCCCCC]">{labels.periodNoun.toUpperCase()}</th>
+              <th className="px-3 py-2 text-left font-mono uppercase text-[10px] text-[#555555] border-r border-[#CCCCCC]">YEAR</th>
+              <th className="px-3 py-2 text-left font-mono uppercase text-[10px] text-[#555555] border-r border-[#CCCCCC]">COHORTS</th>
+              <th className="px-3 py-2 text-center font-mono uppercase text-[10px] text-[#555555] border-r border-[#CCCCCC]">STATUS</th>
+              <th className="px-3 py-2 text-center font-mono uppercase text-[10px] text-[#555555] border-r border-[#CCCCCC]">INPUT STATUS</th>
+              <th className="px-3 py-2 text-right font-mono uppercase text-[10px] text-[#555555]">ACTIONS</th>
             </tr>
           </thead>
-          <tbody className="[&>tr:nth-child(even)]:bg-[var(--ac-sidebar-active-bg)]/50">
+          <tbody>
             {loading ? (
-              <tr>
-                <td colSpan={8} className="ac-text-muted px-4 py-6 text-center">
-                  Loading...
-                </td>
-              </tr>
+              <GovTableLoader colSpan={8} />
             ) : filteredSets.length === 0 ? (
               <tr>
-                <td colSpan={8} className="ac-text-muted px-4 py-6 text-center">
-                  No {labels.periodAssessments.toLowerCase()} for the current {labels.periodNoun.toLowerCase()} yet.
+                <td colSpan={8} className="px-4 py-6 text-center text-xs font-mono text-[#666666]">
+                  NO {labels.periodAssessments.toUpperCase()} CONFIGURED FOR CURRENT {labels.periodNoun.toUpperCase()}.
                 </td>
               </tr>
             ) : (
               filteredSets.map((es) => (
-                <tr key={es.id} className="border-t border-[var(--ac-border)]">
-                  <td className="ac-text-primary px-4 py-2 font-medium">{es.name}</td>
-                  <td className="ac-text-secondary px-4 py-2">{es.description || '-'}</td>
-                  <td className="ac-text-secondary px-4 py-2">{formatPeriod(es.term)}</td>
-                  <td className="ac-text-secondary px-4 py-2">{es.year}</td>
-                  <td className="ac-text-secondary px-4 py-2">
+                <tr key={es.id} className="border-b border-[#E5E5E5] hover:bg-[#F9FAFB]">
+                  <td className="px-3 py-2 font-bold text-[#111111] uppercase font-sans border-r border-[#CCCCCC]">
+                    {es.name}
+                  </td>
+                  <td className="px-3 py-2 font-mono text-[#555555] border-r border-[#CCCCCC]">
+                    {es.description || '—'}
+                  </td>
+                  <td className="px-3 py-2 font-mono text-[#111111] border-r border-[#CCCCCC]">
+                    {formatPeriod(es.term)}
+                  </td>
+                  <td className="px-3 py-2 font-mono text-[#111111] border-r border-[#CCCCCC]">
+                    {es.year}
+                  </td>
+                  <td className="px-3 py-2 font-mono border-r border-[#CCCCCC]">
                     {targetClassesArr(es).length === 0 ? (
-                      <span className="text-emerald-600 dark:text-emerald-400">All Classes</span>
+                      <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-bold bg-[#DCFCE7] text-[#15803D] border border-[#86EFAC] rounded">
+                        ALL COHORTS
+                      </span>
                     ) : (
-                      <span className="text-blue-600 dark:text-blue-400">
-                        {targetClassesArr(es).length} class
-                        {targetClassesArr(es).length !== 1 ? 'es' : ''}
+                      <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-bold bg-[#EAEAEA] text-[#333333] border border-[#CCCCCC] rounded">
+                        {targetClassesArr(es).length} COHORT{targetClassesArr(es).length !== 1 ? 'S' : ''}
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-3 py-2 text-center border-r border-[#CCCCCC]">
                     <button
                       type="button"
                       onClick={() => toggleActive(es.id, es.is_active)}
-                      className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
-                        es.is_active
-                          ? 'bg-emerald-600 text-white hover:bg-emerald-500 dark:bg-emerald-500'
-                          : 'border border-[var(--ac-border)] bg-[var(--ac-sidebar-active-bg)] ac-text-secondary hover:ac-text-primary'
-                      }`}
+                      className={`gov-btn gov-btn-sm ${es.is_active ? 'gov-btn-primary' : ''}`}
                     >
-                      {es.is_active ? 'Active' : 'Inactive'}
+                      {es.is_active ? 'ACTIVE' : 'INACTIVE'}
                     </button>
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-3 py-2 text-center border-r border-[#CCCCCC]">
                     <button
                       type="button"
                       onClick={() => toggleActiveForInput(es.id, es.active_for_input)}
-                      className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
-                        es.active_for_input
-                          ? 'bg-teal-600 text-white hover:bg-teal-500 dark:bg-teal-500'
-                          : 'border border-[var(--ac-border)] bg-[var(--ac-sidebar-active-bg)] ac-text-secondary hover:ac-text-primary'
-                      }`}
+                      className={`gov-btn gov-btn-sm ${es.active_for_input ? 'gov-btn-primary' : ''}`}
                     >
-                      {es.active_for_input ? 'ON' : 'OFF'}
+                      {es.active_for_input ? 'INPUT OPEN' : 'CLOSED'}
                     </button>
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-3 py-2 text-right">
                     <button
                       type="button"
                       onClick={() => deleteExamSet(es.id)}
-                      className="rounded bg-red-500 px-2 py-1 text-xs text-white hover:scale-105 hover:bg-red-400 transition-transform"
+                      className="gov-btn gov-btn-sm text-[#B91C1C] hover:bg-[#FEF2F2]"
                     >
-                      Delete
+                      DELETE
                     </button>
                   </td>
                 </tr>
